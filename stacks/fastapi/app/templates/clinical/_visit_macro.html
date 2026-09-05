@@ -1,0 +1,39 @@
+{# カルテ画面と印刷画面が共有する、1診察ぶんの描画。
+   **画面と印刷を同じマクロにする**のは、検算4（acceptance.md）対策。
+   別テンプレートに同じHTMLを書き写すと、片方だけ直し忘れて食い違う事故が起きる
+   （acceptance.md「なぜ必要か」に書かれている実際の不具合と同じ構図）。 #}
+{% from "_macros.html" import row %}
+
+{% macro render_visit(v) %}
+<li {{ row("visit") }}>
+  <h3>{{ v.visit_date }}（第{{ v.visit_no }}回）</h3>
+  <p>体重: {{ v.body_weight_kg if v.body_weight_kg is not none else "" }} kg</p>
+  <p>主訴: {{ v.chief_complaint }}</p>
+  <p>症状: {{ v.symptom }}</p>
+  <p>診断: {{ v.diagnosis }}</p>
+  <p>治療: {{ v.treatment }}</p>
+
+  <table class="progress-notes">
+    <thead>
+      <tr>
+        <th>日付</th><th>体温</th><th>脈拍</th><th>呼吸</th><th>体重</th>
+        <th>経過</th><th>処置</th><th>メモ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for n in v.progress_notes %}
+      <tr>
+        <td>{{ n.entry_date }}</td>
+        <td data-check="progress_note.temperature_c">{{ n.temperature_c if n.temperature_c is not none else "" }}</td>
+        <td data-check="progress_note.pulse">{{ n.pulse if n.pulse is not none else "" }}</td>
+        <td data-check="progress_note.respiration">{{ n.respiration if n.respiration is not none else "" }}</td>
+        <td data-check="progress_note.body_weight_kg">{{ n.body_weight_kg if n.body_weight_kg is not none else "" }}</td>
+        <td>{{ n.symptom_course }}</td>
+        <td>{{ n.treatment_rx }}</td>
+        <td>{{ n.note }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</li>
+{% endmacro %}

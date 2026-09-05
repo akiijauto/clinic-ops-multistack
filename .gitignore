@@ -1,0 +1,36 @@
+# 依存の実体は追跡しない。lock ファイルは追跡する（同じ版が入るように）。
+# 各スタックが自前の .gitignore を作ることもあるが、ここでも押さえておく。
+# レーンが5つあるので、1つでも漏れると1万件単位で混ざる。
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.next/
+.turbo/
+target/
+tmp/
+log/
+storage/framework/
+bootstrap/cache/
+*.sqlite
+*.sqlite3
+*.db
+
+# 秘密情報
+.env
+.env.*
+!.env.example
+
+# エディタ・OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# レーンが画面を確認するために吐くダンプ。作業ゴミなので追跡しない。
+# 5レーンあるので、1つでも漏れるとリポジトリの入口に散らかる。
+*_dump.html
+*.dump
+dump/

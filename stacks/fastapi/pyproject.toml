@@ -1,0 +1,11 @@
+[project]
+name = "clinic-ops-fastapi"
+version = "0.1.0"
+description = "動物病院の窓口業務システム — Python / FastAPI 実装（レーンD）"
+requires-python = ">=3.14"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+filterwarnings = ["error::DeprecationWarning:app.*"]

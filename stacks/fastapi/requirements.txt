@@ -1,0 +1,15 @@
+# レーンD（Python / FastAPI）の依存。すべて 2026-09-05 に cp314 のホイールで入ることを実測した。
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+jinja2==3.1.6
+python-multipart==0.0.32
+sqlalchemy==2.0.52
+pydantic==2.13.5
+# Windows には OS のタイムゾーンDBが無く、これが無いと ZoneInfo("Asia/Tokyo") が
+# ZoneInfoNotFoundError で落ちる（2026-09-05 実測）。JST 固定の契約なので必須。
+tzdata==2026.3
+
+# テスト
+pytest==9.1.1
+# starlette 1.6 の TestClient は httpx だと非推奨警告を出す。httpx2 が新しい方。
+httpx2==2.12.0

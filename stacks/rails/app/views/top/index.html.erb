@@ -1,0 +1,11 @@
+<% content_for :title, "トップ" %>
+<div data-testid="screen-top">
+  <h1>Clinic Ops（学習・研究用の評価版）</h1>
+  <p>
+    これは5つの技術スタックで同じ仕様を実装し、比較するための学習・研究プロジェクトです。
+    実在の病院・製品ではありません。表示されるデータはすべて合成データです。
+  </p>
+  <p>本日の診察件数: <span data-check="visit_count.today"><%= @today_count %></span></p>
+  <p><a href="/today">本日の患者一覧へ</a></p>
+  <p><a href="/about">このシステムについて</a></p>
+</div>

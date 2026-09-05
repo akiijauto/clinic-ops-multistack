@@ -1,0 +1,27 @@
+<% content_for :title, "本日の患者" %>
+<div data-testid="screen-today">
+  <h1>本日の患者</h1>
+  <p>本日の診察件数: <span data-check="visit_count.today"><%= @today_count %></span></p>
+
+  <% if @receptions.empty? %>
+    <p data-testid="empty-reception">本日はまだ受付がありません。</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>No</th><th>受付時刻</th><th>患者</th><th>状態</th></tr>
+      </thead>
+      <tbody>
+        <% @receptions.each do |r| %>
+          <tr data-testid="row-reception">
+            <td><%= r.display_no %></td>
+            <td><%= r.received_at&.strftime("%H:%M") %></td>
+            <td><a href="/animals/<%= r.patient.karte_no %>"><%= r.patient.name_kanji %></a></td>
+            <td><%= r.status %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>

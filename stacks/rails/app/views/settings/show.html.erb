@@ -1,0 +1,8 @@
+<% content_for :title, "設定" %>
+<div data-testid="screen-settings">
+  <h1>病院設定</h1>
+  <p>病院名: <%= @clinic.name %></p>
+  <p>消費税率: <%= @clinic.tax_rate %></p>
+  <p>予約枠: <%= @clinic.reservation_slot_minutes %>分</p>
+  <p><a href="/">トップへ戻る</a></p>
+</div>

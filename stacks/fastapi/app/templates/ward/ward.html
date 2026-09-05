@@ -1,0 +1,37 @@
+{# 入院。`spec/screens.md` 領域4「18. 入院」。
+   ケア記録の追加フォームは次段階（APIは既に用意済み。実施者は必須で弾く）。
+   `data-check="care_record.performed_by"` は acceptance.md 検算7の目印。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}入院{% endblock %}
+
+{% block content %}
+<section {{ screen("ward") }}>
+  <h1>入院</h1>
+
+  {% if not hospitalizations %}
+  <p {{ empty("hospitalization") }}>入院中の患者はいません。</p>
+  {% endif %}
+  {% for h in hospitalizations %}
+  <article {{ row("hospitalization") }}>
+    <h2>患者ID {{ h.patient_id }}（処置室: {{ h.room }}）</h2>
+    <p>入院期間: {{ h.admitted_on }} 〜 {{ h.discharged_on if h.discharged_on else "（在室中）" }}</p>
+
+    <table class="care-records">
+      <thead><tr><th>日時</th><th>種別</th><th>内容</th><th>実施者</th></tr></thead>
+      <tbody>
+        {% for r in h.care_records %}
+        <tr>
+          <td>{{ r.recorded_at }}</td>
+          <td>{{ r.category }}</td>
+          <td>{{ r.content }}</td>
+          <td data-check="care_record.performed_by">{{ staff_by_id.get(r.performed_by_staff_id, "") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

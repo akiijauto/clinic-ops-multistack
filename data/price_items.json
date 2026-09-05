@@ -1,0 +1,962 @@
+[
+  {
+    "price_code": "PR0001",
+    "name": "初診料",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0002",
+    "name": "再診料",
+    "unit_price": 550,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0003",
+    "name": "時間外診察料",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0004",
+    "name": "往診料",
+    "unit_price": 5500,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0005",
+    "name": "健康診断料",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0006",
+    "name": "セカンドオピニオン料",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0007",
+    "name": "電話再診料",
+    "unit_price": 550,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0008",
+    "name": "死亡診断料",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0009",
+    "name": "紹介状作成料",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0010",
+    "name": "入院管理料(1日)",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0011",
+    "name": "往診交通費",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0012",
+    "name": "休日加算",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0013",
+    "name": "深夜加算",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0014",
+    "name": "往診時間延長料",
+    "unit_price": 2750,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0015",
+    "name": "診断書発行料",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "診察料",
+    "category": "診察料"
+  },
+  {
+    "price_code": "PR0016",
+    "name": "血液一般検査",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0017",
+    "name": "生化学検査(基本項目)",
+    "unit_price": 4400,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0018",
+    "name": "生化学検査(追加項目)",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0019",
+    "name": "尿検査",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0020",
+    "name": "糞便検査",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0021",
+    "name": "レントゲン検査(1部位)",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0022",
+    "name": "レントゲン検査(追加部位)",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0023",
+    "name": "超音波検査",
+    "unit_price": 4400,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0024",
+    "name": "心電図検査",
+    "unit_price": 2750,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0025",
+    "name": "血液凝固検査",
+    "unit_price": 3850,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0026",
+    "name": "アレルギー検査",
+    "unit_price": 6600,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0027",
+    "name": "ホルモン検査",
+    "unit_price": 5500,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0028",
+    "name": "感染症迅速検査",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0029",
+    "name": "細胞診検査",
+    "unit_price": 2750,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0030",
+    "name": "血液型検査",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "検査料",
+    "category": "検査料"
+  },
+  {
+    "price_code": "PR0031",
+    "name": "点滴処置(皮下)",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0032",
+    "name": "点滴処置(静脈内)",
+    "unit_price": 2750,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0033",
+    "name": "注射(筋肉内)",
+    "unit_price": 880,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0034",
+    "name": "注射(皮下)",
+    "unit_price": 770,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0035",
+    "name": "創傷処置",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0036",
+    "name": "耳道洗浄",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0037",
+    "name": "爪切り",
+    "unit_price": 550,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0038",
+    "name": "肛門腺絞り",
+    "unit_price": 550,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0039",
+    "name": "浣腸処置",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0040",
+    "name": "包帯交換",
+    "unit_price": 880,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0041",
+    "name": "導尿処置",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0042",
+    "name": "酸素吸入(30分)",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0043",
+    "name": "ネブライザー処置",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0044",
+    "name": "止血処置",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0045",
+    "name": "胃洗浄",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "処置料",
+    "category": "処置料"
+  },
+  {
+    "price_code": "PR0046",
+    "name": "避妊手術(犬・小型)",
+    "unit_price": 33000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0047",
+    "name": "避妊手術(犬・大型)",
+    "unit_price": 44000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0048",
+    "name": "避妊手術(猫)",
+    "unit_price": 27500,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0049",
+    "name": "去勢手術(犬)",
+    "unit_price": 22000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0050",
+    "name": "去勢手術(猫)",
+    "unit_price": 16500,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0051",
+    "name": "腫瘍摘出術(小)",
+    "unit_price": 27500,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0052",
+    "name": "腫瘍摘出術(大)",
+    "unit_price": 55000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0053",
+    "name": "歯石除去(全身麻酔下)",
+    "unit_price": 22000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0054",
+    "name": "抜歯処置",
+    "unit_price": 5500,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0055",
+    "name": "異物除去手術",
+    "unit_price": 66000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0056",
+    "name": "骨折整復術",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0057",
+    "name": "帝王切開術",
+    "unit_price": 55000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0058",
+    "name": "眼瞼形成術",
+    "unit_price": 33000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0059",
+    "name": "会陰ヘルニア整復術",
+    "unit_price": 77000,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0060",
+    "name": "麻酔管理料",
+    "unit_price": 5500,
+    "is_taxable": true,
+    "category_major": "手術料",
+    "category": "手術料"
+  },
+  {
+    "price_code": "PR0061",
+    "name": "混合ワクチン(5種)",
+    "unit_price": 6600,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0062",
+    "name": "混合ワクチン(8種)",
+    "unit_price": 8800,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0063",
+    "name": "狂犬病予防接種",
+    "unit_price": 3500,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0064",
+    "name": "フィラリア予防薬(1ヶ月分・小型)",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0065",
+    "name": "フィラリア予防薬(1ヶ月分・大型)",
+    "unit_price": 2750,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0066",
+    "name": "フィラリア抗原検査",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0067",
+    "name": "ノミ・マダニ予防薬(1本)",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0068",
+    "name": "駆虫薬(内部寄生虫)",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0069",
+    "name": "猫エイズ・白血病検査",
+    "unit_price": 3850,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0070",
+    "name": "マイクロチップ挿入",
+    "unit_price": 5500,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0071",
+    "name": "狂犬病登録手数料",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0072",
+    "name": "ワクチン抗体価検査",
+    "unit_price": 5500,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0073",
+    "name": "予防相談料",
+    "unit_price": 0,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0074",
+    "name": "フィラリア予防薬(1ヶ月分・中型)",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0075",
+    "name": "ノミ・マダニ予防薬(お試し1回分)",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "予防",
+    "category": "予防"
+  },
+  {
+    "price_code": "PR0076",
+    "name": "入院基本料(1日・小型)",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0077",
+    "name": "入院基本料(1日・大型)",
+    "unit_price": 4400,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0078",
+    "name": "集中管理入院料(1日)",
+    "unit_price": 6600,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0079",
+    "name": "酸素室使用料(1日)",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0080",
+    "name": "入院中投薬料(1日)",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0081",
+    "name": "入院中給餌料(1日)",
+    "unit_price": 550,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0082",
+    "name": "面会立会料",
+    "unit_price": 0,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0083",
+    "name": "入院中点滴管理料(1日)",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0084",
+    "name": "退院時サマリー作成料",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0085",
+    "name": "入院中モニタリング料(1日)",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0086",
+    "name": "隔離室使用料(1日)",
+    "unit_price": 4400,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0087",
+    "name": "入院中検温料(1回)",
+    "unit_price": 0,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0088",
+    "name": "入院延長管理料(1日)",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0089",
+    "name": "入院中包帯交換料",
+    "unit_price": 880,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0090",
+    "name": "入院準備料",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "入院料",
+    "category": "入院料"
+  },
+  {
+    "price_code": "PR0091",
+    "name": "療法食(缶・1個)",
+    "unit_price": 440,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0092",
+    "name": "療法食(ドライ・1袋)",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0093",
+    "name": "エリザベスカラー",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0094",
+    "name": "サプリメント(関節用)",
+    "unit_price": 3850,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0095",
+    "name": "サプリメント(皮膚用)",
+    "unit_price": 3300,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0096",
+    "name": "歯みがきガム(1箱)",
+    "unit_price": 880,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0097",
+    "name": "シャンプー(薬用)",
+    "unit_price": 2200,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0098",
+    "name": "爪切り用具",
+    "unit_price": 1650,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0099",
+    "name": "ペット用消臭剤",
+    "unit_price": 1320,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0100",
+    "name": "キャリーバッグ",
+    "unit_price": 4400,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0101",
+    "name": "介護用リハビリ用品",
+    "unit_price": null,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0102",
+    "name": "包帯・ガーゼセット",
+    "unit_price": 660,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0103",
+    "name": "療法食(猫用・缶)",
+    "unit_price": 440,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0104",
+    "name": "サプリメント(整腸用)",
+    "unit_price": 2750,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0105",
+    "name": "防水シート(1パック)",
+    "unit_price": 990,
+    "is_taxable": true,
+    "category_major": "物品販売",
+    "category": "物品販売"
+  },
+  {
+    "price_code": "PR0106",
+    "name": "診断書再発行料",
+    "unit_price": 1100,
+    "is_taxable": true,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0107",
+    "name": "カルテ開示手数料",
+    "unit_price": 2200,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0108",
+    "name": "ペット霊園紹介料",
+    "unit_price": 0,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0109",
+    "name": "火葬手配代行料",
+    "unit_price": null,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0110",
+    "name": "郵送料",
+    "unit_price": 500,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0111",
+    "name": "キャンセル料",
+    "unit_price": 1100,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0112",
+    "name": "駐車場利用料",
+    "unit_price": 0,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0113",
+    "name": "会員登録料",
+    "unit_price": 1100,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0114",
+    "name": "ペットシーツ(1枚)",
+    "unit_price": 33,
+    "is_taxable": true,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0115",
+    "name": "待合室コピー代",
+    "unit_price": 11,
+    "is_taxable": true,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0116",
+    "name": "ペット保険相談料",
+    "unit_price": 0,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0117",
+    "name": "預り金領収書再発行",
+    "unit_price": 0,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0118",
+    "name": "院内資料コピー代",
+    "unit_price": 22,
+    "is_taxable": true,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0119",
+    "name": "往診用消耗品費",
+    "unit_price": 880,
+    "is_taxable": true,
+    "category_major": "その他",
+    "category": "その他"
+  },
+  {
+    "price_code": "PR0120",
+    "name": "その他雑費",
+    "unit_price": 0,
+    "is_taxable": false,
+    "category_major": "その他",
+    "category": "その他"
+  }
+]

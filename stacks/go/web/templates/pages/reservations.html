@@ -1,0 +1,23 @@
+{{define "title"}}予約{{end}}
+{{define "content"}}
+<div data-testid="screen-reservations">
+  <h1>予約</h1>
+  <table>
+    <thead>
+      <tr><th>開始</th><th>終了</th><th>担当</th><th>処置室</th><th>状態</th></tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-reservation" data-reservation-id="{{.ID}}">
+        <td>{{.Starts}}</td>
+        <td>{{.Ends}}</td>
+        <td>{{.StaffID}}</td>
+        <td>{{.Room}}</td>
+        <td>{{.Status}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

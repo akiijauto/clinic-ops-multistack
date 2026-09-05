@@ -1,0 +1,29 @@
+<% content_for :title, "検査" %>
+<div data-testid="screen-exam">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の検査</h1>
+
+  <% @lab_tests.each do |t| %>
+    <h2><%= t.tested_on %>（<%= t.category %>）</h2>
+    <table>
+      <thead><tr><th>項目</th><th>基準値</th><th>結果</th><th>判定</th></tr></thead>
+      <tbody>
+        <% t.lab_test_items.each do |item| %>
+          <% j = item.judgement(@patient) %>
+          <% range = item.reference_range(@patient) %>
+          <tr data-testid="lab-item-<%= item.item_code %>">
+            <td><%= item.item_code %></td>
+            <td><%= range ? "#{range[:low]}〜#{range[:high]}" : "-" %></td>
+            <td data-testid="lab-item-<%= item.item_code %>-value">
+              <span data-check="lab_test_item.value"><%= item.value_num || item.value_text %></span>
+            </td>
+            <td data-testid="lab-item-<%= item.item_code %>-judgment" data-check-flag="<%= j %>">
+              <span data-check="lab_test_item.judgment"><%= { "high" => "H", "low" => "L" }[j] || "" %></span>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

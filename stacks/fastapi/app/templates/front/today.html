@@ -1,0 +1,43 @@
+{# 本日の患者（受付一覧）。`spec/screens.md` 領域1「1. 本日の患者」。
+   いまは表示のみ（区分タブ・上下送り・完了表示切替は次段階）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}本日の患者{% endblock %}
+
+{% block content %}
+<section {{ screen("today") }}>
+  <h1>本日の患者</h1>
+  <p>対象日の診察件数: <span data-check="visit_count.today">{{ visit_count_today }}</span></p>
+
+  {% if not receptions %}
+  <p {{ empty("reception") }}>本日の受付はまだありません。</p>
+  {% else %}
+  <table class="reception-list">
+    <thead>
+      <tr>
+        <th>受付順</th><th>カルテNo</th><th>飼主</th><th>動物名</th>
+        <th>受付日時</th><th>オーナー目的</th><th>診療目的</th><th>状況</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in receptions %}
+      {% set p = patient_by_id.get(r.patient_id) %}
+      <tr {{ row("reception") }}>
+        <td>{{ r.display_no }}</td>
+        <td>
+          {% if p %}<a href="/animals/{{ p.karte_no }}/karte">{{ p.karte_no }}</a>{% endif %}
+        </td>
+        <td>{{ owner_by_id.get(p.owner_id).name_kanji if p and owner_by_id.get(p.owner_id) else "" }}</td>
+        <td>{{ p.name_kanji if p else "" }}</td>
+        <td>{{ r.received_at }}</td>
+        <td>{{ r.owner_purpose }}</td>
+        <td>{{ r.medical_purpose }}</td>
+        <td>{{ r.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

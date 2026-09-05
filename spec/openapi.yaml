@@ -1,0 +1,3005 @@
+openapi: 3.1.0
+
+info:
+  title: "clinic-ops-multistack API"
+  version: "0.1.0"
+  description: |
+    動物病院の窓口業務システム。**この文書が唯一の正**（`spec/README.md`）。
+    5つの実装（Go / Rails / Laravel / FastAPI / Next.js）は、この契約に対して外から
+    同じ振る舞いをすること。中身（保存先・フレームワークの流儀）は自由。
+
+    ## 画面のルートとデータのルート
+
+    このシステムは基本的にサーバがHTMLを返す作り（Next.jsだけは事情が違うが、
+    URLと振る舞いは揃える）。契約は2種類に分かれる。
+
+    - **画面のルート**（`text/html` を返す）: 契約するのは **200が返ること** と
+      **`x-data-testids` に列挙した目印が存在すること** の2点だけ。HTMLの見た目・
+      マークアップの細部はスタックの流儀に任せる。
+    - **データのルート**（`application/json` を返す／受け取る。`/dm.csv` のみ
+      `text/csv`）: 値そのものを契約する。数値・件数・並び順の正しさは、
+      **必ずこちら側で検証できるようにする。**
+
+    ## HTMLフォーム送信時のエラーの出し方（重要）
+
+    画面（HTML）ルートは、入力エラーや保存失敗が起きても **200 OK でフォームを
+    再描画し**、打った値と一緒にエラー文言を `data-testid="error-banner"` に出す。
+    ステータスコードで判定するのは常にデータのルート側であり、画面のルート側は
+    「200 かつ error-banner の文言」で判定する。これは既存の実システムが
+    実際に踏んだ事故（保存を断ったのに確定済みの値で描き直され、打った値が消えた）
+    を避けるための形で、押し直しをさせないためにこの形にしてある。
+
+    **文言そのものは画面・データの両ルートで一字一句共通。**
+    下記「エラーの文言」の節にあるものを、状況に応じてそのまま使うこと。
+    独自の文言を作らないこと（`coordination/DECISIONS.md` 第4節）。
+
+    ## 日付・時刻
+
+    **すべて JST（日本標準時、UTC+09:00）で扱う。** 集計の月境界・日境界もJST。
+    `date-time` 型の値は `+09:00` オフセット付きのISO 8601で表す
+    （例: `2026-09-05T10:30:00+09:00`）。サーバの内部時刻がUTCであっても、
+    HTTPでやり取りする値はJSTに変換してから出し、受けるときもJSTとして解釈する。
+
+    ## 文字数の数え方
+
+    文字数の上限がある項目は、**Unicodeの文字数で数える。バイト数では数えない**
+    （日本語はUTF-8で3倍になるため）。個別の上限値は `spec/acceptance.md` に従う。
+
+    ## data-testid の命名規則
+
+    共通テストがHTMLの中身を確認できるように、**目印は必ず `data-testid` 属性に置く**。
+
+    | 種類 | 形 | 例 |
+    | --- | --- | --- |
+    | 画面全体のコンテナ | `screen-<画面キー>` | `screen-today` |
+    | 一覧の行（繰り返し） | `row-<資源名>` | `row-reception` |
+    | 一覧が0件のときの表示 | `empty-<資源名>` | `empty-reservation` |
+    | 保存・実行に成功したときの通知 | `success-banner` | 同左 |
+    | 保存・実行に失敗したときの通知（エラー文言を内包） | `error-banner` | 同左 |
+    | 押しても保存されない・常に灰色のボタン（3つだけ） | `disabled-action-<todoキー>` | `disabled-action-temp_save` |
+    | 個別の数値（検算対象） | `<画面キー>-<項目名>` | `billing-total` / `billing-excluded-count` |
+    | 検査項目1行ぶんの値・判定 | `lab-item-<item_code>-value` / `lab-item-<item_code>-judgment` | `lab-item-wbc-judgment` |
+
+    各画面のルート定義に `x-data-testids` として、その画面が最低限持つべき目印の
+    一覧を書いた。**これが無いテストは書けないので、実装側が書き足す分には構わないが、
+    ここに列挙したものは必ず存在すること。**
+
+    ## エラーの文言（一字一句、これを使う）
+
+    | 状況 | HTTPステータス（データのルート） | `error.code` | 文言 |
+    | --- | --- | --- | --- |
+    | 入力がJSONとして壊れている（構文エラー） | 400 | `invalid_json` | 「リクエストの本文がJSONとして壊れています。書き方を確認してください。」 |
+    | 入力の形が違う（項目が足りない・型が違う） | 422 | `invalid_input` | 「入力の形式が正しくありません。必須の項目や値の型を確認してください。」 |
+    | 見つからない | 404 | `not_found` | 「指定されたデータが見つかりません。」 |
+    | 権限がない | 403 | `forbidden` | 「この操作を行う権限がありません。」 |
+    | 保存に失敗した | 500 | `save_failed` | 「保存に失敗しました。時間をおいてもう一度お試しください。」 |
+    | 予約が重なっている（業務ルール違反。上記5つに次いで固定する） | 409 | `reservation_conflict` | 「指定した時間帯は、担当または処置室の予定と重なっています。」 |
+
+    **「壊れている」（400・`invalid_json`）と「形が違う」（422・`invalid_input`）を
+    混同しないこと。** 送り手が直すべき場所が違う——前者は本文そのものがJSONとして
+    読めない（構文）、後者はJSONとしては読めるが項目や型が契約と合わない（意味）。
+    ステータスコードと文言の両方で区別できるようにしてある
+    （2026-09-05、別プロジェクトで同じ設計をして効果を確認済み）。
+
+    「権限がない」は、この計画では**ログインを作らない**
+    （`coordination/DECISIONS.md` 第4節「認証はこの計画では扱わない」）ため、
+    未ログインを理由に発生することは無い。発生しうるのは、担当の役割
+    （`Staff.role`）に基づく制限など、`screens.md` / `acceptance.md` が
+    個別に定める業務ルールに限る。ここで決めるのは**そのときの文言と
+    ステータスコードだけ**であり、いつ発生させるかはここでは決めない。
+
+    `422 invalid_input` は、`error.details` にフィールド単位の指摘を含めてよい
+    （必須。空配列は不可、最低1件）。
+
+    ## この契約に無いもの（`model.md` を見る）
+
+    レセプト（保険請求）・監査ログ・マスタの編集（一覧と参照のみ）・
+    紙カルテPDF取込・分院・書きかけカルテの自動保存（`/karte/draft` 系）は、
+    この企画では意図して作らない。ルートを用意しない。
+
+  x-testid-convention: |
+    上の「data-testid の命名規則」節を参照。
+
+servers:
+  - url: "http://localhost:8000"
+    description: "各実装が自分のポートで待ち受ける。実際のポート番号は各スタックのREADMEに従う。"
+
+tags:
+  - name: "screens-top"
+    description: "トップ／このシステムについて"
+  - name: "screens-reception"
+    description: "受付・患者（本日の患者・新規・顧客・検索・来院履歴・削除・折りたたみ表示）"
+  - name: "screens-clinical"
+    description: "診療（カルテ・検査・投薬・予防・書類）"
+  - name: "screens-billing"
+    description: "会計・売上（会計・会計履歴・DM・売上集計）"
+  - name: "screens-ops"
+    description: "入院・予約・業務（入院・予約・ToDo・スタッフ）"
+  - name: "screens-settings"
+    description: "設定（設定・機能設定・取込・マスタ）"
+  - name: "api-reception"
+    description: "受付・患者のデータ"
+  - name: "api-clinical"
+    description: "診療のデータ"
+  - name: "api-billing"
+    description: "会計・売上のデータ"
+  - name: "api-reservation"
+    description: "予約のデータ"
+  - name: "api-ward"
+    description: "入院のデータ"
+  - name: "api-staff"
+    description: "スタッフのデータ"
+  - name: "api-masters"
+    description: "固定データ（マスタ）"
+  - name: "api-misc"
+    description: "その他のユーティリティ"
+
+paths:
+
+  # ============================================================
+  # 画面のルート — 1 トップ／このシステムについて
+  # ============================================================
+
+  /:
+    get:
+      operationId: "screen_top"
+      tags: ["screens-top"]
+      summary: "トップ"
+      description: "入口。何も選ばずに開いたときの着地点。"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-top"]
+
+  /about:
+    get:
+      operationId: "screen_about"
+      tags: ["screens-top"]
+      summary: "このシステムについて"
+      description: "この企画で何ができ、何を意図して作らなかったかを説明する画面。DBに繋がらなくても開けること。"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-about"]
+
+  # ============================================================
+  # 画面のルート — 2 受付・患者
+  # ============================================================
+
+  /today:
+    get:
+      operationId: "screen_today"
+      tags: ["screens-reception"]
+      summary: "本日の患者（一覧）"
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema: { type: string }
+          description: "受付区分タブ。省略時はマスタの1つ目。マスタに無い区分が来たら空一覧を出さずに1つ目へ戻す。"
+        - name: hide
+          in: query
+          required: false
+          schema: { type: string, enum: ["1"] }
+          description: "'1' のとき、完了（status=done）を一覧から隠す。既定は表示。"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-today", "row-reception", "empty-reception"]
+
+  /animals/new:
+    get:
+      operationId: "screen_new_animal_form"
+      tags: ["screens-reception"]
+      summary: "新規登録（画面）"
+      parameters:
+        - name: owner
+          in: query
+          required: false
+          schema: { type: string }
+          description: "既存飼主の owner_no。付けるとその飼主に動物を1頭足す形になる。付けなければ飼主と1頭目をまとめて作る。"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-new-animal"]
+    post:
+      operationId: "screen_create_animal"
+      tags: ["screens-reception"]
+      summary: "新規登録（保存）"
+      parameters:
+        - name: owner
+          in: query
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/PatientWithOwnerForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。失敗時はフォームを再描画し error-banner に文言を出す。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-new-animal", "success-banner", "error-banner"]
+
+  /animals/{karte_no}:
+    get:
+      operationId: "screen_animal_detail"
+      tags: ["screens-reception"]
+      summary: "顧客（飼主・動物の詳細）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-animal-detail"]
+
+  /animals/{karte_no}/delete:
+    get:
+      operationId: "screen_delete_animal_confirm"
+      tags: ["screens-reception"]
+      summary: "削除（確認画面）"
+      description: "飼主・動物の論理削除の確認画面。物理削除は行わない（`model.md` 「消さずに印を付ける」）。"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-delete-confirm"]
+    post:
+      operationId: "screen_delete_animal"
+      tags: ["screens-reception"]
+      summary: "削除（実行）"
+      description: |
+        Patient.deleted_at に日時を入れる（論理削除）。この動物がその飼主の最後の1頭なら
+        Owner.deleted_at にも日時を入れる。**物理削除はしない。**
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200":
+          description: "削除できた場合も、権限が無く断った場合も200で結果を文で返す。"
+          content:
+            text/html:
+              schema: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-delete-confirm", "success-banner", "error-banner"]
+
+  /search:
+    get:
+      operationId: "screen_search"
+      tags: ["screens-reception"]
+      summary: "検索"
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+          description: "飼主名・カナ・カルテNo・電話番号・診療の中身を横断する1つの検索語。"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-search", "row-patient", "row-visit", "empty-search"]
+
+  /animals/{karte_no}/history:
+    get:
+      operationId: "screen_animal_history"
+      tags: ["screens-reception"]
+      summary: "来院履歴"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-history", "row-visit", "empty-history"]
+
+  /folded/{key}:
+    get:
+      operationId: "screen_folded"
+      tags: ["screens-reception"]
+      summary: "折りたたみ表示（この企画で意図して作らなかった機能の説明）"
+      description: |
+        `model.md` の「落としたもの」に対応する画面。`key` は固定の語彙で、
+        実際に使う値の一覧は `spec/screens.md` / `spec/model.md` を正とする
+        （契約が凍結される前にこの2文書が変わりうるため、ここでは enum に
+        固定しない）。未知の `key` は404。
+      parameters:
+        - $ref: "#/components/parameters/FoldedKey"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/html:
+              schema: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-folded"]
+
+  # ============================================================
+  # 画面のルート — 3 診療
+  # ============================================================
+
+  /animals/{karte_no}/karte:
+    get:
+      operationId: "screen_karte"
+      tags: ["screens-clinical"]
+      summary: "カルテ"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte", "row-visit"]
+    post:
+      operationId: "screen_save_karte"
+      tags: ["screens-clinical"]
+      summary: "カルテ保存（診察本体＋経過記録）"
+      description: |
+        1回の保存で Visit 本体と、複数行の ProgressNote をまとめて保存する。
+        **体温などの数値は行ごとに独立して保存すること。**
+        実システムで「全患者に同じ体温が印字される」不具合が実際に出ている
+        （`model.md` 7章）。保存を断ったときは、打った値をそのままフォームへ返す
+        （確定済みの値で上書きしない）。
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/VisitForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。失敗時はフォームを再描画し error-banner に文言を出す。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-karte", "success-banner", "error-banner"]
+
+  /animals/{karte_no}/karte/new:
+    get:
+      operationId: "screen_karte_new"
+      tags: ["screens-clinical"]
+      summary: "カルテ（新規診察の入力フォーム）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte"]
+
+  /animals/{karte_no}/karte/copy_prev:
+    get:
+      operationId: "screen_karte_copy_prev"
+      tags: ["screens-clinical"]
+      summary: "前回コピー"
+      description: |
+        直前の診察の内容を新規診察フォームへ写して開く。**直前の診察が無いときだけ
+        灰色でよい**（欠落ではなく正しい状態。`docs` の実装分担にある区別と同じ）。
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte"]
+
+  /animals/{karte_no}/karte/cancel:
+    post:
+      operationId: "screen_karte_cancel"
+      tags: ["screens-clinical"]
+      summary: "取消（書きかけの入力を捨てる）"
+      description: "**捨てる書きかけが無いときだけ灰色でよい**（前回コピーと同じ理由）。"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-karte", "success-banner"]
+
+  /animals/{karte_no}/karte/print:
+    get:
+      operationId: "screen_karte_print"
+      tags: ["screens-clinical"]
+      summary: "カルテ印刷（この動物の全診察分）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte-print"]
+
+  /animals/{karte_no}/karte/{visit_id}/print:
+    get:
+      operationId: "screen_visit_print"
+      tags: ["screens-clinical"]
+      summary: "カルテ印刷（1診察分）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/VisitId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte-print"]
+
+  /animals/{karte_no}/karte/{visit_id}/delete:
+    post:
+      operationId: "screen_visit_delete"
+      tags: ["screens-clinical"]
+      summary: "診察の削除（論理削除）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/VisitId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte", "success-banner", "error-banner"]
+
+  /animals/{karte_no}/karte/{visit_id}/restore:
+    post:
+      operationId: "screen_visit_restore"
+      tags: ["screens-clinical"]
+      summary: "診察の削除の取り消し（復元）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/VisitId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-karte", "success-banner"]
+
+  /animals/{karte_no}/exam:
+    get:
+      operationId: "screen_exam"
+      tags: ["screens-clinical"]
+      summary: "検査"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-exam", "lab-item-value", "lab-item-judgment"]
+    post:
+      operationId: "screen_save_exam"
+      tags: ["screens-clinical"]
+      summary: "検査保存"
+      description: |
+        基準値は `data/lab_items.json`（固定データ）から引く。**保存はしない。**
+        基準の外にある値は、判定欄と色の両方で分かるようにすること
+        （判定欄＝`lab-item-<item_code>-judgment`、色は `out_of_range` を見て
+        各スタックが決めてよい）。
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/LabTestForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-exam", "success-banner", "error-banner"]
+
+  /animals/{karte_no}/dosing/{kind_id}:
+    get:
+      operationId: "screen_dosing"
+      tags: ["screens-clinical"]
+      summary: "投薬（月ごとの記録）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/DosingKindId"
+        - name: fiscal_year
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-dosing"]
+    post:
+      operationId: "screen_save_dosing"
+      tags: ["screens-clinical"]
+      summary: "投薬の記録を保存（m01〜m12）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/DosingKindId"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/DosingForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-dosing", "success-banner", "error-banner"]
+
+  /animals/{karte_no}/prevention/{kind_id}:
+    get:
+      operationId: "screen_prevention"
+      tags: ["screens-clinical"]
+      summary: "予防（実施記録）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/PreventionKindId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-prevention", "row-prevention", "empty-prevention"]
+    post:
+      operationId: "screen_save_prevention"
+      tags: ["screens-clinical"]
+      summary: "予防の実施記録を1件追加"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/PreventionKindId"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/PreventionForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-prevention", "success-banner", "error-banner"]
+
+  /animals/{karte_no}/papers:
+    get:
+      operationId: "screen_papers"
+      tags: ["screens-clinical"]
+      summary: "書類（この動物に紐づく文書の一覧）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-papers", "row-paper", "empty-papers"]
+
+  /papers/{paper_id}:
+    get:
+      operationId: "screen_paper_detail"
+      tags: ["screens-clinical"]
+      summary: "書類（1件の詳細）"
+      parameters:
+        - $ref: "#/components/parameters/PaperId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-paper-detail"]
+
+  /papers/{paper_id}/remove:
+    post:
+      operationId: "screen_paper_remove"
+      tags: ["screens-clinical"]
+      summary: "書類の削除"
+      parameters:
+        - $ref: "#/components/parameters/PaperId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-papers", "success-banner"]
+
+  /papers/no-paper:
+    get:
+      operationId: "screen_papers_no_paper"
+      tags: ["screens-clinical"]
+      summary: "書類（対象となる文書が無いことの案内）"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-papers-no-paper"]
+
+  # ============================================================
+  # 画面のルート — 4 会計・売上
+  # ============================================================
+
+  /animals/{karte_no}/accounting:
+    get:
+      operationId: "screen_accounting"
+      tags: ["screens-billing"]
+      summary: "会計"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - name: slip
+          in: query
+          required: false
+          schema: { type: integer }
+          description: "過去の伝票（billing.id）を指定して開き直す。指定が無ければ当日の draft を開くか新規に作る。"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-accounting", "row-billing-detail", "billing-total", "billing-excluded-count"]
+    post:
+      operationId: "screen_save_accounting"
+      tags: ["screens-billing"]
+      summary: "会計の保存（明細の追加・確定・支払い記録）"
+      description: |
+        `unit_price` が未設定の明細行を0円として合計に含めてはならない。
+        **合計は必ず出し、未算入の行数を併記する**（`billing-excluded-count`）。
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/BillingForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-accounting", "billing-total", "billing-excluded-count", "success-banner", "error-banner"]
+
+  /animals/{karte_no}/accounting/history:
+    get:
+      operationId: "screen_accounting_history"
+      tags: ["screens-billing"]
+      summary: "会計履歴"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - name: scope
+          in: query
+          required: false
+          schema: { type: string, enum: ["patient", "owner", "all"] }
+          description: "履歴の範囲。既定は patient（この動物だけ）。"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-accounting-history", "row-billing", "empty-accounting-history"]
+
+  /dm:
+    get:
+      operationId: "screen_dm"
+      tags: ["screens-billing"]
+      summary: "DM管理（区分検索・一覧）"
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: field
+          in: query
+          required: false
+          schema: { type: string, enum: ["next_due_date", "performed_date"] }
+        - name: span
+          in: query
+          required: false
+          schema: { type: string }
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-dm", "row-dm", "empty-dm"]
+
+  /dm.csv:
+    get:
+      operationId: "screen_dm_csv"
+      tags: ["screens-billing"]
+      summary: "DM一覧のCSV書き出し"
+      description: "**画面（`/dm`）と同じ絞り込み・同じ並びであること。** クエリパラメータは `/dm` と共通。"
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: field
+          in: query
+          required: false
+          schema: { type: string }
+        - name: span
+          in: query
+          required: false
+          schema: { type: string }
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/csv:
+              schema: { type: string }
+
+  /sales:
+    get:
+      operationId: "screen_sales"
+      tags: ["screens-billing"]
+      summary: "売上集計（新）"
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: group_by
+          in: query
+          required: false
+          schema: { type: string, enum: ["day", "month", "category"] }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-sales", "sales-total", "sales-excluded-count", "row-sales"]
+
+  # ============================================================
+  # 画面のルート — 5 入院・予約・業務
+  # ============================================================
+
+  /animals/{karte_no}/ward:
+    get:
+      operationId: "screen_animal_ward"
+      tags: ["screens-ops"]
+      summary: "入院（この動物の入院記録）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-ward", "row-care-record", "empty-care-record"]
+    post:
+      operationId: "screen_animal_ward_admit"
+      tags: ["screens-ops"]
+      summary: "入院の開始（入院登録）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/HospitalizationForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-ward", "success-banner", "error-banner"]
+
+  /ward:
+    get:
+      operationId: "screen_ward_today"
+      tags: ["screens-ops"]
+      summary: "入院（本日の入院患者一覧）"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-ward-day", "row-hospitalization", "empty-hospitalization"]
+
+  /ward/day:
+    get:
+      operationId: "screen_ward_day"
+      tags: ["screens-ops"]
+      summary: "入院（指定日の入院患者一覧）"
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: "JSTの日付。"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-ward-day", "row-hospitalization", "empty-hospitalization"]
+
+  /reservations:
+    get:
+      operationId: "screen_reservations"
+      tags: ["screens-ops"]
+      summary: "予約（新）一覧／カレンダー"
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: staff_id
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: room
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-reservations", "row-reservation", "empty-reservation"]
+    post:
+      operationId: "screen_create_reservation"
+      tags: ["screens-ops"]
+      summary: "予約（新）登録"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/ReservationForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。重複がある場合も error-banner に `reservation_conflict` の文言を出す（HTMLはステータスコードで判定しない）。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-reservations", "success-banner", "error-banner"]
+
+  /reservations/new:
+    get:
+      operationId: "screen_reservation_new_form"
+      tags: ["screens-ops"]
+      summary: "予約（新）登録フォーム"
+      parameters:
+        - name: karte_no
+          in: query
+          required: false
+          schema: { type: string }
+          description: "動物を先に選んでいる場合の下書き。"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-reservations"]
+
+  /reservations/{id}:
+    get:
+      operationId: "screen_reservation_detail"
+      tags: ["screens-ops"]
+      summary: "予約（新）詳細／変更フォーム"
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-reservations"]
+    post:
+      operationId: "screen_update_reservation"
+      tags: ["screens-ops"]
+      summary: "予約（新）変更"
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/ReservationForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-reservations", "success-banner", "error-banner"]
+
+  /reservations/{id}/cancel:
+    post:
+      operationId: "screen_cancel_reservation"
+      tags: ["screens-ops"]
+      summary: "予約（新）取消"
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-reservations", "success-banner"]
+
+  /todo/{key}:
+    get:
+      operationId: "screen_todo"
+      tags: ["screens-ops"]
+      summary: "ToDo（作らないと決めたボタンの理由）"
+      description: |
+        押しても保存されない灰色のボタン3つ（一時保存／完了全削除／完了削除）の
+        行き先。**押しても何も起きないボタンにはしない。**押すと決めた理由が読める。
+        `key` の語彙は `spec/screens.md` / `spec/acceptance.md` を正とする
+        （ここでは enum に固定しない）。未知の `key` は404。
+      parameters:
+        - $ref: "#/components/parameters/TodoKey"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/html:
+              schema: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-todo"]
+
+  /staff:
+    get:
+      operationId: "screen_staff"
+      tags: ["screens-ops"]
+      summary: "スタッフ（一覧）"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-staff", "row-staff"]
+
+  # ============================================================
+  # 画面のルート — 6 設定
+  # ============================================================
+
+  /settings:
+    get:
+      operationId: "screen_settings"
+      tags: ["screens-settings"]
+      summary: "設定（病院設定）"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-settings"]
+    post:
+      operationId: "screen_save_settings"
+      tags: ["screens-settings"]
+      summary: "病院設定の保存"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/ClinicForm" }
+      responses:
+        "200":
+          description: "保存の成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-settings", "success-banner", "error-banner"]
+
+  /settings/features:
+    get:
+      operationId: "screen_settings_features"
+      tags: ["screens-settings"]
+      summary: "機能設定（作らないと決めた機能・畳んだ機能の一覧）"
+      description: |
+        `ClinicFeature` はこの企画では持たない（`model.md`「落としたもの」）。
+        この画面は**参照専用**で、`/todo/{key}` と `/folded/{key}` へのリンク一覧を出す。
+        編集フォームは無い。
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-settings-features", "row-feature"]
+
+  /settings/import:
+    get:
+      operationId: "screen_settings_import"
+      tags: ["screens-settings"]
+      summary: "取込（画面）"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-settings-import"]
+    post:
+      operationId: "screen_settings_import_survey"
+      tags: ["screens-settings"]
+      summary: "取込（列名と件数だけを読む。保存はしない）"
+      description: "CSVファイルを1つ受け取り、列名と件数だけを読んで結果を返す。**ファイルの中身は保存しない。**"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: ["file"]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: "読み取りの成否によらず200。"
+          content:
+            text/html:
+              schema: { type: string }
+      x-data-testids: ["screen-settings-import", "success-banner", "error-banner"]
+
+  /settings/master:
+    get:
+      operationId: "screen_settings_master_default"
+      tags: ["screens-settings"]
+      summary: "マスタ（既定のカテゴリ）"
+      description: "**一覧と参照のみ。編集フォームは無い**（`spec/README.md`）。"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+      x-data-testids: ["screen-settings-master", "row-master"]
+
+  /settings/master/{key}:
+    get:
+      operationId: "screen_settings_master"
+      tags: ["screens-settings"]
+      summary: "マスタ（カテゴリ指定）"
+      description: "**一覧と参照のみ。編集フォームは無い。** `key` の語彙は `data/masters.json` 等の固定データを正とする。"
+      parameters:
+        - $ref: "#/components/parameters/MasterKey"
+      responses:
+        "200": { $ref: "#/components/responses/HtmlOk" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-data-testids: ["screen-settings-master", "row-master"]
+
+  # ============================================================
+  # データのルート — 受付・患者
+  # ============================================================
+
+  /healthz:
+    get:
+      operationId: "api_healthz"
+      tags: ["api-misc"]
+      summary: "死活監視"
+      description: "認証を素通しする唯一のルート。落ちているのか閉じているのかを外から区別するため。"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["status"]
+                properties:
+                  status: { type: string, enum: ["ok"] }
+
+  /postal:
+    get:
+      operationId: "api_postal_lookup"
+      tags: ["api-misc"]
+      summary: "郵便番号から住所候補を引く"
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: "OK。候補が無いときは `candidates` が空配列で、`reason` に理由が入る（空文字はありうる）。"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["candidates", "reason"]
+                properties:
+                  candidates:
+                    type: array
+                    items:
+                      type: object
+                      required: ["postal_code", "address1", "address2"]
+                      properties:
+                        postal_code: { type: string }
+                        address1: { type: string }
+                        address2: { type: string }
+                  reason: { type: ["string", "null"] }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/patients:
+    get:
+      operationId: "api_list_patients"
+      tags: ["api-reception"]
+      summary: "動物の検索・一覧"
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/IncludeDeleted"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PatientList" }
+
+  /api/patients/{karte_no}:
+    get:
+      operationId: "api_get_patient"
+      tags: ["api-reception"]
+      summary: "動物の詳細（飼主を含む）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PatientWithOwner" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_patient"
+      tags: ["api-reception"]
+      summary: "動物の情報を更新"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Patient" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Patient" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/patients/{karte_no}/delete:
+    post:
+      operationId: "api_delete_patient"
+      tags: ["api-reception"]
+      summary: "動物の論理削除"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200":
+          description: "OK。`deleted_at` が入った状態の Patient を返す。"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Patient" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/patients/{karte_no}/restore:
+    post:
+      operationId: "api_restore_patient"
+      tags: ["api-reception"]
+      summary: "動物の論理削除の取り消し"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Patient" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/owners/{owner_no}:
+    get:
+      operationId: "api_get_owner"
+      tags: ["api-reception"]
+      summary: "飼主の詳細"
+      parameters:
+        - $ref: "#/components/parameters/OwnerNo"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Owner" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_owner"
+      tags: ["api-reception"]
+      summary: "飼主の情報を更新"
+      parameters:
+        - $ref: "#/components/parameters/OwnerNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Owner" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Owner" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/owners/{owner_no}/delete:
+    post:
+      operationId: "api_delete_owner"
+      tags: ["api-reception"]
+      summary: "飼主の論理削除"
+      parameters:
+        - $ref: "#/components/parameters/OwnerNo"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Owner" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/receptions:
+    get:
+      operationId: "api_list_receptions"
+      tags: ["api-reception"]
+      summary: "本日の患者（受付）一覧"
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema: { type: string }
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: "省略時はJSTの本日。"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReceptionList" }
+    post:
+      operationId: "api_create_reception"
+      tags: ["api-reception"]
+      summary: "受付登録"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Reception" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reception" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/patients/{karte_no}/receptions:
+    post:
+      operationId: "api_create_patient_reception"
+      tags: ["api-reception"]
+      summary: "この動物を本日の受付に登録"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Reception" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reception" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/receptions/{id}:
+    get:
+      operationId: "api_get_reception"
+      tags: ["api-reception"]
+      summary: "受付1件の詳細"
+      parameters:
+        - $ref: "#/components/parameters/ReceptionId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reception" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_reception"
+      tags: ["api-reception"]
+      summary: "受付の状態・表示順・担当を更新（上下送り含む）"
+      parameters:
+        - $ref: "#/components/parameters/ReceptionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Reception" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reception" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ============================================================
+  # データのルート — 診療
+  # ============================================================
+
+  /api/patients/{karte_no}/visits:
+    get:
+      operationId: "api_list_visits"
+      tags: ["api-clinical"]
+      summary: "この動物の診察一覧（来院履歴）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/IncludeDeleted"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VisitList" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_create_visit"
+      tags: ["api-clinical"]
+      summary: "診察（カルテ）を保存する。経過記録も同時に受け取る"
+      description: "経過記録は `progress_notes` に配列で渡す。行ごとに独立した値として保存すること（体温の使い回し禁止）。"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisitCreate" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/visits/{visit_id}:
+    get:
+      operationId: "api_get_visit"
+      tags: ["api-clinical"]
+      summary: "診察1件の詳細（経過記録を含む）"
+      parameters:
+        - $ref: "#/components/parameters/VisitId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_visit"
+      tags: ["api-clinical"]
+      summary: "診察・経過記録の更新"
+      parameters:
+        - $ref: "#/components/parameters/VisitId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisitCreate" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/visits/{visit_id}/delete:
+    post:
+      operationId: "api_delete_visit"
+      tags: ["api-clinical"]
+      summary: "診察の論理削除"
+      parameters:
+        - $ref: "#/components/parameters/VisitId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/visits/{visit_id}/restore:
+    post:
+      operationId: "api_restore_visit"
+      tags: ["api-clinical"]
+      summary: "診察の論理削除の取り消し"
+      parameters:
+        - $ref: "#/components/parameters/VisitId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/patients/{karte_no}/lab-tests:
+    get:
+      operationId: "api_list_lab_tests"
+      tags: ["api-clinical"]
+      summary: "この動物の検査一覧"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LabTestList" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_create_lab_test"
+      tags: ["api-clinical"]
+      summary: "検査結果を保存する"
+      description: |
+        基準値（`reference_low` / `reference_high`）と `judgment` / `out_of_range` は
+        `data/lab_items.json`（固定データ）と患者の種別・性別から**サーバが計算して
+        返す**。保存するのは実測値（`value_num` / `value_text`）だけで、基準値は
+        保存しない。
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LabTestCreate" }
+      responses:
+        "201":
+          description: "作成できた。返る `items` には判定・基準値が付く。"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LabTest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/lab-tests/{id}:
+    get:
+      operationId: "api_get_lab_test"
+      tags: ["api-clinical"]
+      summary: "検査1件の詳細"
+      parameters:
+        - $ref: "#/components/parameters/LabTestId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LabTest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/patients/{karte_no}/dosing/{kind_id}:
+    get:
+      operationId: "api_get_dosing"
+      tags: ["api-clinical"]
+      summary: "投薬の年間記録（m01〜m12）を取得"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/DosingKindId"
+        - name: fiscal_year
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dosing" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_dosing"
+      tags: ["api-clinical"]
+      summary: "投薬の月次記録を更新"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/DosingKindId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Dosing" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dosing" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/patients/{karte_no}/prevention/{kind_id}:
+    get:
+      operationId: "api_list_prevention"
+      tags: ["api-clinical"]
+      summary: "予防の実施記録一覧"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/PreventionKindId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PreventionList" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_create_prevention"
+      tags: ["api-clinical"]
+      summary: "予防の実施記録を1件追加"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/PreventionKindId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Prevention" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Prevention" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/patients/{karte_no}/papers:
+    get:
+      operationId: "api_list_papers"
+      tags: ["api-clinical"]
+      summary: "この動物に紐づく文書の一覧"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaperList" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_create_paper"
+      tags: ["api-clinical"]
+      summary: "文書を1件追加"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Paper" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Paper" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/papers/{paper_id}:
+    get:
+      operationId: "api_get_paper"
+      tags: ["api-clinical"]
+      summary: "文書1件の詳細"
+      parameters:
+        - $ref: "#/components/parameters/PaperId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Paper" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: "api_delete_paper"
+      tags: ["api-clinical"]
+      summary: "文書の削除"
+      parameters:
+        - $ref: "#/components/parameters/PaperId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Paper" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ============================================================
+  # データのルート — 会計・売上
+  # ============================================================
+
+  /api/patients/{karte_no}/billings:
+    get:
+      operationId: "api_list_patient_billings"
+      tags: ["api-billing"]
+      summary: "この動物の会計履歴"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingList" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_create_billing"
+      tags: ["api-billing"]
+      summary: "会計伝票を作成（draft）"
+      description: |
+        `unit_price` が `null` の明細行は合計に含めない。`total` は算入した行だけで
+        計算し、`excluded_detail_count` に未算入の行数を必ず入れる
+        （0件でも省略しない）。
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BillingCreate" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Billing" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/owners/{owner_no}/billings:
+    get:
+      operationId: "api_list_owner_billings"
+      tags: ["api-billing"]
+      summary: "この飼主の会計履歴（複数の動物をまたぐ）"
+      parameters:
+        - $ref: "#/components/parameters/OwnerNo"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingList" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/billings:
+    get:
+      operationId: "api_list_billings"
+      tags: ["api-billing"]
+      summary: "全履歴（病院全体の会計履歴）"
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingList" }
+
+  /api/billings/{id}:
+    get:
+      operationId: "api_get_billing"
+      tags: ["api-billing"]
+      summary: "会計伝票1件の詳細（明細・合計・未算入件数を含む）"
+      parameters:
+        - $ref: "#/components/parameters/BillingId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Billing" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_billing"
+      tags: ["api-billing"]
+      summary: "会計伝票の更新（明細の追加・確定・支払い記録）"
+      parameters:
+        - $ref: "#/components/parameters/BillingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BillingCreate" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Billing" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /api/dm:
+    get:
+      operationId: "api_list_dm"
+      tags: ["api-billing"]
+      summary: "DM対象の一覧（`/dm` 画面・`/dm.csv` と同じ絞り込み）"
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: field
+          in: query
+          required: false
+          schema: { type: string, enum: ["next_due_date", "performed_date"] }
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["items", "total"]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DmRow" }
+                  total: { type: integer, minimum: 0 }
+
+  /api/sales/summary:
+    get:
+      operationId: "api_sales_summary"
+      tags: ["api-billing"]
+      summary: "売上集計"
+      description: |
+        `Billing.status = confirmed` の伝票だけを対象にする。日・月の境界は
+        **JST**。`unit_price` が未設定の明細行は集計から除外し、
+        `excluded_detail_count_total` に総数を入れる。
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: group_by
+          in: query
+          required: false
+          schema: { type: string, enum: ["day", "month", "category"], default: "day" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesSummary" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ============================================================
+  # データのルート — 入院・予約
+  # ============================================================
+
+  /api/ward:
+    get:
+      operationId: "api_ward_day"
+      tags: ["api-ward"]
+      summary: "指定日（既定はJSTの本日）に入院中の患者一覧"
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["items", "total"]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Hospitalization" }
+                  total: { type: integer, minimum: 0 }
+
+  /api/patients/{karte_no}/hospitalizations:
+    get:
+      operationId: "api_list_hospitalizations"
+      tags: ["api-ward"]
+      summary: "この動物の入院記録一覧"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["items", "total"]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Hospitalization" }
+                  total: { type: integer, minimum: 0 }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_admit"
+      tags: ["api-ward"]
+      summary: "入院の開始（入院登録）"
+      parameters:
+        - $ref: "#/components/parameters/KarteNo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HospitalizationCreate" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Hospitalization" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/hospitalizations/{id}:
+    get:
+      operationId: "api_get_hospitalization"
+      tags: ["api-ward"]
+      summary: "入院1件の詳細（実施記録を含む）"
+      parameters:
+        - $ref: "#/components/parameters/HospitalizationId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Hospitalization" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_hospitalization"
+      tags: ["api-ward"]
+      summary: "入院情報の更新（退院日・処置室の変更を含む）"
+      parameters:
+        - $ref: "#/components/parameters/HospitalizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HospitalizationCreate" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Hospitalization" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/hospitalizations/{id}/care-records:
+    get:
+      operationId: "api_list_care_records"
+      tags: ["api-ward"]
+      summary: "実施記録の一覧（投薬・給餌・計測）"
+      parameters:
+        - $ref: "#/components/parameters/HospitalizationId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["items", "total"]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CareRecord" }
+                  total: { type: integer, minimum: 0 }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: "api_create_care_record"
+      tags: ["api-ward"]
+      summary: "実施記録を1件追加"
+      description: |
+        **`staff_id`（実施者）は必須。** 空の記録行は作らない
+        （`model.md` 15章「実施者が空の記録行を作らないこと」）。
+        欠けている場合は 422 `invalid_input`。
+      parameters:
+        - $ref: "#/components/parameters/HospitalizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CareRecordCreate" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CareRecord" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/reservations:
+    get:
+      operationId: "api_list_reservations"
+      tags: ["api-reservation"]
+      summary: "予約の一覧（期間・担当・処置室で絞り込み）"
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: staff_id
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: room
+          in: query
+          required: false
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: ["booked", "cancelled"] }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReservationList" }
+    post:
+      operationId: "api_create_reservation"
+      tags: ["api-reservation"]
+      summary: "予約を作成する"
+      description: |
+        同じ担当（`staff_id`）または同じ処置室（`room`）で、時間帯
+        （`starts_at`〜`ends_at`）が重なる `status=booked` の予約が既にあれば
+        **409 `reservation_conflict`** を返す。取消済み（`status=cancelled`）の
+        予約とは重ねてよい。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReservationCreate" }
+      responses:
+        "201":
+          description: "作成できた"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reservation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/ReservationConflict" }
+
+  /api/reservations/{id}:
+    get:
+      operationId: "api_get_reservation"
+      tags: ["api-reservation"]
+      summary: "予約1件の詳細"
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reservation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: "api_update_reservation"
+      tags: ["api-reservation"]
+      summary: "予約の変更（時間・担当・処置室の変更を含む）"
+      description: "変更後の時間帯が重なる場合も 409 `reservation_conflict`。"
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReservationCreate" }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reservation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/ReservationConflict" }
+
+  /api/reservations/{id}/cancel:
+    post:
+      operationId: "api_cancel_reservation"
+      tags: ["api-reservation"]
+      summary: "予約の取消"
+      description: "`status` を `cancelled` にする。物理削除はしない。"
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reservation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ============================================================
+  # データのルート — スタッフ・マスタ・その他
+  # ============================================================
+
+  /api/staff:
+    get:
+      operationId: "api_list_staff"
+      tags: ["api-staff"]
+      summary: "スタッフ一覧"
+      parameters:
+        - name: is_active
+          in: query
+          required: false
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["items", "total"]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Staff" }
+                  total: { type: integer, minimum: 0 }
+
+  /api/features:
+    get:
+      operationId: "api_list_features"
+      tags: ["api-misc"]
+      summary: "作らないと決めた機能・畳んだ機能の一覧（参照専用）"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["items"]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/FeatureNote" }
+
+  /api/todo/{key}:
+    get:
+      operationId: "api_get_todo"
+      tags: ["api-misc"]
+      summary: "作らないと決めたボタンの理由（1件）"
+      parameters:
+        - $ref: "#/components/parameters/TodoKey"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeatureNote" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/masters/{key}:
+    get:
+      operationId: "api_get_master"
+      tags: ["api-masters"]
+      summary: "固定データ（マスタ）の一覧（参照専用）"
+      description: |
+        `data/masters.json` / `data/price_items.json` / `data/lab_items.json` の
+        内容を返す。**このAPIに書き込み（POST/PATCH/DELETE）は無い**
+        （`spec/README.md` 「マスタ管理の画面：一覧と参照は作る。編集は作らない」）。
+      parameters:
+        - $ref: "#/components/parameters/MasterKey"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ["key", "items", "total"]
+                properties:
+                  key: { type: string }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      description: "カテゴリごとに項目の形が異なる。共通するのは `code` と `label`。"
+                      required: ["code", "label"]
+                      properties:
+                        code: { type: string }
+                        label: { type: string }
+                      additionalProperties: true
+                  total: { type: integer, minimum: 0 }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+
+  # ============================================================
+  # 共通レスポンス
+  # ============================================================
+
+  responses:
+
+    HtmlOk:
+      description: "OK"
+      content:
+        text/html:
+          schema: { type: string }
+
+    BadRequest:
+      description: "リクエストの本文がJSONとして壊れている。"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: "invalid_json"
+              message: "リクエストの本文がJSONとして壊れています。書き方を確認してください。"
+
+    ValidationError:
+      description: "JSONとしては読めるが、項目が足りない・型が違う。"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: "invalid_input"
+              message: "入力の形式が正しくありません。必須の項目や値の型を確認してください。"
+              details:
+                - field: "staff_id"
+                  message: "実施者（staff_id）は必須です。"
+
+    NotFound:
+      description: "指定されたデータが見つからない。"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: "not_found"
+              message: "指定されたデータが見つかりません。"
+
+    Forbidden:
+      description: "この操作を行う権限がない。"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: "forbidden"
+              message: "この操作を行う権限がありません。"
+
+    ReservationConflict:
+      description: "指定した時間帯が、同じ担当または同じ処置室の別の予約と重なっている。"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: "reservation_conflict"
+              message: "指定した時間帯は、担当または処置室の予定と重なっています。"
+
+    ServerError:
+      description: "保存に失敗した。"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: "save_failed"
+              message: "保存に失敗しました。時間をおいてもう一度お試しください。"
+
+  # ============================================================
+  # 共通パラメータ
+  # ============================================================
+
+  parameters:
+
+    KarteNo:
+      name: karte_no
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[0-9]+-[0-9]+$" }
+      description: "カルテNo（例: 1001-1）。カルテを持つ画面・APIのURLには常にこの形式で1つだけ現れる。"
+
+    OwnerNo:
+      name: owner_no
+      in: path
+      required: true
+      schema: { type: string }
+      description: "飼主の表示用番号。"
+
+    VisitId:
+      name: visit_id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    ReceptionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    PaperId:
+      name: paper_id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    BillingId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    LabTestId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    ReservationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    HospitalizationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+    DosingKindId:
+      name: kind_id
+      in: path
+      required: true
+      schema: { type: integer }
+      description: "投薬種別マスタの行id（`data/masters.json`）。"
+
+    PreventionKindId:
+      name: kind_id
+      in: path
+      required: true
+      schema: { type: integer }
+      description: "予防種別マスタの行id（`data/masters.json`）。"
+
+    MasterKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string }
+      description: "マスタのカテゴリ（例: price_item / lab_item / reception_kind / prevention_kind / department / phrase）。語彙は固定データを正とする。"
+
+    TodoKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string }
+      description: "作らないと決めたボタンの識別子。語彙は `spec/screens.md` / `spec/acceptance.md` を正とする。"
+
+    FoldedKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string }
+      description: "この企画で意図して作らなかった機能の識別子（`model.md` 「落としたもの」に対応）。"
+
+    QueryQ:
+      name: q
+      in: query
+      required: false
+      schema: { type: string }
+      description: "横断検索の語。"
+
+    IncludeDeleted:
+      name: include_deleted
+      in: query
+      required: false
+      schema: { type: boolean, default: false }
+      description: "true のとき、論理削除済み（`deleted_at` が入っている）行も含める。既定は含めない。"
+
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema: { type: integer, minimum: 0, default: 0 }
+
+  # ============================================================
+  # スキーマ
+  # ============================================================
+
+  schemas:
+
+    Error:
+      type: object
+      required: ["error"]
+      properties:
+        error:
+          type: object
+          required: ["code", "message"]
+          properties:
+            code:
+              type: string
+              enum:
+                - "invalid_json"
+                - "invalid_input"
+                - "not_found"
+                - "forbidden"
+                - "save_failed"
+                - "reservation_conflict"
+            message:
+              type: string
+            details:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required: ["field", "message"]
+                properties:
+                  field: { type: string }
+                  message: { type: string }
+
+    # ---- 1. Clinic ----
+    Clinic:
+      type: object
+      required: ["id", "name", "reservation_slot_minutes", "tax_rate", "closed_weekdays"]
+      properties:
+        id: { type: integer, readOnly: true }
+        name: { type: string }
+        postal_code: { type: string }
+        address1: { type: string }
+        address2: { type: ["string", "null"] }
+        phone: { type: string }
+        fax: { type: ["string", "null"] }
+        director_name: { type: string }
+        reservation_slot_minutes: { type: integer, minimum: 1, default: 15 }
+        tax_rate: { type: number, minimum: 0, maximum: 1, default: 0.10 }
+        closed_weekdays:
+          type: array
+          items: { type: integer, minimum: 0, maximum: 6 }
+          description: "0=月 … 6=日"
+
+    ClinicForm:
+      type: object
+      description: "`/settings` の保存フォーム（`application/x-www-form-urlencoded`）。フィールドは `Clinic` と同じ。"
+
+    # ---- 2. Staff ----
+    Staff:
+      type: object
+      required: ["id", "staff_code", "name", "role", "is_active"]
+      properties:
+        id: { type: integer, readOnly: true }
+        staff_code: { type: string }
+        name: { type: string }
+        role: { type: string, enum: ["vet", "nurse", "office"] }
+        is_active: { type: boolean }
+
+    # ---- 3. Owner ----
+    Owner:
+      type: object
+      required: ["id", "owner_no", "name_kana", "name_kanji"]
+      properties:
+        id: { type: integer, readOnly: true }
+        owner_no: { type: string }
+        name_kana: { type: string }
+        name_kanji: { type: string }
+        postal_code: { type: string }
+        address1: { type: string }
+        address2: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        mobile: { type: ["string", "null"] }
+        deleted_at: { type: ["string", "null"], format: date-time, readOnly: true }
+
+    # ---- 4. Patient ----
+    Patient:
+      type: object
+      required: ["id", "karte_no", "owner_id", "name_kana", "name_kanji", "species", "sex"]
+      properties:
+        id: { type: integer, readOnly: true }
+        karte_no: { type: string, pattern: "^[0-9]+-[0-9]+$", readOnly: true }
+        owner_id: { type: integer }
+        name_kana: { type: string }
+        name_kanji: { type: string }
+        species: { type: string }
+        breed: { type: ["string", "null"] }
+        sex: { type: string, enum: ["male", "female", "unknown"] }
+        birth_date: { type: ["string", "null"], format: date }
+        neuter_date: { type: ["string", "null"], format: date }
+        deleted_at: { type: ["string", "null"], format: date-time, readOnly: true }
+
+    PatientWithOwner:
+      allOf:
+        - { $ref: "#/components/schemas/Patient" }
+        - type: object
+          properties:
+            owner: { $ref: "#/components/schemas/Owner" }
+
+    PatientWithOwnerForm:
+      type: object
+      description: "`/animals/new` の保存フォーム（`application/x-www-form-urlencoded`）。飼主・動物の各項目をまとめて送る。"
+
+    PatientList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PatientWithOwner" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 5. Reception ----
+    Reception:
+      type: object
+      required: ["id", "patient_id", "display_no", "received_at", "status"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        display_no: { type: integer }
+        received_at: { type: string, format: date-time }
+        owner_purpose: { type: ["string", "null"] }
+        medical_purpose: { type: ["string", "null"] }
+        status: { type: string, enum: ["waiting", "in_exam", "done"] }
+        staff_id: { type: ["integer", "null"] }
+
+    ReceptionList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Reception" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 6. Visit / 7. ProgressNote ----
+    ProgressNote:
+      type: object
+      required: ["row_no", "entry_date"]
+      properties:
+        id: { type: integer, readOnly: true }
+        visit_id: { type: integer, readOnly: true }
+        row_no: { type: integer, minimum: 1 }
+        entry_date: { type: string, format: date }
+        temperature_c: { type: ["number", "null"] }
+        pulse: { type: ["integer", "null"] }
+        respiration: { type: ["integer", "null"] }
+        body_weight_kg: { type: ["number", "null"] }
+        symptom_course: { type: ["string", "null"] }
+        treatment_rx: { type: ["string", "null"] }
+        note: { type: ["string", "null"] }
+
+    Visit:
+      type: object
+      required: ["id", "patient_id", "visit_no", "visit_date"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        visit_no: { type: integer, readOnly: true }
+        visit_date: { type: string, format: date }
+        visit_time: { type: ["string", "null"], format: time }
+        body_weight_kg: { type: ["number", "null"] }
+        chief_complaint: { type: ["string", "null"] }
+        symptom: { type: ["string", "null"] }
+        diagnosis: { type: ["string", "null"] }
+        treatment: { type: ["string", "null"] }
+        staff_id: { type: ["integer", "null"] }
+        deleted_at: { type: ["string", "null"], format: date-time, readOnly: true }
+        progress_notes:
+          type: array
+          items: { $ref: "#/components/schemas/ProgressNote" }
+
+    VisitCreate:
+      allOf:
+        - { $ref: "#/components/schemas/Visit" }
+      description: "作成・更新時に送る形。`id` / `visit_no` / `deleted_at` は無視される（サーバが決める）。"
+
+    VisitForm:
+      type: object
+      description: "`/animals/{karte_no}/karte` の保存フォーム（`application/x-www-form-urlencoded`）。診察本体と経過記録の行をまとめて送る。"
+
+    VisitList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Visit" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 8. Prevention ----
+    Prevention:
+      type: object
+      required: ["id", "patient_id", "kind", "performed_date"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        kind: { type: string }
+        content: { type: ["string", "null"] }
+        performed_date: { type: string, format: date }
+        next_due_date: { type: ["string", "null"], format: date }
+
+    PreventionForm:
+      type: object
+      description: "`/animals/{karte_no}/prevention/{kind_id}` の保存フォーム（`application/x-www-form-urlencoded`）。"
+
+    PreventionList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Prevention" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 9. Dosing ----
+    Dosing:
+      type: object
+      required: ["patient_id", "kind", "fiscal_year"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        kind: { type: string }
+        fiscal_year: { type: integer }
+        m01: { type: ["string", "null"] }
+        m02: { type: ["string", "null"] }
+        m03: { type: ["string", "null"] }
+        m04: { type: ["string", "null"] }
+        m05: { type: ["string", "null"] }
+        m06: { type: ["string", "null"] }
+        m07: { type: ["string", "null"] }
+        m08: { type: ["string", "null"] }
+        m09: { type: ["string", "null"] }
+        m10: { type: ["string", "null"] }
+        m11: { type: ["string", "null"] }
+        m12: { type: ["string", "null"] }
+
+    DosingForm:
+      type: object
+      description: "`/animals/{karte_no}/dosing/{kind_id}` の保存フォーム（`application/x-www-form-urlencoded`）。m01〜m12を送る。"
+
+    # ---- 10. LabTest / 11. LabTestItem ----
+    LabTestItem:
+      type: object
+      required: ["item_code"]
+      properties:
+        id: { type: integer, readOnly: true }
+        lab_test_id: { type: integer, readOnly: true }
+        item_code: { type: string }
+        value_num: { type: ["number", "null"] }
+        value_text: { type: ["string", "null"] }
+        reference_low:
+          type: ["number", "null"]
+          readOnly: true
+          description: "`data/lab_items.json` から患者の種別・性別で引いた下限。保存はしない。"
+        reference_high:
+          type: ["number", "null"]
+          readOnly: true
+          description: "同上、上限。"
+        judgment:
+          type: string
+          readOnly: true
+          enum: ["", "H", "L"]
+          description: |
+            **空 / `H` / `L` の3つだけ。**
+            基準の上を超えていれば `H`、下回っていれば `L`、範囲内・判定できない場合は空。
+            `spec/acceptance.md` の検算5と `tests/` が読む値がこれ。
+            画面では `data-check="lab_test_item.judgment"` に同じ値を出す。
+        out_of_range:
+          type: boolean
+          readOnly: true
+          description: "判定欄の色分けに使うフラグ。色そのものは各スタックの流儀でよい。"
+
+    LabTest:
+      type: object
+      required: ["id", "patient_id", "visit_id", "category", "tested_on"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        visit_id: { type: integer }
+        category: { type: string }
+        tested_on: { type: string, format: date }
+        tested_at_time: { type: ["string", "null"], format: time }
+        staff_id: { type: ["integer", "null"] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LabTestItem" }
+
+    LabTestCreate:
+      type: object
+      required: ["visit_id", "category", "tested_on", "items"]
+      properties:
+        visit_id: { type: integer }
+        category: { type: string }
+        tested_on: { type: string, format: date }
+        tested_at_time: { type: ["string", "null"], format: time }
+        staff_id: { type: ["integer", "null"] }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: ["item_code"]
+            properties:
+              item_code: { type: string }
+              value_num: { type: ["number", "null"] }
+              value_text: { type: ["string", "null"] }
+
+    LabTestForm:
+      type: object
+      description: "`/animals/{karte_no}/exam` の保存フォーム（`application/x-www-form-urlencoded`）。"
+
+    LabTestList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LabTest" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 12. Billing / 13. BillingDetail ----
+    BillingDetail:
+      type: object
+      required: ["row_no", "price_code", "name", "quantity", "is_taxable"]
+      properties:
+        id: { type: integer, readOnly: true }
+        billing_id: { type: integer, readOnly: true }
+        row_no: { type: integer, minimum: 1 }
+        price_code: { type: string }
+        name: { type: string }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        unit_price:
+          type: ["integer", "null"]
+          description: "未設定（null）がありうる。**0円として合計に入れてはならない。**"
+        is_taxable: { type: boolean }
+        amount:
+          type: ["integer", "null"]
+          readOnly: true
+          description: "quantity * unit_price。unit_price が null のときは null（合計に含めない）。"
+
+    Billing:
+      type: object
+      required: ["id", "patient_id", "owner_id", "slip_no", "status", "billed_on", "details",
+                 "net_amount", "tax_amount", "total_amount", "excluded_count"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        owner_id: { type: integer, readOnly: true }
+        slip_no: { type: string, readOnly: true }
+        status: { type: string, enum: ["draft", "confirmed"] }
+        billed_on: { type: string, format: date }
+        staff_id: { type: ["integer", "null"] }
+        cashier_staff_id: { type: ["integer", "null"] }
+        paid_amount: { type: ["integer", "null"] }
+        payment_method: { type: ["string", "null"] }
+        details:
+          type: array
+          items: { $ref: "#/components/schemas/BillingDetail" }
+        net_amount:
+          type: integer
+          readOnly: true
+          description: |
+            **税抜合計。** unit_price が設定されている行だけを足したもの。
+            未設定の行は0円として足さない（`spec/README.md`）。
+            画面では `data-check="billing.net_amount"` に出す。
+        taxable_subtotal:
+          type: integer
+          readOnly: true
+          description: "そのうち課税対象の小計（税抜）。消費税はこれに税率を掛けて伝票単位で1回だけ切り捨てる。"
+        nontaxable_subtotal:
+          type: integer
+          readOnly: true
+          description: "unit_price が設定されている非課税行の小計。"
+        tax_amount:
+          type: integer
+          readOnly: true
+          description: "taxable_subtotal に Clinic.tax_rate を掛けた額。丸めの規則は `spec/acceptance.md` に従う（無指定なら丸めない）。"
+        total_amount:
+          type: integer
+          readOnly: true
+          description: "taxable_subtotal + tax_amount + nontaxable_subtotal。unit_price 未設定の行は含まない。"
+        excluded_count:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: "unit_price が未設定で、total に含まれなかった明細行の数。0件でも必ず返す。"
+
+    BillingCreate:
+      type: object
+      required: ["billed_on", "details"]
+      properties:
+        billed_on: { type: string, format: date }
+        status: { type: string, enum: ["draft", "confirmed"], default: "draft" }
+        staff_id: { type: ["integer", "null"] }
+        cashier_staff_id: { type: ["integer", "null"] }
+        paid_amount: { type: ["integer", "null"] }
+        payment_method: { type: ["string", "null"] }
+        details:
+          type: array
+          items:
+            type: object
+            required: ["price_code", "name", "quantity", "is_taxable"]
+            properties:
+              price_code: { type: string }
+              name: { type: string }
+              quantity: { type: number, exclusiveMinimum: 0 }
+              unit_price: { type: ["integer", "null"] }
+              is_taxable: { type: boolean }
+
+    BillingForm:
+      type: object
+      description: "`/animals/{karte_no}/accounting` の保存フォーム（`application/x-www-form-urlencoded`）。"
+
+    BillingList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Billing" }
+        total: { type: integer, minimum: 0 }
+
+    DmRow:
+      type: object
+      required: ["karte_no", "owner_name_kanji", "patient_name_kanji"]
+      properties:
+        karte_no: { type: string }
+        owner_name_kanji: { type: string }
+        patient_name_kanji: { type: string }
+        kind: { type: ["string", "null"] }
+        next_due_date: { type: ["string", "null"], format: date }
+        performed_date: { type: ["string", "null"], format: date }
+
+    SalesSummary:
+      type: object
+      description: |
+        売上を**3つの軸で同時に**返す。片方ずつ返す形（group_by）にしない。
+
+        検算1は「分類別・担当別・日別の合計が、総合計と一致すること」を確かめるもので、
+        **3つを同時に見られないと成立しない**（別々に取ると、取った時点がずれる余地も残る）。
+
+        消費税は含めない。**3方向一致の対象は税抜売上のみ**。
+        内訳へ税を按分すると、按分の方法しだいで答えが変わり検算にならない
+        （`spec/acceptance.md` 検算1）。
+      required: ["by_category", "by_staff", "by_date", "total_net_amount"]
+      properties:
+        from:
+          type: ["string", "null"]
+          format: date
+          description: "省略可。省略したら全期間。"
+        to:
+          type: ["string", "null"]
+          format: date
+          description: "省略可。省略したら全期間。"
+        by_category:
+          type: array
+          description: "分類別（料金の上位1階層）。"
+          items: { $ref: "#/components/schemas/SalesRow" }
+        by_staff:
+          type: array
+          description: "担当別。`Billing.staff_id`（診療担当）で分ける。`cashier_staff_id` は使わない。"
+          items: { $ref: "#/components/schemas/SalesRow" }
+        by_date:
+          type: array
+          description: "日別。`Billing.billed_on`（JSTの暦日）で分ける。"
+          items: { $ref: "#/components/schemas/SalesRow" }
+        total_net_amount:
+          type: integer
+          description: "対象期間の税抜売上の総合計。3つの内訳の合計はこれと一致すること。"
+        total_tax_amount:
+          type: integer
+          description: "対象期間の全伝票の消費税額の合計。内訳へは按分しない。"
+        excluded_count_total:
+          type: integer
+          description: "単価未設定で合計に入れなかった明細の行数。"
+
+    SalesRow:
+      type: object
+      required: ["key", "net_amount"]
+      properties:
+        key:
+          type: ["string", "integer"]
+          description: "分類名・スタッフID・日付のいずれか。軸によって変わる。"
+        label:
+          type: string
+          description: "画面に出す名前。"
+        net_amount:
+          type: integer
+          description: "税抜。画面では `data-check=\"sales_summary.net_amount\"` に出す。"
+        share_pct:
+          type: number
+          description: |
+            構成比。**`by_category` の行にだけ付ける。**
+            最大剰余法で丸め、**和がちょうど 100.0** になること。
+            画面では `data-check="sales_summary.share_pct"`。
+
+    Reservation:
+      type: object
+      required: ["id", "patient_id", "starts_at", "ends_at", "staff_id", "room", "status"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        staff_id: { type: integer }
+        room: { type: string }
+        purpose: { type: ["string", "null"] }
+        note: { type: ["string", "null"] }
+        status: { type: string, enum: ["booked", "cancelled"], readOnly: true }
+
+    ReservationCreate:
+      type: object
+      required: ["patient_id", "starts_at", "ends_at", "staff_id", "room"]
+      properties:
+        patient_id: { type: integer }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        staff_id: { type: integer }
+        room: { type: string }
+        purpose: { type: ["string", "null"] }
+        note: { type: ["string", "null"] }
+
+    ReservationForm:
+      type: object
+      description: "`/reservations` の登録・変更フォーム（`application/x-www-form-urlencoded`）。"
+
+    ReservationList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Reservation" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 15. Hospitalization ----
+    CareRecord:
+      type: object
+      required: ["id", "hospitalization_id", "recorded_at", "category", "performed_by_staff_id"]
+      properties:
+        id: { type: integer, readOnly: true }
+        hospitalization_id: { type: integer, readOnly: true }
+        recorded_at: { type: string, format: date-time }
+        category: { type: string, enum: ["medication", "feeding", "measurement"] }
+        content: { type: ["string", "null"] }
+        performed_by_staff_id:
+          type: integer
+          description: "実施者。**必須。** 空の記録行は作らない。"
+
+    CareRecordCreate:
+      type: object
+      required: ["recorded_at", "category", "performed_by_staff_id"]
+      properties:
+        recorded_at: { type: string, format: date-time }
+        category: { type: string, enum: ["medication", "feeding", "measurement"] }
+        content: { type: ["string", "null"] }
+        performed_by_staff_id: { type: integer }
+
+    Hospitalization:
+      type: object
+      required: ["id", "patient_id", "admitted_on", "room"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        admitted_on: { type: string, format: date }
+        discharged_on: { type: ["string", "null"], format: date }
+        room: { type: string }
+        care_records:
+          type: array
+          items: { $ref: "#/components/schemas/CareRecord" }
+
+    HospitalizationCreate:
+      type: object
+      required: ["admitted_on", "room"]
+      properties:
+        admitted_on: { type: string, format: date }
+        discharged_on: { type: ["string", "null"], format: date }
+        room: { type: string }
+
+    HospitalizationForm:
+      type: object
+      description: "`/animals/{karte_no}/ward` の入院登録フォーム（`application/x-www-form-urlencoded`）。"
+
+    # ---- 書類（papers） ----
+    Paper:
+      type: object
+      required: ["id", "patient_id", "title"]
+      properties:
+        id: { type: integer, readOnly: true }
+        patient_id: { type: integer }
+        title: { type: string }
+        note: { type: ["string", "null"] }
+        created_at: { type: string, format: date-time, readOnly: true }
+
+    PaperList:
+      type: object
+      required: ["items", "total"]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Paper" }
+        total: { type: integer, minimum: 0 }
+
+    # ---- 折りたたみ・ToDo・機能設定 ----
+    FeatureNote:
+      type: object
+      required: ["key", "kind", "title", "message"]
+      properties:
+        key: { type: string }
+        kind:
+          type: string
+          enum: ["todo", "folded"]
+          description: "todo = 押しても保存されない灰色のボタン。folded = この企画で意図して作らなかった機能。"
+        title: { type: string }
+        message: { type: string }

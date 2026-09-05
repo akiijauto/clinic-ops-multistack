@@ -1,0 +1,20 @@
+<% content_for :title, "来院履歴" %>
+<div data-testid="screen-history">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の来院履歴</h1>
+
+  <% if @visits.empty? %>
+    <p data-testid="empty-history">診察の記録がありません。</p>
+  <% else %>
+    <ul>
+      <% @visits.each do |v| %>
+        <li data-testid="row-visit">
+          <%= v.visit_date %>（<%= v.visit_no %>回目）
+          <%= v.deleted? ? "［削除済み］" : "" %>
+          主訴:<%= v.chief_complaint %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

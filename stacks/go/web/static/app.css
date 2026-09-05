@@ -1,0 +1,5 @@
+/* 画面の見た目は各スタックの流儀でよい（spec/README.md）。
+   ここは土台だけ。画面ごとの様式は契約が凍ってから足す。 */
+:root { color-scheme: light dark; }
+body { margin: 0; font: 16px/1.6 system-ui, sans-serif; }
+#main { padding: 1rem; }

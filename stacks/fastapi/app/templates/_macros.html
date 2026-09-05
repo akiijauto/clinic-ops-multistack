@@ -1,0 +1,41 @@
+{# 共通マクロ。領域ごとのテンプレートはここを import して使うこと。
+
+   `qa/lane-d.md` D-4 の仮決めに従い、**`data-testid` は書かない。`data-check` だけ**を使う。
+   openapi.yaml が定義した命名規則（screen-<key> / row-<資源名> / empty-<資源名> /
+   success-banner / error-banner / disabled-action-<todoキー>）は、属性名だけ
+   `data-check` に載せ替えてそのまま流用する。 #}
+
+{# 画面コンテナ。各画面テンプレートは body 直下をこれで包む。 #}
+{% macro screen(key) %}data-check="screen-{{ key }}"{% endmacro %}
+
+{# 一覧の行（繰り返し）。 #}
+{% macro row(resource) %}data-check="row-{{ resource }}"{% endmacro %}
+
+{# 一覧が0件のときの表示。 #}
+{% macro empty(resource) %}data-check="empty-{{ resource }}"{% endmacro %}
+
+{# 個別の数値（検算対象）。acceptance.md の13キーはここを直接使う。
+   例: {{ value_check('billing.net_amount') }} #}
+{% macro value_check(key) %}data-check="{{ key }}"{% endmacro %}
+
+{% macro success_banner(message) %}
+<div data-check="success-banner" class="banner banner-success">{{ message }}</div>
+{% endmacro %}
+
+{% macro error_banner(message) %}
+<div data-check="error-banner" class="banner banner-error">{{ message }}</div>
+{% endmacro %}
+
+{# ボタンの3状態（spec/screens.md「共通の約束」）。
+   state: "a"（動く） / "b"（この企画では作っていない） / "c"（あえて動かさない）
+   b/c は href を /todo/{key} へ固定し、見た目は無効表示にする（消さない）。 #}
+{% macro action_button(label, state, href=None, todo_key=None) %}
+{%- if state == "a" -%}
+<a href="{{ href }}" class="btn btn-action">{{ label }}</a>
+{%- else -%}
+<a href="/todo/{{ todo_key }}"
+   class="btn btn-disabled"
+   aria-disabled="true"
+   data-check="disabled-action-{{ todo_key }}">{{ label }}</a>
+{%- endif -%}
+{% endmacro %}

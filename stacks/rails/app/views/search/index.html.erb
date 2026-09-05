@@ -1,0 +1,43 @@
+<% content_for :title, "検索" %>
+<div data-testid="screen-search">
+  <h1>検索</h1>
+  <form action="/search" method="get">
+    <input type="text" name="q" value="<%= @q %>">
+    <button type="submit">検索</button>
+  </form>
+
+  <% if @q.blank? %>
+    <p data-testid="empty-search">
+      飼主名・カナ・カルテNo・電話番号、または診察の中身（主訴・症状・診断・処置）で検索できます。
+      例: <a href="/search?q=1">カルテNoに「1」を含む</a>
+    </p>
+  <% else %>
+    <h2>飼主・動物</h2>
+    <% if @patients.empty? %>
+      <p>該当なし</p>
+    <% else %>
+      <ul>
+        <% @patients.each do |p| %>
+          <li data-testid="row-patient">
+            <a href="/animals/<%= p.karte_no %>"><%= p.name_kanji %>（<%= p.owner.name_kanji %>）</a>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <h2>診察の中身</h2>
+    <% if @visits.empty? %>
+      <p>該当なし</p>
+    <% else %>
+      <ul>
+        <% @visits.each do |v| %>
+          <li data-testid="row-visit">
+            <a href="/animals/<%= v.patient.karte_no %>/karte"><%= v.patient.name_kanji %>: <%= v.chief_complaint %></a>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>

@@ -1,0 +1,27 @@
+{# 検索。カルテNo・氏名で患者を探し、カルテ画面へ入る入口。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}検索{% endblock %}
+
+{% block content %}
+<section {{ screen("search") }}>
+  <h1>検索</h1>
+  <form method="get" action="/search">
+    <input type="text" name="q" value="{{ q }}" placeholder="カルテNo・氏名">
+    <button type="submit">検索</button>
+  </form>
+
+  {% if not patients %}
+  <p {{ empty("patient") }}>該当する動物がいません。</p>
+  {% else %}
+  <ul class="patient-list">
+    {% for p in patients %}
+    <li {{ row("patient") }}>
+      <a href="/animals/{{ p.karte_no }}/karte">{{ p.karte_no }} — {{ p.name_kanji }}（{{ p.species }}）</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+{# カルテ印刷。`spec/screens.md` 領域2「9. カルテ」印刷用。
+   `karte.html` と同じ `_visit_macro.html` を使うことで、検算4（画面と印刷の値一致）を
+   構造上崩せないようにしてある（別テンプレートに書き写さない）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen %}
+{% from "clinical/_visit_macro.html" import render_visit %}
+
+{% block title %}カルテ印刷 — {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("karte-print") }} class="print-sheet">
+  <h1>カルテ（印刷）</h1>
+
+  <div class="patient-header">
+    <p>カルテNo: {{ patient.karte_no }}</p>
+    <p>{{ patient.name_kanji }}（{{ patient.name_kana }}）</p>
+    <p>飼主: {{ patient.owner.name_kanji if patient.owner else "" }}</p>
+    <p>{{ patient.species }} / {{ patient.breed }} / {{ patient.sex }}</p>
+  </div>
+
+  <ul class="visit-list">
+    {% for v in visits %}
+      {{ render_visit(v) }}
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,147 @@
+# レーンA の質問と仮決め
+
+**書き方**: 止まらない質問はここに書いて先へ進む（`PROTOCOL.md` 9）。
+仮決めしたことは**仮決めと分かる形で**残す。
+実装に溶けて誰も気づけなくなるのを防ぐため（レーンRが見る3点目）。
+
+---
+
+## Q-A-01 画面数が 24 / 25 / 26 で食い違っている（止まらない）
+
+| 出どころ | 数 |
+| --- | --- |
+| `briefs/lane-a.md` の本文 | 「全24画面」 |
+| `briefs/lane-a.md` の領域表を数えたもの | **25**（8＋5＋3＋4＋5） |
+| `PLAN.md` の領域表 | **26**（既存24＋新規2。領域3に「売上集計（新）」がある） |
+| `spec/README.md` | 「26画面すべて作る」 |
+
+`briefs/lane-a.md` の領域表には `PLAN.md` にある**売上集計（新）が無い**。
+本文の「24」は既存画面の数で、新規2枚を足す前の数と読める。
+
+**仮決め**: `spec/screens.md` が出たらそれに従う。それまで画面は作らない
+（土台の段階なので実害が無い）。**この食い違いは指揮役に直してほしい**が、
+いま止まってはいないので直接は言わない。
+
+---
+
+## Q-A-02 JSON の `Content-Type`（止まらない・要確認）
+
+**仮決め**: `application/json`（`charset=utf-8` を付けない）。
+
+- RFC 8259 は `application/json` に charset 引数を定義していない
+- テストが完全一致で見る場合、付けないほうが通りやすい
+
+`spec/openapi.yaml` に書かれていればそれに合わせる。**5実装で揃っている必要がある**ので、
+契約に無ければ指揮役に決めてほしい項目。
+
+---
+
+## Q-A-03 JSON 本文の末尾改行（止まらない）
+
+**仮決め**: 付けない。`{"status":"ok"}` の15バイトちょうどを返す。
+
+Go の `json.NewEncoder(w).Encode` は末尾に `\n` を足す。使わずに `json.Marshal` してから書いた。
+本文をそのまま突き合わせるテストがあると、改行1文字で落ちるため。
+**他レーンの既定と食い違う可能性が高い箇所**（第3段階の突き合わせ候補）。
+
+---
+
+## Q-A-04 経路はあるがメソッドが違うとき（止まらない）
+
+**仮決め**: `405 Method Not Allowed`（`net/http` のメソッド付きパターンの既定）。
+未知のパスは `404`。契約に別の定めがあればそれに従う。
+
+---
+
+## Q-A-05 JST の持ち方（止まらない・決着済み）
+
+**決め**: `time.FixedZone("JST", 9*3600)` を使う。`time.LoadLocation("Asia/Tokyo")` は使わない。
+
+Windows には tzdata が入っていない場合があり、環境によって集計の月境界がずれる。
+契約が JST を要求している以上、環境に依存させない
+（`internal/config/config.go` の `JST`）。
+
+---
+
+## Q-A-08 openapi.yaml と tests/checks.py で応答の項目名が食い違う（止まらない）
+
+`GET /api/billings/{id}` と `GET /api/sales/summary` について、**2つの凍結文書の要求が違う**。
+
+| | `spec/openapi.yaml`（Billing / SalesSummary スキーマ） | `tests/checks.py`（実際に採点する側） |
+| --- | --- | --- |
+| 伝票の税抜合計 | `taxable_subtotal` + `nontaxable_subtotal` | `net_amount` |
+| 伝票の未算入件数 | `excluded_detail_count` | `excluded_count` |
+| 伝票の税込合計 | `total` | `total_amount` |
+| 消費税額 | `tax_amount` | `tax_amount`（一致） |
+| 売上集計の内訳 | `rows`（`group_by` で選んだ1軸だけ） | `by_category` / `by_staff` / `by_date`（3軸を同時に返す） |
+| 売上集計の総合計 | `total_amount` | `total_net_amount` または `total` |
+| `/api/sales/summary` の `from`/`to` | 両方 `required: true`（無いと 422 想定） | **パラメータ無しで呼ぶ**（`tests/checks.py` の `_sales_three_ways`） |
+
+**仮決め**: 採点する側（`tests/checks.py` = 実際に緑/赤を決める判定）を主に置きつつ、
+JSON は両方の項目名を同時に返す形にした（余分なキーがあっても壊れない）。
+`from`/`to` は未指定なら無制限（全期間）として扱い、422 にはしない。
+
+理由: 「実装のほうを疑う」原則は実装のバグを疑う話であって、**2つの凍結文書自体が
+矛盾している**場合はどちらかを選ばざるを得ない。5実装が同じ判定で緑になる必要がある以上、
+`tests/` が実際に読む形を優先した。`spec/openapi.yaml` 側の項目名も同時に満たしているので、
+どちらの文書を正としても壊れない状態にしてある。
+
+**実装した場所**: `stacks/go/internal/server/billing.go`（`billingAmountsJSON` / `salesSummaryJSON`）。
+
+これは5実装で認識が割れやすい箇所なので、**契約を1本化してもらえると次の段階が楽になる**。
+
+---
+
+## Q-A-10 `tests/checks.py` の `_data_check` が、完全なHTML文書からは値を1つも読めない（**止まる・全レーン共通の可能性が高い**）
+
+**実測**（`stacks/go` の実装で確認。ロジックの問題ではなく正規表現そのものの性質）:
+
+```python
+>>> import re
+>>> html = '<!DOCTYPE html><html><head></head><body><span data-check="x">1</span></body></html>'
+>>> pattern = r'<([a-zA-Z][\w-]*)\b([^>]*?)>(.*?)</\1>'
+>>> [m.group(1) for m in re.finditer(pattern, html, re.S)]
+['html']
+```
+
+**原因**: `re.finditer` は最も左で成立する開始位置から**貪欲でなく最短**にマッチを試みる。
+文書中に `</html>` は末尾に1個しか無いため、最初に見つかる `<html ...>` を開始点とする
+マッチは、**その `.*?` が文書の残り全部（`<span data-check="x">` を含む）を飲み込んで
+初めて成立する。** 結果、`finditer` はこの1個（文書全体）だけをマッチとして返し、
+検索位置がそこで終わるため、**中に入れ子になっている `data-check` 要素は一切見つからない**。
+
+**確認したこと**:
+- これは私（Go実装）のHTMLの書き方の問題ではない。`<!DOCTYPE html><html>...</html>` という
+  ごく標準的な構造を持つHTML文書であれば、**どの言語・どのスタックで作っても同じ結果になる**
+  （正規表現自体の性質のため）。
+- 実際、`stacks/go` で `/animals/{karte_no}/karte` に `data-check="progress_note.temperature_c"`
+  等を正しく埋め込んだ画面を用意したが、`python tests/run.py --only screen` の
+  検算3・4は `_data_check` が0件しか返さず不合格になった。`curl` や素の正規表現で
+  同じHTMLを直接読むと値は正しく取れている。
+- `checks.py` 内の他の合格しているテスト（検算5・9等）は `_data_check` を経由しない
+  （JSON APIまたは別ロジック）ため、**この不具合はまだどのレーンの結果にも表面化していない
+  可能性が高い**（screen組に着手したのが私が最初のため）。
+
+**仮決めできない理由**: `tests/` は凍結対象で変更できない。かといって、完全なHTML文書を
+返さない実装（`<html>` を省く等）は仕様（画面）として不自然。**私の側の作り方では
+回避しようがない**ため、ここで止まって報告する。
+
+**指揮役への相談**: `tests/checks.py` の `_data_check` の正規表現を直す必要があると考える
+（例: `re.finditer` の代わりに `html.parser` を使う、または非貪欲マッチが同名タグの
+入れ子・後続を正しく扱えるロジックに直す）。5レーン共通の土台なので、**1箇所直せば
+全レーンに効く**。
+
+---
+
+## Q-A-06 保存先（まだ決めない）
+
+契約（`spec/model.md`）が凍っていないので**決めない**。判断材料だけ実測して置く（2026-09-05）。
+
+| 実測したこと | 結果 |
+| --- | --- |
+| `CGO_ENABLED` | `0`。gcc も入っていない |
+| cgo を使う SQLite（`mattn/go-sqlite3`） | **選べない**（上記のため） |
+| 純 Go の SQLite（`modernc.org/sqlite`） | モジュールの取得が通る（v1.58.0 まで見えた）。cgo 不要 |
+| 標準ライブラリだけの案 | 追加取得が要らない。索引をメモリに持ち JSON へ保存する形 |
+
+決めたらここに理由とともに書く。

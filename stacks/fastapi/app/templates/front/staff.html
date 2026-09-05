@@ -1,0 +1,22 @@
+{# スタッフ（担当選択）。いまは一覧表示のみ。担当を選ぶ操作は次段階。
+   `Staff.password_hash` は画面に一切出さない（spec/screens.md 21）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}スタッフ{% endblock %}
+
+{% block content %}
+<section {{ screen("staff") }}>
+  <h1>スタッフ</h1>
+
+  {% if not staff %}
+  <p {{ empty("staff") }}>スタッフが登録されていません。</p>
+  {% else %}
+  <ul class="staff-list">
+    {% for s in staff %}
+    <li {{ row("staff") }}>{{ s.name }}（{{ s.role }}）</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,31 @@
+{# カルテ画面。`spec/screens.md` 領域2「9. カルテ」。
+   検算3・4（acceptance.md）の要点は router 側のコメントに書いた。
+   1診察ぶんの描画は `_visit_macro.html` に共通化してある（印刷画面と共有するため）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen %}
+{% from "clinical/_visit_macro.html" import render_visit %}
+
+{% block title %}カルテ — {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("karte") }}>
+  <h1>カルテ</h1>
+
+  <div class="patient-header">
+    <p>カルテNo: {{ patient.karte_no }}</p>
+    <p>{{ patient.name_kanji }}（{{ patient.name_kana }}）</p>
+    <p>飼主: {{ patient.owner.name_kanji if patient.owner else "" }}</p>
+    <p>{{ patient.species }} / {{ patient.breed }} / {{ patient.sex }}</p>
+  </div>
+
+  <h2>診察一覧（新しい順）</h2>
+  {% if not visits %}
+  <p class="empty" data-check="empty-visit">診察記録がありません。</p>
+  {% endif %}
+  <ul class="visit-list">
+    {% for v in visits %}
+      {{ render_visit(v) }}
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

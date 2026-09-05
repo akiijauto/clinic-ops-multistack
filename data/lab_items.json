@@ -1,0 +1,806 @@
+[
+  {
+    "item_code": "RBC",
+    "name": "赤血球数",
+    "unit": "10^6/uL",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 5.5,
+        "high": 8.5
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 5.0,
+        "high": 10.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 3.0,
+        "high": 9.0
+      }
+    ]
+  },
+  {
+    "item_code": "WBC",
+    "name": "白血球数",
+    "unit": "/uL",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 6000,
+        "high": 17000
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 5500,
+        "high": 19500
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 4000,
+        "high": 20000
+      }
+    ]
+  },
+  {
+    "item_code": "HGB",
+    "name": "ヘモグロビン濃度",
+    "unit": "g/dL",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 12.0,
+        "high": 18.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 8.0,
+        "high": 15.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 8.0,
+        "high": 17.0
+      }
+    ]
+  },
+  {
+    "item_code": "HCT",
+    "name": "ヘマトクリット値",
+    "unit": "%",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 37.0,
+        "high": 55.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 24.0,
+        "high": 45.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 24.0,
+        "high": 55.0
+      }
+    ]
+  },
+  {
+    "item_code": "PLT",
+    "name": "血小板数",
+    "unit": "10^4/uL",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 20.0,
+        "high": 50.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 30.0,
+        "high": 70.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 15.0,
+        "high": 70.0
+      }
+    ]
+  },
+  {
+    "item_code": "MCV",
+    "name": "平均赤血球容積",
+    "unit": "fL",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 60.0,
+        "high": 77.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 39.0,
+        "high": 55.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 35.0,
+        "high": 80.0
+      }
+    ]
+  },
+  {
+    "item_code": "MCH",
+    "name": "平均赤血球血色素量",
+    "unit": "pg",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 19.5,
+        "high": 24.5
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 12.5,
+        "high": 17.5
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 12.0,
+        "high": 25.0
+      }
+    ]
+  },
+  {
+    "item_code": "MCHC",
+    "name": "平均赤血球血色素濃度",
+    "unit": "g/dL",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 32.0,
+        "high": 36.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 30.0,
+        "high": 36.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 28.0,
+        "high": 37.0
+      }
+    ]
+  },
+  {
+    "item_code": "NEUT",
+    "name": "好中球比率",
+    "unit": "%",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 60.0,
+        "high": 77.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 35.0,
+        "high": 75.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 30.0,
+        "high": 80.0
+      }
+    ]
+  },
+  {
+    "item_code": "LYMPH",
+    "name": "リンパ球比率",
+    "unit": "%",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 12.0,
+        "high": 30.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 20.0,
+        "high": 55.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 10.0,
+        "high": 55.0
+      }
+    ]
+  },
+  {
+    "item_code": "MONO",
+    "name": "単球比率",
+    "unit": "%",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 3.0,
+        "high": 10.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 1.0,
+        "high": 4.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 1.0,
+        "high": 10.0
+      }
+    ]
+  },
+  {
+    "item_code": "EOS",
+    "name": "好酸球比率",
+    "unit": "%",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 2.0,
+        "high": 10.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 2.0,
+        "high": 12.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 1.0,
+        "high": 12.0
+      }
+    ]
+  },
+  {
+    "item_code": "BASO",
+    "name": "好塩基球比率",
+    "unit": "%",
+    "category": "血球算定",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 0.0,
+        "high": 1.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 0.0,
+        "high": 1.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 0.0,
+        "high": 1.5
+      }
+    ]
+  },
+  {
+    "item_code": "TP",
+    "name": "総蛋白",
+    "unit": "g/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 5.4,
+        "high": 7.8
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 5.7,
+        "high": 8.9
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 5.0,
+        "high": 9.0
+      }
+    ]
+  },
+  {
+    "item_code": "ALB",
+    "name": "アルブミン",
+    "unit": "g/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "male",
+        "low": 2.7,
+        "high": 4.1
+      },
+      {
+        "species": "dog",
+        "sex": "female",
+        "low": 2.5,
+        "high": 3.9
+      },
+      {
+        "species": "cat",
+        "sex": "male",
+        "low": 2.4,
+        "high": 4.0
+      },
+      {
+        "species": "cat",
+        "sex": "female",
+        "low": 2.3,
+        "high": 3.8
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 2.0,
+        "high": 4.2
+      }
+    ]
+  },
+  {
+    "item_code": "GLOB",
+    "name": "グロブリン",
+    "unit": "g/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 2.0,
+        "high": 3.6
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 2.6,
+        "high": 5.1
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 2.0,
+        "high": 5.5
+      }
+    ]
+  },
+  {
+    "item_code": "ALT",
+    "name": "ALT(GPT)",
+    "unit": "U/L",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 10,
+        "high": 100
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 12,
+        "high": 130
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 10,
+        "high": 150
+      }
+    ]
+  },
+  {
+    "item_code": "AST",
+    "name": "AST(GOT)",
+    "unit": "U/L",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 10,
+        "high": 50
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 10,
+        "high": 40
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 10,
+        "high": 60
+      }
+    ]
+  },
+  {
+    "item_code": "ALP",
+    "name": "ALP",
+    "unit": "U/L",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 20,
+        "high": 150
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 10,
+        "high": 90
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 10,
+        "high": 200
+      }
+    ]
+  },
+  {
+    "item_code": "GGT",
+    "name": "GGT",
+    "unit": "U/L",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 0,
+        "high": 10
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 0,
+        "high": 5
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 0,
+        "high": 15
+      }
+    ]
+  },
+  {
+    "item_code": "TBIL",
+    "name": "総ビリルビン",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 0.0,
+        "high": 0.5
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 0.0,
+        "high": 0.4
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 0.0,
+        "high": 0.6
+      }
+    ]
+  },
+  {
+    "item_code": "BUN",
+    "name": "尿素窒素",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 8.0,
+        "high": 28.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 16.0,
+        "high": 36.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 10.0,
+        "high": 40.0
+      }
+    ]
+  },
+  {
+    "item_code": "CRE",
+    "name": "クレアチニン",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "male",
+        "low": 0.5,
+        "high": 1.5
+      },
+      {
+        "species": "dog",
+        "sex": "female",
+        "low": 0.4,
+        "high": 1.2
+      },
+      {
+        "species": "cat",
+        "sex": "male",
+        "low": 0.7,
+        "high": 2.3
+      },
+      {
+        "species": "cat",
+        "sex": "female",
+        "low": 0.6,
+        "high": 1.9
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 0.3,
+        "high": 2.5
+      }
+    ]
+  },
+  {
+    "item_code": "GLU",
+    "name": "血糖値",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 65.0,
+        "high": 118.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 67.0,
+        "high": 124.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 60.0,
+        "high": 150.0
+      }
+    ]
+  },
+  {
+    "item_code": "TCHO",
+    "name": "総コレステロール",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 110.0,
+        "high": 320.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 65.0,
+        "high": 220.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 60.0,
+        "high": 330.0
+      }
+    ]
+  },
+  {
+    "item_code": "TG",
+    "name": "中性脂肪",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 20.0,
+        "high": 130.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 20.0,
+        "high": 110.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 15.0,
+        "high": 150.0
+      }
+    ]
+  },
+  {
+    "item_code": "CA",
+    "name": "カルシウム",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 9.0,
+        "high": 11.8
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 8.0,
+        "high": 11.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 8.0,
+        "high": 12.0
+      }
+    ]
+  },
+  {
+    "item_code": "IP",
+    "name": "無機リン",
+    "unit": "mg/dL",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 2.5,
+        "high": 6.5
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 3.0,
+        "high": 7.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 2.0,
+        "high": 7.5
+      }
+    ]
+  },
+  {
+    "item_code": "NA",
+    "name": "ナトリウム",
+    "unit": "mEq/L",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 140.0,
+        "high": 155.0
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 145.0,
+        "high": 158.0
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 135.0,
+        "high": 160.0
+      }
+    ]
+  },
+  {
+    "item_code": "K",
+    "name": "カリウム",
+    "unit": "mEq/L",
+    "category": "生化学",
+    "reference_ranges": [
+      {
+        "species": "dog",
+        "sex": "any",
+        "low": 3.8,
+        "high": 5.6
+      },
+      {
+        "species": "cat",
+        "sex": "any",
+        "low": 3.5,
+        "high": 5.5
+      },
+      {
+        "species": "other",
+        "sex": "any",
+        "low": 3.0,
+        "high": 6.0
+      }
+    ]
+  }
+]

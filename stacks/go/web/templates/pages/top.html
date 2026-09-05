@@ -1,0 +1,13 @@
+{{define "title"}}窓口業務 トップ{{end}}
+{{define "content"}}
+<div data-testid="screen-top">
+  <h1>窓口業務</h1>
+  <nav>
+    <ul>
+      {{range .Links}}
+      <li><a href="{{.Href}}">{{.Label}}</a></li>
+      {{end}}
+    </ul>
+  </nav>
+</div>
+{{end}}

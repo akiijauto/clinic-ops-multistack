@@ -1,0 +1,29 @@
+{
+  "name": "clinic-ops-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "clinic-ops-multistack / lane E - TypeScript + Next.js (App Router)",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "seed": "node scripts/seed.ts"
+  },
+  "dependencies": {
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "typescript": "^7.0.2"
+  }
+}

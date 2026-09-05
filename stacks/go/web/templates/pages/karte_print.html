@@ -1,0 +1,6 @@
+{{define "title"}}カルテ印刷 {{.Patient.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-karte-print">
+  {{template "karte_body" .}}
+</div>
+{{end}}

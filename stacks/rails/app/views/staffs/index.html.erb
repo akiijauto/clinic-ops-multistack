@@ -1,0 +1,10 @@
+<% content_for :title, "スタッフ" %>
+<div data-testid="screen-staff">
+  <h1>スタッフ</h1>
+  <ul>
+    <% @staffs.each do |s| %>
+      <li data-testid="row-staff"><%= s.name %>（<%= s.role %>）</li>
+    <% end %>
+  </ul>
+  <p><a href="/">トップへ戻る</a></p>
+</div>

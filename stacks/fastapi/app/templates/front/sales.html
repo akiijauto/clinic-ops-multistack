@@ -1,0 +1,44 @@
+{# 売上集計。`GET /api/sales/summary` と同じ計算（`app/routers/sales.compute_summary`）を
+   画面でも見せる。`acceptance.md`「共通の確認手段」表の `sales_summary.*` を付ける。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row %}
+
+{% block title %}売上集計{% endblock %}
+
+{% block content %}
+<section {{ screen("sales") }}>
+  <h1>売上集計</h1>
+  <p>総合計（税抜）:
+    <span data-check-axis="total" data-check="sales_summary.net_amount">{{ summary.total_net_amount }}</span>円
+  </p>
+
+  <h2>分類別</h2>
+  <table>
+    <thead><tr><th>分類</th><th>税抜合計</th><th>構成比</th></tr></thead>
+    <tbody>
+      {% for r in summary.by_category %}
+      <tr {{ row("sales-category") }}>
+        <td>{{ r.category }}</td>
+        <td data-check-axis="category" data-check-key="{{ r.category }}" data-check="sales_summary.net_amount">{{ r.net_amount }}</td>
+        <td data-check-axis="category" data-check-key="{{ r.category }}" data-check="sales_summary.share_pct">{{ r.share_pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>担当別</h2>
+  <table>
+    <thead><tr><th>担当ID</th><th>税抜合計</th></tr></thead>
+    <tbody>
+      {% for r in summary.by_staff %}
+      <tr {{ row("sales-staff") }}>
+        <td>{{ r.staff_id }}</td>
+        <td data-check-axis="staff" data-check-key="{{ r.staff_id }}" data-check="sales_summary.net_amount">{{ r.net_amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p>未算入の明細行: {{ summary.excluded_detail_count_total }} 行</p>
+</section>
+{% endblock %}

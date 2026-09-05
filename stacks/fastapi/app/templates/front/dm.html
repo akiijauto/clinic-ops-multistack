@@ -1,0 +1,32 @@
+{# DM。次回予定日（`Prevention.next_due_date`）が入っている記録を並べる、案内対象の一覧。
+   絞り込み（区分・期間）は次段階。`/api/dm` と同じデータ源。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}DM{% endblock %}
+
+{% block content %}
+<section {{ screen("dm") }}>
+  <h1>DM</h1>
+
+  {% if not rows %}
+  <p {{ empty("dm") }}>対象がありません。</p>
+  {% else %}
+  <table class="dm-list">
+    <thead><tr><th>カルテNo</th><th>飼主</th><th>動物名</th><th>種別</th><th>次回予定日</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      {% set p = patient_by_id.get(r.patient_id) %}
+      <tr {{ row("dm") }}>
+        <td>{{ p.karte_no if p else "" }}</td>
+        <td>{{ owner_by_id.get(p.owner_id).name_kanji if p and owner_by_id.get(p.owner_id) else "" }}</td>
+        <td>{{ p.name_kanji if p else "" }}</td>
+        <td>{{ r.kind }}</td>
+        <td>{{ r.next_due_date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

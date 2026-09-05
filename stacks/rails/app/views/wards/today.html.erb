@@ -1,0 +1,21 @@
+<% content_for :title, "入院（本日）" %>
+<div data-testid="screen-ward-day">
+  <h1>入院中の患者（<%= @date %>）</h1>
+
+  <% if @hospitalizations.empty? %>
+    <p data-testid="empty-hospitalization">入院中の患者はいません。</p>
+  <% else %>
+    <ul>
+      <% @hospitalizations.each do |h| %>
+        <li data-testid="row-hospitalization">
+          <a href="/animals/<%= h.patient.karte_no %>/ward">
+            <%= h.patient.name_kanji %>（<%= h.patient.karte_no %>）／ 処置室:<%= h.room %>
+            ／ 入院日:<%= h.admitted_on %>
+          </a>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>

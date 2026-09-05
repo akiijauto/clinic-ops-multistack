@@ -1,0 +1,14 @@
+<% content_for :title, "顧客" %>
+<div data-testid="screen-animal-detail">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+  <p>飼主: <%= @owner.name_kanji %>（<%= @owner.owner_no %>）／ 電話: <%= @owner.phone %></p>
+  <p>種別: <%= @patient.species %> <%= @patient.breed %> ／ 性別: <%= @patient.sex %></p>
+
+  <ul>
+    <li><a href="/animals/<%= @patient.karte_no %>/karte">カルテ</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/history">来院履歴</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/exam">検査</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/ward">入院</a></li>
+  </ul>
+  <p><a href="/">トップへ戻る</a></p>
+</div>

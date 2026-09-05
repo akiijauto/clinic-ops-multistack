@@ -1,0 +1,27 @@
+<% content_for :title, "入院" %>
+<div data-testid="screen-ward">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の入院記録</h1>
+
+  <% if @hospitalizations.empty? %>
+    <p data-testid="empty-care-record">入院の記録がありません。</p>
+  <% else %>
+    <% @hospitalizations.each do |h| %>
+      <h2><%= h.admitted_on %> 〜 <%= h.discharged_on || "（入院中）" %>（処置室:<%= h.room %>）</h2>
+      <% if h.care_records.empty? %>
+        <p data-testid="empty-care-record">実施記録がありません。</p>
+      <% else %>
+        <ul>
+          <% h.care_records.each do |r| %>
+            <li data-testid="row-care-record">
+              <%= r.recorded_at&.strftime("%Y-%m-%d %H:%M") %>
+              <%= r.kind %> <%= r.content %>
+              ／実施者: <span data-check="care_record.performed_by"><%= r.performed_by_staff&.name %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

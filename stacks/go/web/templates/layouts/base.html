@@ -1,0 +1,15 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{block "title" .}}窓口業務{{end}}</title>
+<link rel="stylesheet" href="{{asset "app.css"}}">
+</head>
+<body>
+<main id="main">
+{{block "content" .}}{{end}}
+</main>
+</body>
+</html>
+{{end}}

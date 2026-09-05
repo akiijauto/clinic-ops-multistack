@@ -1,0 +1,91 @@
+<?php
+
+namespace App\Support;
+
+use Illuminate\Support\Facades\Cache;
+
+/**
+ * data/ 配下の固定データ（画面から編集しない。spec/model.md「変わらないもの」）を読む。
+ *
+ * リポジトリ直下の data/ を読む（stacks/laravel/data/ ではない。全レーン共通の場所）。
+ * data/ は指揮役だけが触る凍結ディレクトリなので、ここは読み込み専用。
+ */
+class FixedData
+{
+    /** リポジトリ直下の data/ ディレクトリの絶対パス。 */
+    public static function dir(): string
+    {
+        // stacks/laravel から見て ../../data
+        return realpath(base_path('../../data')) ?: base_path('../../data');
+    }
+
+    private static function readJson(string $filename): array
+    {
+        return Cache::rememberForever("fixed_data.$filename", function () use ($filename) {
+            $path = self::dir().DIRECTORY_SEPARATOR.$filename;
+            if (! is_file($path)) {
+                throw new \RuntimeException("固定データが見つかりません: $path");
+            }
+            $json = file_get_contents($path);
+            $data = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+
+            return $data;
+        });
+    }
+
+    /** @return array<int, array{item_code:string,name:string,unit:string,category:string,reference_ranges:array}> */
+    public static function labItems(): array
+    {
+        return self::readJson('lab_items.json');
+    }
+
+    public static function labItem(string $itemCode): ?array
+    {
+        foreach (self::labItems() as $item) {
+            if ($item['item_code'] === $itemCode) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<int, array{price_code:string,name:string,unit_price:?int,is_taxable:bool,category_major:string,category:string}> */
+    public static function priceItems(): array
+    {
+        return self::readJson('price_items.json');
+    }
+
+    public static function priceItem(string $priceCode): ?array
+    {
+        foreach (self::priceItems() as $item) {
+            if ($item['price_code'] === $priceCode) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array{prevention_kinds:array,reception_kinds:array,departments:array,phrases:array,price_categories:array} */
+    public static function masters(): array
+    {
+        return self::readJson('masters.json');
+    }
+
+    public static function master(string $key): array
+    {
+        $all = self::masters();
+        if (! array_key_exists($key, $all)) {
+            throw new \RuntimeException("未知のマスタキー: $key");
+        }
+
+        return $all[$key];
+    }
+
+    /** @return array<string,mixed> data/seed.json 全体（初期データ投入時にのみ使う）。 */
+    public static function seed(): array
+    {
+        return self::readJson('seed.json');
+    }
+}

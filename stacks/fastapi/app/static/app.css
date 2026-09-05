@@ -1,0 +1,3 @@
+/* 画面の見た目は各スタックの流儀でよい（spec/README.md）。中身は契約が凍ってから。 */
+:root { color-scheme: light dark; }
+body { margin: 0; font-family: system-ui, sans-serif; }

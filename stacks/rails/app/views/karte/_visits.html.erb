@@ -1,0 +1,28 @@
+<%# 画面・印刷で共有する本体。data-check の並びを一致させるため partial を共通化する。
+    重要: data-check を持つ要素は、他の要素で「包まない」こと。
+    共通テスト（tests/checks.py _data_check）は正規表現で1階層ずつタグを消費する素朴な
+    実装で、あるタグの中に別のタグをネストすると、外側のタグに data-check が無い限り
+    中の data-check ごと読み飛ばされる（外側タグの開始〜対応する終了までを1つの
+    マッチとして消費し、finditer は消費済みの範囲を二度と見ない）。実測して確認済み
+    （coordination/qa/lane-b.md 参照）。そのため、値を持つ <span data-check="..."> は
+    <td> や <div> で囲まず、地の文の直後に**兄弟として**並べる。 %>
+<div data-testid="screen-karte"></div>
+<p>カルテNo <%= @patient.karte_no %> ／ <%= @patient.name_kanji %>（<%= @patient.name_kana %>）／
+  <%= @patient.species %> <%= @patient.breed %> ／ <%= @patient.sex %></p>
+
+<% @visits.each do |visit| %>
+  <p data-testid="row-visit" data-visit-id="<%= visit.id %>">
+    診察 <%= visit.visit_date %>（<%= visit.visit_no %>回目）
+    主訴:<%= visit.chief_complaint %> 症状:<%= visit.symptom %>
+    診断:<%= visit.diagnosis %> 治療:<%= visit.treatment %>
+  </p>
+  <% visit.progress_notes.each do |pn| %>
+    <p data-testid="row-progress-note" data-progress-note-id="<%= pn.id %>">
+      経過記録 <%= pn.entry_date %></p>
+    <span data-check="progress_note.temperature_c"><%= pn.temperature_c %></span>
+    <span data-check="progress_note.pulse"><%= pn.pulse %></span>
+    <span data-check="progress_note.respiration"><%= pn.respiration %></span>
+    <span data-check="progress_note.body_weight_kg"><%= pn.body_weight_kg %></span>
+    <p><%= pn.symptom_course %> <%= pn.treatment_rx %> <%= pn.note %></p>
+  <% end %>
+<% end %>
