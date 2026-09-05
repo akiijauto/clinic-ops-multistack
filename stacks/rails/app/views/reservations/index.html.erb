@@ -1,0 +1,26 @@
+<% content_for :title, "予約" %>
+<div data-testid="screen-reservations">
+  <h1>予約</h1>
+
+  <% if @reservations.empty? %>
+    <p data-testid="empty-reservation">予約がありません。</p>
+  <% else %>
+    <table>
+      <thead><tr><th>患者</th><th>開始</th><th>終了</th><th>担当</th><th>処置室</th><th>状態</th></tr></thead>
+      <tbody>
+        <% @reservations.each do |r| %>
+          <tr data-testid="row-reservation">
+            <td><%= r.patient.name_kanji %></td>
+            <td><%= r.starts_at %></td>
+            <td><%= r.ends_at %></td>
+            <td><%= r.staff&.name %></td>
+            <td><%= r.room %></td>
+            <td><%= r.status %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>

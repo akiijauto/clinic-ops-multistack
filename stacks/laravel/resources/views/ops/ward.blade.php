@@ -12,7 +12,7 @@
                     <tr data-testid="row-hospitalization">
                         <td>
                             @if ($h->patient)
-                                <a href="{{ url('/animals/'.$h->patient->karte_no.'/karte') }}">{{ $h->patient->name_kanji }}</a>
+                                <a href="/animals/{{ $h->patient->karte_no }}/karte">{{ $h->patient->name_kanji }}</a>
                             @endif
                         </td>
                         <td>{{ $h->admitted_on?->format('Y-m-d') }}</td>

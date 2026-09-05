@@ -14,7 +14,7 @@
                         <td>{{ $r->ends_at }}</td>
                         <td>
                             @if ($r->patient)
-                                <a href="{{ url('/animals/'.$r->patient->karte_no.'/karte') }}">{{ $r->patient->name_kanji }}</a>
+                                <a href="/animals/{{ $r->patient->karte_no }}/karte">{{ $r->patient->name_kanji }}</a>
                             @endif
                         </td>
                         <td>{{ $r->staff_id }}</td>

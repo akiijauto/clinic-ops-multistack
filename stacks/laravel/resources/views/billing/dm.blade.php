@@ -12,7 +12,7 @@
                     <tr data-testid="row-dm">
                         <td>
                             @if ($r->patient)
-                                <a href="{{ url('/animals/'.$r->patient->karte_no.'/karte') }}">{{ $r->patient->name_kanji }}</a>
+                                <a href="/animals/{{ $r->patient->karte_no }}/karte">{{ $r->patient->name_kanji }}</a>
                             @endif
                         </td>
                         <td>{{ $r->patient?->owner?->name_kanji }}</td>
