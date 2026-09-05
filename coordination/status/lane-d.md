@@ -298,3 +298,47 @@ cd stacks/fastapi
 **rules組（検算6・7・9）緑。crawl（検算8）は判定側の疑いを報告し、指揮役の確認待ち。**
 画面自体（`/` `/today` `/search` `/reservations` `/ward` `/dm` `/sales` `/staff`
 `/settings` `/about`）は直接叩けば全部200。ヘッダの件が直ればcrawlも緑になる見込み。
+
+## 2026-09-06（続報）14件全部緑。ポート問題の正体が判明（D-9訂正）
+
+指揮役の指示どおり `./.venv/Scripts/python.exe run.py`（既定8414）で再検証。
+
+### ポート8404/8414の「死んだソケット」の正体（`qa/lane-d.md` D-9訂正）
+
+**孤児プロセスだった。** `Stop-Process` で reloader（親）だけ止めていたため、
+multiprocessing の worker（子）が生き残ってソケットを掴み続けていた。
+`Get-CimInstance Win32_Process | Where CommandLine -like '*multiprocessing.spawn*'`
+で親が存在しない子を洗い出して個別に止めたところ、8404・8414とも
+`socket.bind()` が通るようになった。以後、reloaderを止めるときは子も一緒に止める。
+
+### 実測（`PORT`未指定＝8414）
+
+```
+── smoke ──
+  OK ×2
+── money ──
+  OK ×5
+── screen ──
+  OK ×3
+── rules ──
+  OK ×3
+── crawl ──
+  OK  検算8 画面から辿れるリンクが全部生きている  — 60 画面を辿って切れなし
+
+全 14 件 通過
+```
+
+**共通テスト14件、すべて緑。**
+
+### 起動コマンド
+
+```
+cd stacks/fastapi
+./.venv/Scripts/python.exe run.py
+```
+環境変数無しで8414に立つ。
+
+## いまの状態
+
+**14件全部緑。** 次の指示を待っている。screens.md の保存系操作（カルテ保存・
+受付の並べ替え・設定編集等）はまだ未着手。

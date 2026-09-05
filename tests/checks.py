@@ -74,6 +74,11 @@ class _CheckCollector(HTMLParser):
             self._buf.append(data)
 
 
+# href の値を拾う。ルート相対・絶対URLのどちらも取れる形にしておき、
+# どれを辿るかは呼び出し側で決める（外部サイトへは出て行かない）。
+HREF_RE = re.compile(r"""href\s*=\s*["']([^"'>]+)""")
+
+
 _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input",
          "link", "meta", "param", "source", "track", "wbr"}
 
@@ -313,8 +318,27 @@ def register(check, Client, Report):
             # キーは Client が小文字へ揃えている（run.py の _norm_headers）
             if "html" not in (headers.get("content-type", "") or ""):
                 continue
-            for m in re.finditer(r'href\s*=\s*["\'](/[^"\'#?]*)', html):
-                href = m.group(1)
+            # **絶対URLも辿る。**
+            # 最初はルート相対（/xxx）しか拾っていなかったが、
+            # http://127.0.0.1:8403/xxx のような絶対URLは正しいHTMLで、
+            # ブラウザは普通に辿る。Laravel の url() ヘルパは絶対URLを返す。
+            # 拾えないままだと**判定側が実装に書き方を強制する**ことになり、
+            # 「書き方は各スタックの流儀で自由」という契約と食い違う
+            # （2026-09-06、レーンCが実測で発見）。
+            #
+            # ただし**同じ相手のものだけ**辿る。外のサイトへは出て行かない。
+            for m in re.finditer(HREF_RE, html):
+                raw = m.group(1).split("#")[0].split("?")[0]
+                if not raw:
+                    continue
+                if raw.startswith(("http://", "https://")):
+                    if not raw.startswith(c.base):
+                        continue          # 外部サイトは辿らない
+                    href = raw[len(c.base):] or "/"
+                elif raw.startswith("/"):
+                    href = raw
+                else:
+                    continue              # mailto: や相対パスは対象外
                 if href not in seen and not href.startswith("/api"):
                     queue.append(href)
         if dead:

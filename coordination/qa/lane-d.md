@@ -144,3 +144,19 @@
 - **画面自体は用意済み**: `/` `/today` `/search` `/reservations` `/ward` `/dm` `/sales`
   `/staff` `/settings` `/about` は直接叩けば全部200。ヘッダの件が直れば crawl は
   緑になる見込み
+
+## D-9（訂正）: 8404/8414の「握ったまま死んだソケット」の正体は、殺し損ねた孤児プロセスだった
+
+- D-6・D-9 で「PIDを引いても存在しない」と報告したのは誤りだった。
+  正しくは: **`Stop-Process` でWatchFilesの reloader（親）を止めても、
+  multiprocessing で fork した worker（子）は生き残る。** その子プロセスが
+  ソケットを掴んだまま実際に応答し続けていた
+- `Get-CimInstance Win32_Process | Where CommandLine -like '*multiprocessing.spawn*'`
+  で確認したところ、親PIDが既に存在しない孤児の worker が複数見つかった
+  （このセッション内で reloader だけを繰り返し止めていた結果、積み重なっていた）
+- 対処: 孤児の worker（子）を個別に `Stop-Process -Force` したところ、
+  8404・8414 とも `socket.bind()` が通るようになった
+- **教訓**: 今後 `run.py`（`reload=True`）を止めるときは、reloaderのPIDだけでなく
+  **その子プロセス（`--multiprocessing-fork` を含むコマンドライン）も一緒に**
+  止めること。片方だけ止めると「掴んだまま死んだように見えるソケット」の正体は
+  だいたいこれ
