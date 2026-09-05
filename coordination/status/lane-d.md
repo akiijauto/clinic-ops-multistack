@@ -242,3 +242,59 @@ cd stacks/fastapi
 
 **smoke・money・screen、合計10件すべて緑。** 次の指示を待っている。
 `spec/screens.md` の他領域・保存系の実装はまだ手をつけていない。
+
+## 2026-09-06 rules組 3件 緑。crawl はjudge側の疑いあり（D-8）。ポートは暫定8415
+
+指揮役の指示: 「rules・crawl の残り3件（検算6・7・8）を緑にする」。
+
+### やったこと
+
+1. `app/routers/reservations.py`（新規）: `GET/POST /api/reservations`（重複時409
+   `reservation_conflict`）・`GET/PATCH /api/reservations/{id}`・
+   `POST /api/reservations/{id}/cancel`。半開区間での重なり判定（担当・処置室の両方）。
+   画面 `/reservations`（一覧表示のみ）
+2. `app/routers/ward.py`（新規）: `GET /api/hospitalizations/{id}`・
+   `GET/POST /api/hospitalizations/{id}/care-records`（実施者必須。無いと422、
+   退院済みの入院には追加不可）。画面 `/ward`
+3. `app/routers/front.py`（新規）: `/`（`/today`と同じ）・`/search`・`/dm`・`/sales`・
+   `/staff`・`/settings`・`/about`。すべてDBから実データを読む表示専用画面
+   （保存系は次段階）
+4. `app/routers/sales.py`: 集計本体を `compute_summary()` として切り出し、
+   API と `/sales` 画面の両方が同じ関数を呼ぶようにした（画面と印刷を共有マクロに
+   したのと同じ考え方）
+5. `app/main.py` に3ルーターを登録
+
+### 実測（`PORT=8415`。理由は下記）
+
+```
+── rules ──
+
+  OK  検算6 予約が担当・処置室のどちらでも重ならない  — 60 件で重なり0
+  OK  検算7 入院の記録行に実施者が必ず入っている  — 108 件中 実施者なし 0 件
+  OK  検算9 削除済みは一覧から消えるが件数には残る  — 一覧から消えても集計に残る
+
+全 3 件 通過
+```
+
+検算9は指示に無かったが `rules` 組に含まれており、既存の設計（`deleted_at IS NULL`で
+絞る一覧クエリと、絞らない集計クエリを最初から分けてある）で追加実装なしに緑だった。
+
+### crawl（検算8）: `qa/lane-d.md` D-8 参照。判定側の疑いを指揮役へ報告済み
+
+`tests/checks.py` の `_dead_links` が `headers.get("Content-Type")` を大文字小文字
+そのままで引いており、FastAPI/uvicornが返す小文字の `content-type` と噛み合わない。
+結果、トップページからリンクを1件も抽出できず「1画面しか辿れない」で不合格になる。
+`curl` で直接HTMLを見るとリンクは正しく10個出ている。**自分の実装ではなく判定側の
+疑いが強い**（大文字小文字を無視すべきはHTTPヘッダの仕様）。指揮役の確認待ち。
+
+### D-9: ポート8414でまた「握ったまま死んだソケット」（暫定的に8415を使用）
+
+`Stop-Process -Force` でreloaderを止めた直後に発生。強制終了がソケットの後始末を
+妨げている可能性を疑っている（`qa/lane-d.md` D-6と同じ現象の再発）。
+指揮役へ報告済み。以後、可能な限り `-Force` を避けて様子を見る。
+
+## いまの状態
+
+**rules組（検算6・7・9）緑。crawl（検算8）は判定側の疑いを報告し、指揮役の確認待ち。**
+画面自体（`/` `/today` `/search` `/reservations` `/ward` `/dm` `/sales` `/staff`
+`/settings` `/about`）は直接叩けば全部200。ヘッダの件が直ればcrawlも緑になる見込み。

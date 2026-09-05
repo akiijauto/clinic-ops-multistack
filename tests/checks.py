@@ -310,7 +310,8 @@ def register(check, Client, Report):
             if status >= 400:
                 dead.append(f"{path}({status})")
                 continue
-            if "html" not in (headers.get("Content-Type", "") or ""):
+            # キーは Client が小文字へ揃えている（run.py の _norm_headers）
+            if "html" not in (headers.get("content-type", "") or ""):
                 continue
             for m in re.finditer(r'href\s*=\s*["\'](/[^"\'#?]*)', html):
                 href = m.group(1)

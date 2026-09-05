@@ -125,3 +125,22 @@
 - **仮決め**: `GET /api/lab-tests/{id}` の各項目に両方を返す（`judgment` が共通テスト用、
   `judgement` が openapi.yaml 用。値の語彙は `flag` フィールドとしても併記）
 - 実装: `app/routers/lab.py`
+
+## D-8. `_dead_links`（検算8）が Content-Type ヘッダを大文字小文字そのままで見ている
+
+- **事実**: `tests/checks.py` の `_dead_links` は
+  `if "html" not in (headers.get("Content-Type", "") or ""): continue` と、
+  ヘッダ名を大文字小文字そのまま (`Content-Type`) で引く
+- **事実**: FastAPI/Starlette（uvicorn）は仕様どおり**小文字**の `content-type` を返す
+  （`curl -sD -` で実測）。`tests/run.py` の `Client.get` は `dict(res.headers)` で
+  ヘッダを辞書化するため、大文字小文字はサーバが送った形のまま残る
+- **結果**: `headers.get("Content-Type")` が常に `None` になり、リンク抽出の分岐が
+  全ページで「htmlではない」扱いになる。トップ以外にリンクが1件も辿れない
+- **確認したこと**: `curl` でトップページのHTMLを直接見ると `<a href="/today">` 等
+  10個のリンクが正しく出力されている。`tests/run.py` の `Client.get('/')` を直接呼んでも
+  同じHTMLが返る。ヘッダのキーだけが `content-type`（小文字）
+- **止まるか**: 止めない。指揮役へ報告済み（HTTPヘッダ名は本来大文字小文字を区別しない
+  仕様なので、`.get()` 側を大文字小文字を無視する形にするのが筋と考える）
+- **画面自体は用意済み**: `/` `/today` `/search` `/reservations` `/ward` `/dm` `/sales`
+  `/staff` `/settings` `/about` は直接叩けば全部200。ヘッダの件が直れば crawl は
+  緑になる見込み

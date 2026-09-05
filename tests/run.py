@@ -87,6 +87,20 @@ class Client:
     def __init__(self, base: str):
         self.base = base.rstrip("/")
 
+    @staticmethod
+    def _norm_headers(h) -> dict:
+        """ヘッダのキーを小文字に揃える。
+
+        **HTTPのヘッダ名は大文字小文字を区別しない**（RFC 9110）。
+        実際、Go と Laravel は `Content-Type`、FastAPI/Starlette は
+        `content-type` を返す。素の辞書で `get("Content-Type")` すると
+        後者では常に None になり、**実装によって判定が変わる**
+        （2026-09-06、レーンDが実測で発見）。
+
+        判定する側が実装の書き癖に左右されてはいけないので、ここで揃える。
+        """
+        return {str(k).lower(): v for k, v in dict(h).items()}
+
     def request(self, method: str, path: str, body=None, headers=None):
         url = self.base + path
         data = None
@@ -99,9 +113,9 @@ class Client:
         req = urllib.request.Request(url, data=data, headers=h, method=method)
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
-                return res.status, res.read().decode("utf-8", "replace"), dict(res.headers)
+                return res.status, res.read().decode("utf-8", "replace"), self._norm_headers(res.headers)
         except urllib.error.HTTPError as e:
-            return e.code, e.read().decode("utf-8", "replace"), dict(e.headers)
+            return e.code, e.read().decode("utf-8", "replace"), self._norm_headers(e.headers)
         except Exception as e:  # 接続できない等
             return 0, f"{type(e).__name__}: {e}", {}
 

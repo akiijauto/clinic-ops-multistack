@@ -37,6 +37,10 @@ module ClinicOps
     # 保存は UTC のまま（Rails 既定）。表示と集計の境界だけが JST になる。
     config.time_zone = "Tokyo"
 
+    # Rack 3 の小文字ヘッダを送出直前に昔ながらの表記へ揃える
+    # （app/middleware/canonical_headers.rb 参照。共通テストのクローラー対策）。
+    config.middleware.use CanonicalHeaders
+
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end

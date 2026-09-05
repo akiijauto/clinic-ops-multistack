@@ -237,3 +237,46 @@ smoke（2件）・money（5件、指揮役が足した検算そのものの点�
 ### 次にやること
 
 指揮役の指示待ち。5領域の実装、または他の検算（6〜9）に進める。
+
+---
+
+## 2026-09-06 — rules組・crawl組（検算6・7・8。9は副産物で先に緑）を通し、共通テスト全14件が緑になった
+
+`GET /api/reservations`・`GET /api/hospitalizations/{id}/care-records` を新設し、
+画面を9枚（トップ・このシステムについて・本日の患者・検索・予約・入院・スタッフ・
+売上集計・DM管理・設定 — 実質10枚）追加してナビを実際に機能させた。
+
+### 作ったもの
+
+| 種類 | 場所 |
+| --- | --- |
+| 予約API | `app/Http/Controllers/Api/ReservationController.php`（新規） |
+| 入院記録API | `app/Http/Controllers/Api/HospitalizationController.php`（新規） |
+| トップ・このシステムについて | `app/Http/Controllers/Top/TopController.php` + `resources/views/top/*`（`/about` はDB非参照） |
+| 本日の患者・検索 | `app/Http/Controllers/Reception/{Today,Search}Controller.php` + `resources/views/reception/*` |
+| 予約・入院・スタッフ | `app/Http/Controllers/Ops/{Reservations,Ward,Staff}Controller.php` + `resources/views/ops/*` |
+| 売上集計・DM | `app/Http/Controllers/Billing/{SalesScreen,Dm}Controller.php` + `resources/views/billing/*`。**売上集計画面はAPIと同じ `SalesSummaryController::__invoke()` を呼んで数字を共有**（画面とAPIで別計算にして食い違う事故を防ぐ） |
+| 設定 | `app/Http/Controllers/Settings/SettingsController.php` + `resources/views/settings/index.blade.php` |
+
+### 確かめたこと
+
+```
+$ python tests/run.py http://127.0.0.1:8403
+（省略）
+全 14 件 通過
+```
+smoke 2・money 5・screen 3・rules 3・crawl 1 = 14件、すべて緑。
+
+### 踏んだ落とし穴（自分のミス。他レーンの参考になるかもしれない）
+
+検算8（リンク巡回）を最初に流したとき「1画面しか辿れなかった」で不合格になった。
+原因は共通レイアウトのナビと一覧画面のリンクを **`url('/xxx')`** で書いていたこと。
+Laravelの `url()` は絶対URL（`http://127.0.0.1:8403/xxx`）を返すため、共通クローラーの
+`href="/..."`（先頭が `/` かどうか）判定に掛からず、**1件もリンクとして拾われていなかった**。
+`resources/views/layouts/app.blade.php` と一覧系ビュー5枚のリンクを、すべて素のルート
+相対パス（`href="/xxx"`）に書き直して解決した。実装（ルート自体）は最初から正しく動いていた。
+
+### 次にやること
+
+指揮役の指示待ち。共通テストは全件緑。5領域の作り込み、または画面数の食い違い
+（24/25/26の実測）など、次の段階の指示を待つ。
