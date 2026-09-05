@@ -28,7 +28,7 @@ LANES = [
     ("A", "Go", 8401),
     ("B", "Rails", 8402),
     ("C", "Laravel", 8403),
-    ("D", "FastAPI", 8414),
+    ("D", "FastAPI", 8415),
     ("E", "Next.js", 8405),
 ]
 
