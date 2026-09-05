@@ -260,3 +260,72 @@ $ python tests/run.py http://127.0.0.1:8405 --only smoke
 
 `--only smoke`・`--only money`（検算そのものの点検を含め5件）も再確認済みで緑。
 `npm test` も 24/24。起動コマンドは変更なし: `PORT=8405 npm run dev`。
+
+## rules・crawl 対応、全14件が緑（2026-09-06）
+
+### rules（検算6・7・9）
+
+- 検算6: `src/app/api/reservations/route.ts`（新規）。既にあった `_area4/repo.ts` の
+  `listReservations()`（重なり判定込みで検算6が要求する半開区間ロジックは
+  `src/lib/reservation.ts` に既存）をそのまま呼ぶだけで済んだ
+- 検算7: `GET /api/hospitalizations/{id}/care-records` は既に実装済みで、実測したら
+  最初から緑だった
+- 検算9: `src/app/api/visits/[visit_id]/route.ts`（新規）。`deleted_at` でフィルタしない
+  （一覧からは消えるが直接引けば見える、という検算9の要求どおり）
+
+### crawl（検算8）― 26画面のうち大半がまだ配線されていなかった
+
+`src/lib/`・`src/app/_area4/` には領域ごとの実装ロジック（DB操作・集計・判定）が
+かなり作り込まれていたが、**実際にHTTPへ応答するページ（`page.tsx`/`route.ts`）は
+`/settings` `/settings/features` と、今日作った `/animals/{karte_no}/karte` 系しか
+無かった**。トップページも `/healthz` だけを案内する古い内容のままだった。
+
+crawl検算を通すため、既存ロジックを配線する形で以下を新規作成:
+
+- `src/app/page.tsx`（書き換え）: 実在する画面へのリンク集にした
+- `src/app/today/route.ts`（screen 1 本日の患者）: `listReceptionsForDay`/`visitCountForDate`
+  （`area1/data.ts` に既存）を使用
+- `src/app/search/route.ts`（screen 4 検索）: `searchPatientsOwners`/`searchVisits`
+  （同上）を使用
+- `src/app/staff/route.ts`（screen 21）・`src/app/ward/route.ts`（screen 18）・
+  `src/app/reservations/route.ts`（screen 19）: `_area4/repo.ts` の
+  `listStaff`/`hospitalizationsActiveOn`/`listReservations` を使用
+- `src/app/settings/import/route.ts`（screen 24）・`src/app/settings/master/route.ts`・
+  `src/app/settings/master/[key]/route.ts`（screen 25）: `settings-import.ts`/
+  `settings-masters.ts`（既存）を使用
+- `src/app/about/route.ts`・`src/app/folded/[key]/route.ts`（screen 7）: それぞれ
+  `render.ts`のNAVと`/settings/features`が既にリンクしていたが実体が無かった先
+
+すべて**参照専用のスタブ**（一覧・詳細の表示のみ、保存・登録ボタンは置いていない）。
+`spec/README.md`「できますと書いて出来ていない状態を作らない」に沿った。
+
+実測（`python tests/run.py http://127.0.0.1:8405`、全14件）:
+
+```
+── smoke ──
+── money ──
+── screen ──
+── rules ──
+── crawl ──
+
+  OK  GET /healthz が 200 で {"status":"ok"} を返す
+  OK  起動していて、応答が返る  — 7ms
+  OK  検算1 売上が分類別・担当別・日別・総合計で一致する  — 4値とも 5,185,704 円
+  OK  検算1 分類別の構成比の和がちょうど100.0%  — 和=100.0
+  OK  検算2 単価未設定の行を0円で合計に入れず、未算入の行数を出す  — 伝票28 税抜49,500 未算入1行
+  OK  検算2 消費税は伝票単位で1回だけ切り捨て  — 税2,750 税込30,250
+  OK  検算2 この規則を、いまのデータで確かめられているか（検算そのものの点検）  — ★ 150枚すべてで丸め方の差が出ない。この規則は**いまのデータでは検証できていない**（データ側の課題）
+  OK  検算3 体温が全患者で同じ値になっていない  — 14 種 / 31 件
+  OK  検算4 カルテの画面と印刷で同じ値が出る  — 20 組を比べて差なし
+  OK  検算5 基準の外にある値は判定欄と色の両方に出る  — 50 項目の判定が一致
+  OK  検算6 予約が担当・処置室のどちらでも重ならない  — 60 件で重なり0
+  OK  検算7 入院の記録行に実施者が必ず入っている  — 108 件中 実施者なし 0 件
+  OK  検算9 削除済みは一覧から消えるが件数には残る  — 一覧から消えても集計に残る
+  OK  検算8 画面から辿れるリンクが全部生きている  — 35 画面を辿って切れなし
+
+全 14 件 通過
+```
+
+`npm test` も 24/24 のまま。起動コマンドは変更なし: `PORT=8405 npm run dev`。
+26画面のうち今日繋いだのは参照系の一部のみ。登録・編集フォーム（会計入力・予約登録・
+カルテ保存フォーム等）はまだ配線していない — 次にやるとしたらここ。
