@@ -87,7 +87,7 @@ $ python tests/run.py http://localhost:3005
 | 2 | 依存を入れる | 済 | `next` `react` `react-dom` ＋型定義のみ。リポジトリ内に閉じた。`found 0 vulnerabilities` |
 | 3 | テストが走る形 | 済 | `npm test` で10件（うち2件はHTTP用でskip）。**壊して落ちることを確認済み** |
 | 4 | `GET /health` | 済 | `/health` と **`/healthz`** の両方。`200` / `application/json` / `{"status":"ok"}` を実測 |
-| 5 | 題材を読む | 済 | `vet-karte/docs/実装分担-2026-09-05.md`。**読むだけ。当該リポジトリは一切変更していません** |
+| 5 | 題材を読む | 済 | `題材のシステムdocs/実装分担-2026-09-05.md`。**読むだけ。当該リポジトリは一切変更していません** |
 
 ### 先へ進めたぶん（`spec/model.md` が出たので）
 
@@ -150,7 +150,7 @@ Next.js が肩代わりしているもの（ルーティング・ビルド・型
 ## 触っていないもの
 
 `git`（commit/push/checkout をしていません）／`spec/`／`tests/`／他レーンの `stacks/`／
-`vet-karte`（読んだだけ）。書いたのは `stacks/nextjs/` と、このファイル・
+題材のシステム（読んだだけ）。書いたのは `stacks/nextjs/` と、このファイル・
 `coordination/qa/lane-e.md` だけです。秘密情報・実データは入れていません。
 
 ## R-14 / R-19 対応（2026-09-05）

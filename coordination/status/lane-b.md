@@ -112,7 +112,7 @@ $ python tests/run.py http://127.0.0.1:8402
 | 2. 依存を入れる（リポジトリ内に閉じる） | 済 | `bundle config` で `BUNDLE_PATH: vendor/bundle`。104 gems。**システムへは何も入れていない** |
 | 3. テストが走る形 | 済 | `bin/rails test` → `1 runs, 2 assertions, 0 failures, 0 errors` |
 | 4. `GET /health` | 済 | 実サーバへ `curl` → `200` / `{"status":"ok"}` |
-| 5. 題材を読む | 済 | `vet-karte/docs/実装分担-2026-09-05.md`。**読んだだけで1文字も変更していない** |
+| 5. 題材を読む | 済 | `題材のシステムdocs/実装分担-2026-09-05.md`。**読んだだけで1文字も変更していない** |
 
 ### 構成（あとで効く決め）
 

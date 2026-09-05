@@ -1,6 +1,6 @@
 # 協調のルール — 5レーン並列
 
-RetailBrain（2026-09-04、3レーン）の `coordination/README.md` の不変条件を引き継ぎ、
+前回の並列開発（2026-09-04、3レーン）の `coordination/README.md` の不変条件を引き継ぎ、
 **レーンが5つに増えることで悪化する点を補強**した版。
 
 ## 不変条件（破ると全体が壊れる）
@@ -18,7 +18,7 @@ RetailBrain（2026-09-04、3レーン）の `coordination/README.md` の不変�
 
 ### 6. 起動文面はレーンごとに変える
 
-RetailBrain で実際に起きた事故（`AI開発/retailbrain/coordination/ASSIGNMENT.md` に記録）:
+前回の並列開発 で実際に起きた事故（`AI開発/前回の並列開発/coordination/ASSIGNMENT.md` に記録）:
 
 > ユーザーは3つのCLIに**同一の起動文面**を貼った。そのため各CLIは自分のレーンを知らずに起動した
 
