@@ -38,3 +38,6 @@ dump/
 # 機械ごとの設定。**利用者名を含む絶対パスが入る**ので追跡しない。
 stacks/laravel/tools/php-binary.txt
 stacks/laravel/tools/php.ini
+
+# 取ってくれば済むものは追跡しない。3.6MB・16万行あった。
+*.phar
