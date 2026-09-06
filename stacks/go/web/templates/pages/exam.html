@@ -6,7 +6,7 @@
   <p>{{.PatientName}}（{{.KarteNo}}）</p>
 
   <nav data-testid="exam-list">
-    <a href="/animals/{{.KarteNo}}/exam">新規検査</a>
+    <a href="/animals/{{.KarteNo}}/exam?new=1">新規検査</a>
     {{range .Tests}}
     <a href="/animals/{{$.KarteNo}}/exam?lab_test_id={{.ID}}"{{if .IsCurrent}} aria-current="page"{{end}}>{{.TestedOn}} {{.Category}}</a>
     {{end}}

@@ -26,6 +26,8 @@
             <a class="button secondary" href="/animals/{{ $patient->karte_no }}/karte{{ $showDeleted ? '' : '?show_deleted=1' }}">
                 {{ $showDeleted ? '削除済みを隠す' : '削除済みも表示' }}
             </a>
+            {{-- 状態C（あえて動かさないと決めた）。押せる見た目のまま無効にする。消さない。 --}}
+            <a class="button disabled" href="/todo/karte_temp_save">一時保存</a>
         </p>
 
         @include('clinical._visits', ['visits' => $visits, 'patient' => $patient, 'interactive' => true])

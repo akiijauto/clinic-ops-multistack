@@ -20,6 +20,13 @@
     ／ 本日の診察件数 <span data-check="visit_count.today">{{.VisitCountToday}}</span> 件
   </p>
 
+  <!-- 完了の件数はその日に何件診たかの実績なので、消す操作は作らない
+       （spec/README.md 同上）。押せる見た目のまま無効にし、理由は各 /todo/{key} で読める。 -->
+  <p>
+    <a class="disabled" href="/todo/done_all" aria-disabled="true">完了全削除</a>
+    <a class="disabled" href="/todo/done" aria-disabled="true">完了削除</a>
+  </p>
+
   {{if .Rows}}
   <table>
     <thead>

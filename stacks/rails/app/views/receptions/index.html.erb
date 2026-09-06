@@ -86,7 +86,9 @@
   <% end %>
 
   <p>
-    <%# 完了全削除／完了削除（状態C）。完了行を消すと当日件数が数えられなくなるため、あえて塞んである。 %>
+    <%# 完了全削除／完了削除（状態C）。完了行を消すと当日件数が数えられなくなるため、あえて塞んである。
+        押せる見た目のまま無効にする。消してはいけない（spec/README.md）。 %>
+    <a href="/todo/reception_done_all_delete" class="disabled" data-testid="btn-delete-done-all" aria-disabled="true">完了全削除（あえて動かしていません）</a>
     <a href="/todo/reception_done_delete" class="disabled" data-testid="btn-delete-done" aria-disabled="true">完了削除（あえて動かしていません）</a>
   </p>
 

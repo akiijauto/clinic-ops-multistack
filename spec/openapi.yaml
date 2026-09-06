@@ -461,8 +461,27 @@ paths:
       operationId: "screen_exam"
       tags: ["screens-clinical"]
       summary: "検査"
+      description: |
+        既定表示（クエリ無し）は、**その患者の最新の保存済み検査**とする。空の新規フォームでは
+        ない（2026-09-06、裁定R-24）。契約がこの経路のクエリを1つも定義していなかったため
+        既定の挙動が実装ごとに割れ（4実装は最新の保存済み検査、1実装は常に空フォーム）、
+        空フォームだった実装では検算5（基準の外にある値は判定欄と色の両方に出る）が
+        既定表示では永久に確かめられなくなっていた。
+
+        `lab_test_id` を指定すると、その検査（この患者のものに限る。他患者のIDは404）を表示する。
+        空の新規フォームを見るには `new=1` を明示すること。
       parameters:
         - $ref: "#/components/parameters/KarteNo"
+        - name: lab_test_id
+          in: query
+          required: false
+          schema: { type: integer }
+          description: "表示する保存済み検査を指定する。省略時は最新の保存済み検査（既定）。"
+        - name: new
+          in: query
+          required: false
+          schema: { type: string, enum: ["1"] }
+          description: "\"1\" を渡すと、保存済み検査を無視して空の新規フォームを表示する。"
       responses:
         "200": { $ref: "#/components/responses/HtmlOk" }
         "404": { $ref: "#/components/responses/NotFound" }

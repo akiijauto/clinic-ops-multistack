@@ -1,7 +1,7 @@
 {# 本日の患者（受付一覧）。`spec/screens.md` 領域1「1. 本日の患者」。
    いまは表示のみ（区分タブ・上下送り・完了表示切替は次段階）。 #}
 {% extends "base.html" %}
-{% from "_macros.html" import screen, row, empty %}
+{% from "_macros.html" import screen, row, empty, action_button %}
 
 {% block title %}本日の患者{% endblock %}
 
@@ -39,5 +39,13 @@
     </tbody>
   </table>
   {% endif %}
+
+  {# 状態C（あえて動かさないと決めたもの。`spec/screens.md`・openapi.yaml `/todo/{key}` の
+     「押しても保存されない灰色のボタン3つ」のうち2つ）。完了行を消すと当日件数が
+     数えられなくなるため、押しても保存されない灰色のままにしてある——消さない。 #}
+  <p>
+    {{ action_button("完了全削除", "c", todo_key="complete_delete_all") }}
+    {{ action_button("完了削除", "c", todo_key="complete_delete_one") }}
+  </p>
 </section>
 {% endblock %}

@@ -637,3 +637,66 @@ $ python tests/run.py http://127.0.0.1:8401
 `/ui.css` の中身は `diff` で `spec/ui.css` と完全一致を確認済み。
 `go build ./...` / `go test ./...` も全緑。`stacks/go/` 以外は変更していない。
 コミット・pushはしていない。
+
+---
+
+## 追記6（2026-09-06、disabled・out-of-rangeが出ていなかった件）
+
+実測の結論: **1（判定器の条件不成立）と2（単純に足りていない）の両方だった。**
+
+### `disabled`（実装側の不足だった）
+
+`disabled` クラスを付けた `karte.html` の「前回コピー（直前の診察がありません）」は、
+**判定器が使う固定患者（karte_no=10003、視診済み=あり）では原理的に一度も出ない**
+（`PreviousExists` は「その患者に既存の診察が1件でもあるか」で決まり、
+在庫検査が使う患者は必ず「視診あり」の患者になる——`visit_id` の対応付けの都合上）。
+つまりこの条件は1（判定器の条件不成立）だったが、**それとは別に、
+仕様が求める「常に灰色の3つのボタン」（一時保存／完了全削除／完了削除。
+`spec/README.md`「押しても できます と書いて出来ていない状態を作らない」）が
+**画面にまったく実装されていなかった**（2に該当。テンプレートを全文検索して確認）。
+
+この3つはデータに依存せず常に出る（B/C状態そのもの）。
+- `karte.html`（`karte-actions`ナビに追加）: `<a class="disabled" href="/todo/temp_save">一時保存</a>`
+- `today.html`（完了件数の下に追加）: `<a class="disabled" href="/todo/done_all">完了全削除</a>`・
+  `<a class="disabled" href="/todo/done">完了削除</a>`
+
+いずれも押せる見た目のまま無効にし、`/todo/{key}` で理由を読める形にした
+（既存の `internal/server/todo.go` の3キーとそのまま対応）。
+
+### `out-of-range`（1・2の複合。実装側の設計を見直した）
+
+`GET /animals/{karte_no}/exam`（クエリ無し）の既定表示が**常に空欄の新規フォーム**
+だった。`spec/openapi.yaml` はこの経路にクエリパラメータを1つも定義しておらず
+（`lab_test_id` はどこにも無い）、既定の中身は実装の裁量。ところがこの裁量の結果、
+**基準外の値を示す判定・色が、既定表示には未来永劫出ない設計**になっていた
+（判定はその場で入力した値にしか付かず、新規フォームは常に空欄のため）。
+カルテ画面（`GET /animals/{karte_no}/karte`）は既定で最新の診察を開き、
+空の新規フォームは別経路（`/karte/new`）にしている既存の設計にならい、
+検査画面も**既定は最新の保存済み検査を表示**（判定・色つき）、空の新規フォームは
+`?new=1` を明示したときだけ出す形に直した（`internal/server/exam.go`
+`handleExam`、`web/templates/pages/exam.html`「新規検査」リンクの遷移先）。
+
+karte_no=10003 の最新の保存済み検査には基準外の値（PLT等）が実在することを
+実測済み（`curl`で`out-of-range`3件・`data-check-flag="high"/"low"`を確認）。
+
+### 実測
+
+```
+$ curl -s http://127.0.0.1:8401/animals/10003/exam | grep -o 'out-of-range'
+out-of-range（3件）
+$ curl -s http://127.0.0.1:8401/animals/10003/exam | grep -o 'data-check-flag="[a-z]*"'
+high / low / low / normal / normal
+$ curl -s http://127.0.0.1:8401/animals/10003/karte | grep -o 'class="disabled"'
+class="disabled"
+$ curl -s http://127.0.0.1:8401/today | grep -o 'class="disabled"'
+class="disabled"（2件）
+
+$ python tests/run.py http://127.0.0.1:8401 --only inventory
+全 7 件 通過（新規の「指示したクラスが実際に画面に付いている」含む、33画面で3クラスすべて確認）
+
+$ python tests/run.py http://127.0.0.1:8401
+全 21 件 通過
+```
+
+`go build ./...` / `go test ./...` も全緑。`stacks/go/` 以外は変更していない。
+コミット・pushはしていない。

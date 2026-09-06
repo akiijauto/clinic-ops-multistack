@@ -15,8 +15,8 @@
             <a class="button secondary" href="/today{{ $hideDone ? '' : '?hide=1' }}">
                 {{ $hideDone ? '完了行も表示する' : '完了行を隠す' }}
             </a>
-            <a class="button disabled" href="/todo/today.complete_delete_all">完了全削除</a>
-            <a class="button disabled" href="/todo/today.complete_delete_one">完了削除</a>
+            <a class="button disabled" href="/todo/today_complete_delete_all">完了全削除</a>
+            <a class="button disabled" href="/todo/today_complete_delete_one">完了削除</a>
             <a class="button disabled" href="/folded/hospital_division">分院</a>
         </p>
 

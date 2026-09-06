@@ -460,3 +460,31 @@ $ python tests/run.py http://127.0.0.1:8414 --only inventory
 $ python tests/run.py http://127.0.0.1:8414
 全 20 件 通過
 ```
+
+---
+
+## Q20. 灰色のボタン3つ（一時保存／完了全削除／完了削除）を揃えた（記録）
+
+`TodosController::ITEMS` は元から3キーとも定義済みだったが、**画面から実際にリンクしていたのは
+`reception_done_delete`（完了削除）1つだけ**だった（レーンAが全文検索で発見・指揮役が確認）。
+
+- `/today`（`app/views/receptions/index.html.erb`）に「完了全削除」（`/todo/reception_done_all_delete`）を追加
+- `/animals/{karte_no}/karte`（`app/views/karte/show.html.erb`）に「一時保存」（`/todo/temp_save`）を追加
+
+いずれも `class="disabled"` `aria-disabled="true"` を付けた**押せる見た目のボタン**で、消していない
+（spec/README.md「押せる見た目のまま無効。消さない」）。キー名は既存の `TodosController::ITEMS` の
+3キーをそのまま使った（契約はenumを固定していないため、語彙を変える必要は無かった）。
+
+`karte/show.html.erb` は `_visits` パーティシャル（画面・印刷で共有）を呼ぶだけの薄いテンプレートで、
+一時保存ボタンは印刷（`karte/print.html.erb`）には影響しない別ファイルに置いた
+（印刷フラグメントに余計なボタンを混ぜないため）。
+
+### 確認結果
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+全 8 件 通過（新しい「契約 押しても何も起きないボタンにしない」チェック含む）
+
+$ python tests/run.py http://127.0.0.1:8414
+全 22 件 通過
+```

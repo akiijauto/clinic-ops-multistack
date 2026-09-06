@@ -531,3 +531,24 @@
 - 実測: `GET /ui.css` -> 200、`spec/ui.css` と完全一致（diff差分なし）。
   `python tests/run.py http://127.0.0.1:8415 --only inventory`（全6件）・
   フル（全20件）とも全件通過
+
+## D-23: 契約が名指しする灰色ボタン3つ（状態C）を追加した
+
+- `/todo/{key}` の契約説明が求める「押しても保存されない灰色のボタン3つ
+  （一時保存／完了全削除／完了削除）」の行き先が、テンプレートに1つも無かった
+  （以前直した`action_button`の適用先を、契約外の3ボタン削除で全部消してしまい、
+  契約が求める3つを足し戻していなかった）
+- `feature_notes.py` の `TODO_NOTES` に既にちょうどこの3キー（`temp_save`
+  `complete_delete_all` `complete_delete_one`）があったので、新規キーは作らず
+  既存キーへ繋いだ:
+  - `/today`（`front/today.html`）に「完了全削除」「完了削除」（状態C、
+    `action_button(..., "c", todo_key=...)`）
+  - `/animals/{karte_no}/karte`（`clinical/karte.html`）に「一時保存」（状態C）
+- B（folded）とC（todo）を混ぜていないことを確認: 3つとも `state="c"` で
+  `action_button` マクロにより `/todo/<key>` へリンクする（前回直した
+  b/c振り分けバグの対象外——3つとも元々C状態のキーなので `/todo/` が正しい）
+- 実測: `/today`・`/animals/10002/karte` から3つのリンク（`/todo/complete_delete_all`
+  `/todo/complete_delete_one` `/todo/temp_save`）が出ており、いずれも200
+- `python tests/run.py http://127.0.0.1:8415 --only inventory`（全8件、新規2項目
+  「見た目 指示したクラスが実際に画面に付いている」「契約 押しても何も起きない
+  ボタンにしない」を含む）・フル（全22件）とも全件通過

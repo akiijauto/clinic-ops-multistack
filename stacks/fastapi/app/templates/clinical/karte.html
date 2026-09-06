@@ -3,7 +3,7 @@
    1診察ぶんの描画は `_visit_macro.html` に共通化してある（印刷画面と共有するため）。
    入力フォームは `_visit_form_macro.html`（新規診察・前回コピー・編集で共有）。 #}
 {% extends "base.html" %}
-{% from "_macros.html" import screen, row, empty, success_banner, error_banner %}
+{% from "_macros.html" import screen, row, empty, success_banner, error_banner, action_button %}
 {% from "clinical/_visit_macro.html" import render_visit %}
 {% from "clinical/_visit_form_macro.html" import render_form %}
 
@@ -35,6 +35,9 @@
       <button type="submit" class="button">取消</button>
     </form>
     <a href="/animals/{{ patient.karte_no }}/karte/print" class="button">カルテ印刷（全体）</a>
+    {# 状態C（あえて動かさないと決めたもの）。題材が「手で押す保存は作らない」と
+       決めているため、一時保存は押しても保存されない灰色のまま——消さない。 #}
+    {{ action_button("一時保存", "c", todo_key="temp_save") }}
     {% if show_deleted %}
       <a href="/animals/{{ patient.karte_no }}/karte">削除済みを隠す</a>
     {% else %}

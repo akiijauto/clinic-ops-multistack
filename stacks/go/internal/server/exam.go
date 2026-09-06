@@ -113,6 +113,25 @@ func (s *Server) handleExam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	labTestID, _ := strconv.Atoi(r.URL.Query().Get("lab_test_id"))
+	// lab_test_id を指定せずに開いたときの既定表示。
+	//
+	// `spec/openapi.yaml` はこの経路にクエリパラメータを1つも定義しておらず、
+	// 既定の中身は各実装の裁量になっている（`spec/screens.md` 10章は
+	// 「新規作成」と「保存済みを選んで見る」の両方を「できること」と書くのみ）。
+	// カルテ画面（`GET /animals/{karte_no}/karte`）は既定で最新の診察を開き、
+	// 空の新規フォームは別の明示的な経路（`/karte/new`）で出す設計なので、
+	// 検査画面もそれに揃える: 既定は最新の保存済み検査を表示し、
+	// 空の新規フォームは `?new=1` を明示したときだけ出す
+	// （以前は既定=空欄だったため、基準外の値・判定色が既定画面には
+	// 一切出ず、契約が求める「基準の外にある値は判定欄と色の両方に出る」を
+	// 満たす画面に一度もたどり着けなかった — 2026-09-06、在庫検査で発覚）。
+	if labTestID == 0 && r.URL.Query().Get("new") != "1" {
+		if patient, ok := s.clinical.PatientByKarteNo(karteNo); ok {
+			if tests := s.clinical.ListLabTests(patient.ID); len(tests) > 0 {
+				labTestID = tests[0].ID
+			}
+		}
+	}
 	data, ok := s.buildExamView(karteNo, labTestID)
 	if !ok {
 		http.NotFound(w, r)

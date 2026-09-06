@@ -255,14 +255,52 @@ def register(check, Client, Report):
         spec_path = path
         names = _VAR.findall(path)
         if "key" in names:
+            # **語彙の出どころを1つに決めつけない。**
+            #
+            # 決めつけるたびに外した（2026-09-06、いずれも判定器の誤り）。
+            #
+            #   1回目「`key=reception` で通るはず」→ どの語彙にも無い語だった
+            #   2回目「その経路の一覧ページに在るはず」→ `/folded` は一覧に全項目を
+            #         並べる作りで**自分の個別ページへリンクしない**実装があり、
+            #         個別への入口は `/settings/features` 側にあった（レーンCが切り分け）
+            #   3回目「`masters.json` のキー名が語彙のはず」→ 実装の語彙は**単数形**
+            #         （`department` `price_item` …）で、5実装とも404になった
+            #
+            #     判定器が「ここにしか無いはず」と決めつけると、
+            #     **正しく作ってあるものが「確かめられない」や「無い」に落ちる。**
+            #
+            # だから**実装が出しているものを探す**。単数・複数の揺れも見る。
             index = path.split("/{key}")[0]
-            status, html, _ = c.get(index)
-            if status != 200 or not html:
+            seg = index.rsplit("/", 1)[-1]
+            segs = {seg, seg.rstrip("s"), seg + "s"}
+            pages = [index]
+            if index.startswith("/api/"):
+                pages.append(index[4:])                     # /api/masters → /masters
+                pages.append(index[4:].rstrip("s"))          # → /master
+                pages.append("/settings" + index[4:].rstrip("s"))
+            # 灰色ボタン（状態C）の導線は本日の患者とカルテに在る。
+            # そこを見ないと `/todo/{key}` が「確かめられない」に落ちる。
+            pages += ["/settings/master", "/settings/features", "/settings",
+                      "/today", "/", "/animals/" + sample.get("karte_no", "") + "/karte"]
+            cand = None
+            seen_pages = set()
+            for probe in pages:
+                if probe in seen_pages:
+                    continue
+                seen_pages.add(probe)
+                st, html, _ = c.get(probe)
+                if st != 200 or not html:
+                    continue
+                for sg in segs:
+                    m = re.search(r"/" + re.escape(sg) + r"/([A-Za-z0-9_\-]+)", html)
+                    if m:
+                        cand = m.group(1)
+                        break
+                if cand:
+                    break
+            if cand is None:
                 return None
-            m = re.search(re.escape(index) + r"/([A-Za-z0-9_\-]+)", html)
-            if not m:
-                return None
-            path = path.replace("{key}", m.group(1))
+            path = path.replace("{key}", cand)
             names = _VAR.findall(path)
         for n in names:
             if n not in sample:
@@ -461,5 +499,93 @@ def register(check, Client, Report):
         if bad:
             return False, f"{len(bad)} 画面が読んでいない: {', '.join(bad[:4])}"
         return True, f"{looked} 画面すべてが読んでいる"
+
+    @check("inventory", "見た目 指示したクラスが実際に画面に付いている")
+    def _ui_classes(c, rep):
+        """**読んでいることと、当たっていることは別。**
+
+        共通CSSを配って読ませたが、それだけでは足りなかった。2レーンが独立に
+        こう報告してきた（2026-09-06）。
+
+          レーンE「`class="banner-error"`（語順が逆）が複数箇所にあり、
+                  `ui.css` の `.error-banner` に当たらない」
+          レーンC「`class="btn"` 72箇所は ui.css のどのセレクタにも一致せず**死んでいた**」
+
+        **同じ名前で違う語順、似た名前で別物** — CSSはこれを黙って無視する。
+        エラーも警告も出ない。読み込みだけを見る検査では、この状態が緑になる。
+
+            指示しただけでは、付いていることの証明にならない。
+
+        だから**指示した3クラスが実際に現れるか**を数える。
+        画面の内容次第で出ないもの（`out-of-range` は基準外の値が無ければ出ない）も
+        あるので、**全画面に必須とはしない。** 辿れる範囲のどこかに現れればよい。
+        """
+        want = {
+            "num": "金額・数量の右寄せ",
+            "disabled": "押せるが動かないボタン",
+            "out-of-range": "基準の外にある検査値",
+        }
+        sample = _samples()
+        screens, _ = _split()
+        found, looked = set(), 0
+        for p in screens:
+            real = _resolve(c, p, sample)
+            if real is None:
+                continue
+            st, html, _ = c.get(real)
+            if st != 200 or not html or "<html" not in html.lower():
+                continue
+            looked += 1
+            for cls in want:
+                if re.search(r'class="[^"]*\b' + re.escape(cls) + r'\b', html):
+                    found.add(cls)
+        if looked < 10:
+            return False, f"{looked} 画面しか見られていない（検査が働いていない）"
+        missing = [f"{k}({v})" for k, v in want.items() if k not in found]
+        if missing:
+            return False, f"どの画面にも現れないクラス: {', '.join(missing)}"
+        return True, f"{looked} 画面で {len(found)} クラスすべてを確認"
+
+    @check("inventory", "契約 押しても何も起きないボタンにしない（灰色3つが理由へ繋がる）")
+    def _grey(c, rep):
+        """契約が名指しで求めている3つのボタンが在るかを見る。
+
+        `spec/openapi.yaml` の `/todo/{key}` にこう書いてある。
+
+            押しても保存されない灰色のボタン3つ（一時保存／完了全削除／完了削除）の
+            行き先。**押しても何も起きないボタンにはしない。** 押すと決めた理由が読める。
+
+        **契約が名指しで要求しているのに、確かめる検査が無かった。**
+        レーンA（Go）が「テンプレートに一切実装されていない」と全文検索で気づくまで、
+        **5実装のうち4つが持っていないまま、すべての検査が緑だった**（2026-09-06）。
+
+            書いてあるのに確かめない。この企画でいちばん多く繰り返した型である。
+
+        キーの語彙は契約が実装に委ねている（`enum` に固定しない、と明記）ので、
+        **名前は問わない。** 「3つの異なる `/todo/<key>` への導線が在り、
+        その行き先が生きていること」だけを見る。
+        """
+        keys = set()
+        for path in ("/today", "/animals/{karte_no}/karte"):
+            real = _resolve(c, path, _samples())
+            if real is None:
+                continue
+            st, html, _ = c.get(real)
+            if st != 200 or not html:
+                continue
+            keys.update(re.findall(r"/todo/([A-Za-z0-9_\-]+)", html))
+        if len(keys) < 3:
+            return False, (f"灰色のボタンが {len(keys)} 個しか無い（3つ必要）"
+                           f"{'：' + ', '.join(sorted(keys)) if keys else ''}")
+        dead = []
+        for k in sorted(keys):
+            st, _, _ = c.get(f"/todo/{k}")
+            if st != 200:
+                dead.append(f"/todo/{k}={st}")
+        if dead:
+            return False, f"理由の行き先が生きていない: {', '.join(dead)}"
+        return True, f"{len(keys)} 個: {', '.join(sorted(keys))}"
+
+
 
 

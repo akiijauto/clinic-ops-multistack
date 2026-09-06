@@ -714,3 +714,18 @@ $ python tests/run.py http://127.0.0.1:8415
 「PDF以外の形式のファイルは取り込みを拒否する」は該当なし・未対応のまま
 （この実装にファイルアップロード自体が無いため）。指揮役側で `screens.md` を
 直す方針と聞いている。それ以外の既知の欠けは無い。
+
+## 完了の自己点検（5回目、灰色ボタン3つ対応後）
+
+```
+$ python tests/run.py http://127.0.0.1:8415 --only inventory
+全 8 件 通過
+```
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 22 件 通過
+```
+
+`/today` に「完了全削除」「完了削除」、`/animals/{karte_no}/karte` に「一時保存」を
+状態Cのボタンとして追加（`feature_notes.py` の既存キーへ繋いだだけで新規キーは
+作っていない）。詳細は `coordination/qa/lane-d.md` D-23。

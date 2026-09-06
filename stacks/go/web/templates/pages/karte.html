@@ -55,6 +55,10 @@
       <button type="submit">取消</button>
     </form>
     <a href="/animals/{{.Patient.KarteNo}}/karte/print">カルテ印刷（全件）</a>
+    <!-- 書きかけの自動保存は無いため、手で押す一時保存は作らない
+         （spec/README.md「押しても できます と書いて出来ていない状態を作らない」）。
+         押せる見た目のまま無効にし、理由は /todo/temp_save で読める。 -->
+    <a class="disabled" href="/todo/temp_save" aria-disabled="true">一時保存</a>
   </nav>
 
   {{template "karte_body" .}}

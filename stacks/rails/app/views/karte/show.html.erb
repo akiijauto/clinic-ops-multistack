@@ -1,1 +1,8 @@
 <%= render "visits" %>
+
+<p>
+  <%# 一時保存（状態C）。書きかけは自動で控えている前提のため、あえて塞んである
+      （spec/screens.md #9・TodosController::ITEMS "temp_save"）。押せる見た目のまま
+      無効にする。消してはいけない（spec/README.md）。 %>
+  <a href="/todo/temp_save" class="disabled" data-testid="btn-temp-save" aria-disabled="true">一時保存（あえて動かしていません）</a>
+</p>

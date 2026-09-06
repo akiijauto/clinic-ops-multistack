@@ -225,3 +225,37 @@ HTML構造の対応:
 
 実測: `python tests/run.py http://127.0.0.1:8403` 全20件通過（新規追加された
 「見た目 共通CSS(/ui.css)を配っていて、全画面が読んでいる」含む）。
+
+## M. 2026-09-06 — 灰色のボタン3つを追加、キーに「.」を含めない教訓
+
+契約（`/todo/{key}` の説明・`spec/screens.md`「本日の患者」状態C表）が名指しで求める
+「一時保存／完了全削除／完了削除」の3つの灰色ボタンのうち、実装済みだったのは
+今日の患者画面の2つ（完了全削除・完了削除）だけで、カルテ画面の「一時保存」が無かった。
+`resources/views/clinical/karte.blade.php`に`<a class="button disabled" href="/todo/karte_temp_save">一時保存</a>`
+を追加した（`config/feature_notes.php`の`todo`配列に`karte_temp_save`キーを新設）。
+
+**副次的な発見**: 既存の2キー（`today.complete_delete_all` / `today.complete_delete_one`）は
+`.`（ドット）を含んでいたため、在庫検査の新しい語彙抽出（`/todo/([A-Za-z0-9_\-]+)`——
+`.`は文字クラスに含まれない）が両方とも`today`に切り詰めて同一視し、「1個しか無い」と
+誤カウントしていた（指揮役の実測どおり）。**キーに`.`を使わない**よう
+`today_complete_delete_all` / `today_complete_delete_one`へ改名した
+（画面側リンクと`config/feature_notes.php`の両方を合わせて変更。参照箇所は2ファイルのみ
+だったことを`grep`で確認済み）。
+
+実測: `/todo/today_complete_delete_all` `/todo/today_complete_delete_one` `/todo/karte_temp_save`
+いずれも200。`/today`・`/animals/10002/karte`のHTMLから3つとも辿れることを確認。
+
+**ついでに気づいたこと**: 在庫検査の実行中、`php artisan serve`（開発用の簡易サーバ、
+シングルスレッド）が1回だけ`/settings/master/{key}`・`/api/masters/{key}`で偶発的な
+タイムアウト/404を返した。実際の6キー（price_item/lab_item/reception_kind/
+prevention_kind/department/phrase）はすべて直接確認すると200で、判定器のキー解決ロジック
+（`tests/inventory.py`の`_resolve`）を手動で追跡しても正しく`price_item`を拾えていた。
+直後に2回連続で実行し直すと両方とも緑になったため、**アプリ側の不具合ではなく開発サーバの
+一過性の詰まり**と判断した（本番相当のサーバではないための既知の限界）。
+
+実測（連続2回・フルテスト1回、すべて緑）:
+```
+python tests/run.py http://127.0.0.1:8403 --only inventory → 全8件通過（1回目）
+python tests/run.py http://127.0.0.1:8403 --only inventory → 全8件通過（2回目、再現なし）
+python tests/run.py http://127.0.0.1:8403 → 全22件通過
+```
