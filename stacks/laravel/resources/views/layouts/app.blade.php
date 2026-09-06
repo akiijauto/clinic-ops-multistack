@@ -3,7 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'clinic-ops-multistack（Laravel）')</title>
+    {{--
+        <title>は「画面名 — 動物病院 窓口業務システム」の形にする（spec/screens.md
+        「トップ画面と共通ナビは、5実装で同一にする」2026-09-06追記）。各画面は
+        @section('title', '画面名')だけを書けばよく、接尾辞はここで一括して付ける。
+    --}}
+    <title>@yield('title', 'トップ') — 動物病院 窓口業務システム</title>
     {{--
         見た目は5実装の共通CSS（spec/ui.css）に揃える（オーナー判断・案B、2026-09-06）。
         このファイルはコピーして配るだけで、1文字も変えない

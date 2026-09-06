@@ -938,6 +938,22 @@ def register(check, Client, Report):
             return False, f"/today?kind={codes[0]} が {s2}"
         n1 = len(re.findall(r'data-testid="row-reception"', h1 or ""))
         n2 = len(re.findall(r'data-testid="row-reception"', h2 or ""))
+
+        # **タブが在ることと、絞り込みが効いていることは別。**
+        #
+        # `data/seed.json` の受付は `anchor_date`（2026-09-01）に作られている。
+        # 「本日」は壁時計の日付なので、その日を過ぎると `/today` は5実装とも0件になる。
+        # **0件どうしを比べても、絞り込みが働いているかは分からない。**
+        #
+        # 検算2（消費税の丸め）で「150枚すべてで差が出ず、規則を確かめられていない」
+        # という事故を既に起こしている。**同じ形なので、同じように事実として表に出す。**
+        # 隠して緑にすると、確かめていないことを確かめたことにしてしまう。
+        if n1 == 0:
+            return True, (f"{len(codes)} 区分すべてにタブがある — "
+                          f"★ ただし本日の受付が0件のため、**絞り込みが効いているかは"
+                          f"確かめられていない**（データが anchor_date に固定されているため）")
+        if n2 > n1:
+            return False, f"絞り込むと行が増えている（全体{n1}行 → 先頭区分{n2}行）"
         return True, f"{len(codes)} 区分すべてにタブがある（全体{n1}行 / 先頭区分{n2}行）"
 
 

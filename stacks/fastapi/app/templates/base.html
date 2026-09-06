@@ -6,7 +6,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}動物病院 窓口業務システム（学習・研究用）{% endblock %}</title>
+  {# 契約（spec/screens.md）: `<title>` は「画面名 — 動物病院 窓口業務システム」の形。
+     各画面は画面名だけを block title に書けば、ここ1箇所で全画面に付く。 #}
+  <title>{% block title %}動物病院 窓口業務システム{% endblock %} — 動物病院 窓口業務システム</title>
   {# 5実装が共有する唯一のスタイル（spec/ui.css）。中身は変えない・全画面はここ経由で
      読む（base.html が全画面共通の <head> を持つため、ここ1箇所で足りる）。 #}
   <link rel="stylesheet" href="/ui.css">

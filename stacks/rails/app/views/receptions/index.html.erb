@@ -4,9 +4,8 @@
   <p>本日の診察件数: <span data-check="visit_count.today"><%= @today_count %></span></p>
   <p>表示中の完了件数: <%= @done_count %></p>
 
+  <%# 「すべて」は契約に無い（省略時はマスタの1つ目へ戻す。絞らない状態は用意しない）。 %>
   <nav data-testid="reception-kind-tabs">
-    <a href="/today?<%= { hide: @hide_done ? "1" : nil }.compact.to_query %>"
-       data-testid="reception-kind-tab-all"<%= @kind.nil? ? ' aria-current="page"' : "" %>>すべて</a>
     <% @kinds.each do |k| %>
       <a href="/today?<%= { kind: k[:code], hide: @hide_done ? "1" : nil }.compact.to_query %>"
          data-testid="reception-kind-tab-<%= k[:code] %>"<%= @kind == k[:code] ? ' aria-current="page"' : "" %>>

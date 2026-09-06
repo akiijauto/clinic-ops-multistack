@@ -4,7 +4,13 @@
 
 @section('content')
     <div class="card" data-testid="screen-reservations">
-        <h1>予約一覧（{{ $from }} 〜 {{ $to }}）</h1>
+        <h1>予約</h1>
+        <form method="get" action="/reservations">
+            <label>開始日 <input type="date" name="from" value="{{ $from }}"></label>
+            <label>終了日 <input type="date" name="to" value="{{ $to }}"></label>
+            <button class="button secondary" type="submit">絞り込む</button>
+        </form>
+        <p>期間: {{ $from }} 〜 {{ $to }}</p>
         <p><a class="button" href="/reservations/new">新規予約</a></p>
         <table>
             <thead><tr><th>開始</th><th>終了</th><th>患者</th><th>担当</th><th>処置室</th><th>状態</th><th></th></tr></thead>

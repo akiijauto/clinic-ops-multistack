@@ -310,3 +310,95 @@ python tests/run.py http://127.0.0.1:8403
 （検算1-9・検算8・在庫5件・見た目2件・灰色ボタン1件・書き込み1件・データ一致1件・起動確認）
 全 24 件 通過
 ```
+
+## O. 2026-09-06 — レビュー指摘5件（売上3表・マスタ表示・退院済み入院・PDF・スタッフ選択）
+
+### O1. 売上集計、分類別の1表しかなかった → 3表に
+
+`resources/views/billing/sales.blade.php`が`by_category`しか描画していなかった
+（APIは`by_staff`/`by_date`も最初から正しく返していた）。分類別・担当別・日別の
+3表を追加し、期間指定フォーム・税抜合計・未算入件数（`sales-total`/`sales-excluded-count`
+のtestid）も追加した。`Billing\SalesScreenController`で`Staff::pluck('name','id')`を渡し、
+担当別表で担当名を表示する。
+
+実測: `total_net_amount` / `by_category`合計 / `by_staff`合計 / `by_date`合計は
+すべて`5,185,704`円で一致（spec/screens.md画面17「3つの表それぞれの金額の合計が、
+すべて同じ値になる」を満たす）。
+
+### O2. マスタ画面が生JSONダンプだった → 整形済みの表に
+
+`Settings\MasterController`に列見出し・セル整形ロジックを追加した（先頭行のキーから
+列を作り、ネストした配列——検査の基準値など——は1行で読める要約文字列にする）。
+6種類（price_item/lab_item/reception_kind/prevention_kind/department/phrase）すべてで
+表として描画されることを確認した。
+
+### O3. 退院済みの入院にケア記録を追加できてしまう → 422で拒否
+
+`Api\CareRecordController::store()`に退院済みチェック（`$hospitalization->isOngoing()`）が
+無く、画面側（`Ops\AnimalWardController`）だけが持っていた規則が抜けていた。API側にも
+同じチェックを追加。実測: 退院済みの入院（id=1）へのPOSTは422、進行中の入院（id=8）への
+POSTは201のまま。テスト用に作成したケア記録（id=109）は削除済み（他4実装との比較を
+歪めないため）。
+
+### O4. 書類のPDF拒否 — 実装にファイルアップロード自体が無い（対応不要と判断）
+
+`Clinical\PaperController` / `Api\PaperController`とも`title`（文字列）と`note`だけを
+受け取る設計で、`enctype="multipart/form-data"`もファイル入力欄も、
+`$request->file()`/`hasFile()`の呼び出しも存在しない（grep で確認済み）。
+`title=test.txt`のようなPOSTが通るのは「titleという文字列項目に任意の文字列を
+入れられる」だけであり、ファイルの拡張子チェックとは別の話。指揮役の指示
+「受け取らないなら対応不要」に従い、コード変更はしていない。
+
+### O5. スタッフ画面に担当選択の手段が無かった → 選択・解除を追加
+
+`Ops\StaffController`に`select(int $id)`（一覧から選ぶ）`clear()`（担当を外す）を追加し、
+`routes/areas/ops.php`に`POST /staff/{id}/select` `POST /staff/clear`を配線した
+（openapi.yamlは`/staff`のGETしか規定していないため、POST経路はレーンC統合点として
+自分で決めた——会計画面のE3と同じ考え方）。`App\Support\CurrentStaff`は既存の仕組みを
+そのまま使う。実測: 選択後`GET /staff`が選んだ担当名を表示し、解除後は「未選択」に戻る。
+
+## P. 2026-09-06 — 見た目の実描画一致（トップ見出し・共通ナビ・受付区分タブ）
+
+指揮役がPlaywrightでの実描画比較（`tests/shots.py`）を導入し、「CSSを配った／クラスが
+付いた」までしか確かめておらず「同じに見えるか」を見ていなかったと自ら訂正した。
+以下を対応した。
+
+- `<title>`をレイアウト側で一括して「画面名 — 動物病院 窓口業務システム」の形に統一
+  （`resources/views/layouts/app.blade.php`の1箇所の変更で全画面に効く）
+- トップ画面（`/`）の本文を、spec/screens.md追記どおり「h1・3点の説明・`/today`への
+  導線1本」だけに簡略化。旧本文にあった`/folded`・`/about`へのリンク（ナビの重複）と
+  対象日診察件数の表示を削除した。`Top\TopController`もこれに伴いDB参照が不要になった
+- `<h1>`に日付・期間を含めていた2画面（`/reservations`「予約一覧（期間）」→「予約」、
+  `/ward`「入院（日付時点）」→「入院」）を修正。期間・基準日は見出しの下の`<p>`へ移した
+  （全画面の`<h1>`をgrepし、可変値を含むのはこの2件だけだったことを確認済み。他は
+  患者名・伝票番号等の「その画面が指す対象の識別子」であり、日付・期間ではないため対象外
+  と判断した）
+- 共通ナビ（`<nav>`内の10リンク：トップ/本日の患者/検索/予約/入院/DM/売上集計/スタッフ/
+  設定/このシステムについて）は、追記されたspec/screens.mdの表と完全一致していることを
+  確認済み（元から変更不要だった）
+- `spec/ui.css`（ダークモード対応版）と`public/ui.css`はdiffで内容一致を確認済み
+  （再配布の必要は無かった）
+
+`python tests/shots.py /today /reservations /ward` / `/sales` / `/`で実描画を確認:
+`/`・`/sales`・`/reservations`（修正後）は「揃っている」。`/today`はtitle/h1が5実装
+完全一致（nav本数だけ16 vs Rails17で近似）。`/ward`は自分のtitle/h1が最も規則に
+忠実（可変値を含まない）だが、他4実装がまだ日付を残しているため「違う」表示のまま
+残る（自分側の問題ではないと判断）。
+
+## Q. 2026-09-06 — 受付区分タブ（spec/screens.md画面1・契約が名指しで要求）
+
+`Reception\TodayController`に受付区分（`data/masters.json`の`reception_kinds`）の
+タブを追加した。`Reception.medical_purpose`が区分の表示名（例:「初診」）をそのまま
+持っていること（`code`ではない）を`data/seed.json`実測で確認した上でマッピングした。
+
+契約どおり: `kind`省略時・未知の`kind`はマスタの1つ目へ戻す（空一覧にしない）。
+6区分すべてにタブリンクを設置し、「完了行を隠す」トグルでも`kind`を保持するよう
+修正した。
+
+## R. /folded（バラ引数無し）についての意見
+
+指揮役から「契約に足すか、他レーンに合わせるかを決めたい」と相談があった。
+自分の意見: **契約に追加することを推奨する。** 理由は、`/folded`単体を一覧として
+実装した2レーン（Laravel・Rails）は実際に動く200のページを返しており、逆に
+未実装（Go・FastAPI）や404（Next.js）へ合わせるのは、動くものを壊す方向の統一に
+なるため。`spec/screens.md`の「③折りたたみ表示＝一覧」という説明とも自然に合致する。

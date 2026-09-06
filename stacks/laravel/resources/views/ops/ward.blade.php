@@ -4,7 +4,12 @@
 
 @section('content')
     <div class="card" data-testid="screen-ward-day">
-        <h1>入院（{{ $date }} 時点）</h1>
+        <h1>入院</h1>
+        <form method="get" action="/ward">
+            <label>基準日 <input type="date" name="date" value="{{ $date }}"></label>
+            <button class="button secondary" type="submit">表示する</button>
+        </form>
+        <p>{{ $date }} 時点</p>
         <table>
             <thead><tr><th>患者</th><th>入院日</th><th>退院日</th><th>処置室</th><th></th></tr></thead>
             <tbody>

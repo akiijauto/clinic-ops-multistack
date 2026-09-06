@@ -775,3 +775,38 @@ $ python tests/run.py http://127.0.0.1:8415
 Laravel/FastAPIは「トップ」のみ）——これはFastAPI固有ではなく手本のLaravelも同じ書式で、
 全26件の自動検査も通っているため、今回の2件の指摘の範囲外と判断し変更していない。
 気になる場合は指揮役へ報告する。
+
+## 完了の自己点検（8回目、受付区分タブ欠落・title書式2件対応）
+
+指揮役から追加2件のNG報告を受けて対応。
+
+1. **本日の患者に受付区分タブが無い**（`spec/screens.md` 1番・`spec/openapi.yaml` /today
+   の `kind` クエリが名指しで求めている機能。Go/Rails/Next.jsの実装を手本にした）。
+   - `app/routers/front.py`: `today_screen` に `kind` クエリを追加。
+     `data/masters.json` の `reception_kinds` から選択中の区分を決定
+     （省略時・マスタに無い区分は1つ目へ戻す——契約どおり）。`Reception` に独立した
+     「種別」列が無いため、`medical_purpose` への一致で絞り込み（`/api/receptions` の
+     既存の kind フィルタと同じ考え方。`patients.py` D-12）。
+   - `app/templates/front/today.html`: `/today` 側にのみ2つ目の `<nav>` として区分タブ
+     （`/today?kind=<コード>`）を追加。**トップ側には出していない**（本文リンク数を
+     6本以下に保つ契約のため）。既存の `data-testid`/`data-check` は変更なし。
+2. **`<title>` に「— 動物病院 窓口業務システム」の接尾辞が無い**。
+   - `app/templates/base.html`: `{% block title %}` を包む形にして、全画面共通で
+     1箇所から接尾辞を付けるようにした（各画面テンプレートの `block title` は
+     画面名だけのまま変更不要）。
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 27 件 通過
+```
+
+該当3件も通過:
+- OK 契約 本日の患者に受付区分のタブがある — 6 区分すべてにタブがある
+- OK 見た目 トップの見出しと共通ナビが契約どおり
+- OK 見た目 トップの本文が契約どおり（ナビの複製を並べない）
+
+`tests/shots.py /today` で `<title>` が5実装とも「本日の患者 — 動物病院 窓口業務システム」に
+揃ったことを確認（nav本数はRailsのみ17本で他4本は16本——FastAPI側の差ではない）。
+`tests/shots.py /` は「揃っている」で差分なし。
+
+サーバーは今回も --reload なしのため、旧プロセスを止めて入れ替え起動（孤児無しを確認）。

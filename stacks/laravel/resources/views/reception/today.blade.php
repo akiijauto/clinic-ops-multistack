@@ -6,13 +6,22 @@
     <div class="card" data-testid="screen-today">
         <h1>本日の患者</h1>
 
+        {{-- 受付区分タブ（spec/screens.md画面1「区分タブを押す→その区分の当日ぶんだけに絞る」）。 --}}
+        <nav data-testid="reception-kind-tabs">
+            @foreach ($kinds as $k)
+                <a class="button {{ $k['code'] === $currentKind ? '' : 'secondary' }}"
+                   data-testid="reception-kind-tab"
+                   href="/today?kind={{ $k['code'] }}{{ $hideDone ? '&hide=1' : '' }}">{{ $k['name'] }}</a>
+            @endforeach
+        </nav>
+
         <p>
             完了件数（表示中）: {{ $receptions->where('status', 'done')->count() }}　/
             対象日の診察件数: <strong data-check="visit_count.today">{{ $visitCountToday }}</strong>
         </p>
 
         <p>
-            <a class="button secondary" href="/today{{ $hideDone ? '' : '?hide=1' }}">
+            <a class="button secondary" href="/today?kind={{ $currentKind }}{{ $hideDone ? '' : '&hide=1' }}">
                 {{ $hideDone ? '完了行も表示する' : '完了行を隠す' }}
             </a>
             <a class="button disabled" href="/todo/today_complete_delete_all">完了全削除</a>

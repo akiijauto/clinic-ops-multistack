@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 
-from app import models
+from app import fixtures, models
 from app.config import JST
 from app.db import get_db
 from app.routers.sales import compute_summary
@@ -27,19 +27,33 @@ def _today_jst() -> dt.date:
     return dt.datetime.now(JST).date()
 
 
+def _reception_kinds() -> list[dict]:
+    """`data/masters.json` の受付区分（区分タブ・`kind` クエリの元）。"""
+    return fixtures.masters().get("reception_kinds", [])
+
+
 @router.get("/", response_class=HTMLResponse)
 @router.get("/today", response_class=HTMLResponse)
-def today_screen(request: Request, db: Session = Depends(get_db)):
+def today_screen(request: Request, kind: str | None = None, db: Session = Depends(get_db)):
     today = _today_jst()
     start = dt.datetime.combine(today, dt.time.min, tzinfo=JST)
     end = start + dt.timedelta(days=1)
 
-    receptions = (
-        db.query(models.Reception)
-        .filter(models.Reception.received_at >= start, models.Reception.received_at < end)
-        .order_by(models.Reception.display_no)
-        .all()
+    # `spec/screens.md` 1番・`spec/openapi.yaml` /today: 受付区分タブで当日ぶんを絞る。
+    # 省略時・マスタに無い区分が来たときはマスタの1つ目へ戻す（空一覧を出さない）。
+    kinds = _reception_kinds()
+    codes = [k["code"] for k in kinds if k.get("code")]
+    selected_kind = kind if kind in codes else (codes[0] if codes else None)
+    selected_kind_name = next((k["name"] for k in kinds if k["code"] == selected_kind), None)
+
+    reception_query = db.query(models.Reception).filter(
+        models.Reception.received_at >= start, models.Reception.received_at < end
     )
+    if selected_kind_name:
+        # Reception には独立した「種別」列が無いため、medical_purpose への一致で
+        # 代用する（`/api/receptions` の kind フィルタと同じ考え方。patients.py D-12）。
+        reception_query = reception_query.filter(models.Reception.medical_purpose == selected_kind_name)
+    receptions = reception_query.order_by(models.Reception.display_no).all()
     visit_count_today = (
         db.query(models.Visit)
         .filter(models.Visit.visit_date == today, models.Visit.deleted_at.is_(None))
@@ -61,6 +75,8 @@ def today_screen(request: Request, db: Session = Depends(get_db)):
             "patient_by_id": patient_by_id,
             "owner_by_id": owner_by_id,
             "screen_key": screen_key,
+            "reception_kinds": kinds,
+            "selected_kind": selected_kind,
         },
     )
 

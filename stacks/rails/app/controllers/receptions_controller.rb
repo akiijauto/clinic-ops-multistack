@@ -8,9 +8,12 @@ class ReceptionsController < ApplicationController
     # 件数は減らない）。
     @today_count = Visit.unscoped.where(visit_date: Date.current).count
 
+    # spec/openapi.yaml「省略時はマスタの1つ目。マスタに無い区分が来たら空一覧を出さずに
+    # 1つ目へ戻す」。「すべて」という絞らない状態は契約に無い（2026-09-06 指揮役の指摘。
+    # 5実装のうちRailsだけが持っていた）。
     @kinds = FixedData::Masters.reception_kinds
     @kind = params[:kind].presence
-    @kind = nil unless @kinds.any? { |k| k[:code] == @kind }
+    @kind = @kinds.first[:code] unless @kinds.any? { |k| k[:code] == @kind }
 
     @hide_done = params[:hide] == "1"
     @selected_id = params[:selected].presence&.to_i

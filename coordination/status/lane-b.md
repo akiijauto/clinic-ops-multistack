@@ -556,3 +556,31 @@ $ python tests/run.py http://127.0.0.1:8414
 反映待ちだったとみられる）。今回のフルテストでも該当2件は緑。
 
 **残っていること**: 無し。次の指示待ち。
+
+---
+
+## 2026-09-06 — /today の「すべて」タブを外す
+
+指揮役の指摘（5実装のうちRailsだけ`/today`のナビが17本、差分は「すべて」タブ）に対応。
+反論なし。契約（`spec/openapi.yaml` `/today` の `kind`）は「省略時はマスタの1つ目」であって
+「すべて」という絞らない状態は書かれていない。
+
+1. `app/controllers/receptions_controller.rb` — `@kind` が空/不正なときのフォールバックを
+   `nil`（＝`of_kind(nil)`で絞らない＝すべて表示）から `@kinds.first[:code]`
+   （マスタの1つ目）に変更。Laravel `TodayController` と同じロジックに揃えた。
+2. `app/views/receptions/index.html.erb` — 「すべて」タブ（`reception-kind-tab-all`）を削除。
+   区分タブは契約どおり6本のみ。
+
+### 自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+全 27 件 通過
+```
+
+```
+$ python tests/shots.py /today
+/today — 揃っている
+```
+
+**残っていること**: 無し。次の指示待ち。

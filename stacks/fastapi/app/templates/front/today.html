@@ -1,5 +1,5 @@
 {# 本日の患者（受付一覧）。`spec/screens.md` 領域1「1. 本日の患者」。
-   いまは表示のみ（区分タブ・上下送り・完了表示切替は次段階）。 #}
+   いまは受付区分タブで絞り込みまで実装（上下送り・完了表示切替は次段階）。 #}
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty, action_button %}
 
@@ -28,6 +28,19 @@
 {% else %}
 <section {{ screen(screen_key) }}>
   <h1>本日の患者</h1>
+
+  {# 受付区分タブ（`spec/screens.md` 1番「区分タブを押す→その区分の当日ぶんだけに絞る」）。
+     グローバルナビとは別の2つ目のnav。行き先は `/today?kind=<コード>`。 #}
+  <nav>
+    <ul>
+      {% for k in reception_kinds %}
+      <li>
+        <a href="/today?kind={{ k.code }}"{% if k.code == selected_kind %} aria-current="page"{% endif %}>{{ k.name }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
   <p>対象日の診察件数: <span data-check="visit_count.today">{{ visit_count_today }}</span></p>
 
   {% if not receptions %}
