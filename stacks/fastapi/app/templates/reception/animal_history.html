@@ -1,0 +1,48 @@
+{# 来院履歴（screens.md 5番）。中身は書き換えない記録。
+   `AuditLog` は model.md「落としたもの」で意図して外されているため、登録・修正の
+   項目別の前後値までは出せない（`coordination/qa/lane-d.md` D-12）。
+   ここでは Visit（削除済みを含む）を新しい順に並べ、削除済みの行には
+   「元に戻す」（screens-clinical 側のルート）への導線を出す。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty, action_button %}
+
+{% block title %}来院履歴 — {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("history") }}>
+  <h1>来院履歴</h1>
+
+  <p>カルテNo: {{ patient.karte_no }} ／ {{ patient.name_kanji }}</p>
+
+  <p class="note">
+    詳しい変更履歴（誰が・いつ・何を変えたか）は、この企画では
+    {{ action_button("監査ログ", "b", todo_key="audit_log") }}
+    として扱っていません。ここに出るのは診察（Visit）の登録・削除・復元の状態です。
+  </p>
+
+  {% if not visits %}
+  <p {{ empty("history") }}>来院の記録がありません。</p>
+  {% else %}
+  <ul class="visit-history-list">
+    {% for v in visits %}
+    <li {{ row("visit") }}>
+      <span>{{ v.visit_date }}（診察No: {{ v.visit_no }}）</span>
+      <span>主訴: {{ v.chief_complaint or "-" }}</span>
+      <span>診断: {{ v.diagnosis or "-" }}</span>
+      {% if v.deleted_at %}
+      <span>状態: 削除済み（{{ v.deleted_at }}）</span>
+      <form method="post" action="/animals/{{ patient.karte_no }}/karte/{{ v.id }}/restore" style="display:inline">
+        <button type="submit">元に戻す</button>
+      </form>
+      {% else %}
+      <span>状態: 通常</span>
+      <a href="/animals/{{ patient.karte_no }}/karte?visit_id={{ v.id }}">カルテで見る</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <p><a href="/animals/{{ patient.karte_no }}">顧客画面に戻る</a></p>
+</section>
+{% endblock %}

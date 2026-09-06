@@ -20,14 +20,18 @@ from app.config import get_settings
 from app.errors import register_error_handlers
 from app.routers import (
     accounting,
+    api_extra,
     billing,
+    clinical_extra,
     front,
     health,
     karte,
     lab,
+    patients,
     refdata,
     reservations,
     sales,
+    staff_api,
     ward,
 )
 from app.seed_loader import load_seed
@@ -80,6 +84,13 @@ def create_app() -> FastAPI:
     app.include_router(front.router)
     app.include_router(refdata.router)
     app.include_router(accounting.router)
+    # 残り23画面・26 APIの穴埋め（2026-09-06、在庫検査で実測して着手）。
+    # 領域ごとのサブエージェントが1ファイルずつ書く。詳細は各ファイルの docstring。
+    app.include_router(patients.router)
+    app.include_router(clinical_extra.router)
+    app.include_router(api_extra.router)
+    app.include_router(staff_api.router)
+    app.include_router(staff_api.no_prefix_router)
 
     return app
 

@@ -1,0 +1,65 @@
+{# 新規登録（screens.md 2番）。飼主とその1頭目をまとめて登録する。
+   `owner` が渡されていれば既存飼主に1頭足す形（飼主欄を出さない）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner, error_banner, action_button %}
+
+{% block title %}新規登録{% endblock %}
+
+{% block content %}
+<section {{ screen("new-animal") }}>
+  <h1>新規登録</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  {% if created_karte_no %}
+  <p>作成したカルテNo: <a href="/animals/{{ created_karte_no }}">{{ created_karte_no }}</a></p>
+  {% endif %}
+
+  <p>次に割り当てられるカルテNo: {{ next_karte_no }}</p>
+
+  <form method="post" action="/animals/new{% if owner %}?owner={{ owner.owner_no }}{% endif %}">
+    {% if owner %}
+    <fieldset>
+      <legend>飼主（既存）</legend>
+      <p>{{ owner.owner_no }} — {{ owner.name_kanji }}</p>
+    </fieldset>
+    {% else %}
+    <fieldset>
+      <legend>飼主（新規）</legend>
+      <label>氏名（漢字） <input type="text" name="owner_name_kanji" value="{{ form.get('owner_name_kanji', '') }}" required></label>
+      <label>氏名（カナ） <input type="text" name="owner_name_kana" value="{{ form.get('owner_name_kana', '') }}"></label>
+      <label>郵便番号 <input type="text" name="owner_postal_code" value="{{ form.get('owner_postal_code', '') }}"></label>
+      <label>住所1 <input type="text" name="owner_address1" value="{{ form.get('owner_address1', '') }}"></label>
+      <label>住所2 <input type="text" name="owner_address2" value="{{ form.get('owner_address2', '') }}"></label>
+      <label>電話 <input type="text" name="owner_phone" value="{{ form.get('owner_phone', '') }}"></label>
+      <label>携帯 <input type="text" name="owner_mobile" value="{{ form.get('owner_mobile', '') }}"></label>
+    </fieldset>
+    {% endif %}
+
+    <fieldset>
+      <legend>動物</legend>
+      <label>氏名（漢字） <input type="text" name="name_kanji" value="{{ form.get('name_kanji', '') }}" required></label>
+      <label>氏名（カナ） <input type="text" name="name_kana" value="{{ form.get('name_kana', '') }}"></label>
+      <label>種別 <input type="text" name="species" value="{{ form.get('species', '') }}" required></label>
+      <label>品種 <input type="text" name="breed" value="{{ form.get('breed', '') }}"></label>
+      <label>性別
+        <select name="sex">
+          {% set current_sex = form.get('sex', 'unknown') %}
+          <option value="male" {% if current_sex == "male" %}selected{% endif %}>雄</option>
+          <option value="female" {% if current_sex == "female" %}selected{% endif %}>雌</option>
+          <option value="unknown" {% if current_sex == "unknown" %}selected{% endif %}>不明</option>
+        </select>
+      </label>
+      <label>生年月日 <input type="date" name="birth_date" value="{{ form.get('birth_date', '') }}"></label>
+      <label>不妊・去勢日 <input type="date" name="neuter_date" value="{{ form.get('neuter_date', '') }}"></label>
+    </fieldset>
+
+    <button type="submit">登録</button>
+  </form>
+
+  {# 品種リストは対応するB状態の項目がmodel.md「落としたもの」表に無いため出さない
+     （animal_detail.html と同じ理由。qa/lane-d.md D-17）。 #}
+</section>
+{% endblock %}

@@ -1,0 +1,45 @@
+<% content_for :title, "投薬" %>
+<div data-testid="screen-dosing">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の投薬（<%= @kind[:name] %>）</h1>
+
+  <% if @success %>
+    <p data-testid="success-banner">保存しました。</p>
+  <% end %>
+  <% if @error %>
+    <p data-testid="error-banner"><%= @error_message %></p>
+  <% end %>
+
+  <% @dosings.each do |dosing| %>
+    <h2><%= dosing.fiscal_year %>年度</h2>
+    <%= form_with url: "/animals/#{@patient.karte_no}/dosing/#{params[:kind_id]}", method: :post, local: true do %>
+      <input type="hidden" name="fiscal_year" value="<%= dosing.fiscal_year %>">
+      <table data-testid="row-dosing">
+        <thead>
+          <tr><% (1..12).each { |m| %><th><%= m %>月</th><% } %></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <% Dosing::MONTH_COLUMNS.each do |col| %>
+              <td>
+                <select name="<%= col %>">
+                  <option value="" <%= "selected" if dosing[col].blank? %>>-</option>
+                  <option value="○" <%= "selected" if dosing[col] == "○" %>>○</option>
+                  <option value="×" <%= "selected" if dosing[col] == "×" %>>×</option>
+                </select>
+              </td>
+            <% end %>
+          </tr>
+        </tbody>
+      </table>
+      <button type="submit">この年度を保存</button>
+    <% end %>
+  <% end %>
+
+  <h2>新しい年度を追加</h2>
+  <%= form_with url: "/animals/#{@patient.karte_no}/dosing/#{params[:kind_id]}", method: :post, local: true do %>
+    <input type="number" name="fiscal_year" placeholder="年度（例: 2026）" required>
+    <button type="submit">追加</button>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

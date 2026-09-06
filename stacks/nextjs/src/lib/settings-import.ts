@@ -11,8 +11,8 @@
  */
 import { statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { getDb, rows } from './db';
-import { toJstIso } from './jst';
+import { getDb, rows } from './db.ts';
+import { toJstIso } from './jst.ts';
 import { moduleDir } from './paths.ts';
 
 /** Table name, and the label the fixture file (`data/seed.json`) uses for the same rows. */

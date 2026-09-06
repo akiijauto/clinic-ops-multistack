@@ -14,6 +14,11 @@ Rails.application.routes.draw do
   get "health"  => "health#show", as: :health
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # spec/openapi.yaml のパスは `/postal`（`/api` 配下ではない）。
+  # qa/lane-b.md 参照: Api::PostalController は存在しないため、
+  # `namespace :api` 内の "postal" も同じ最上位コントローラへ向ける（互換のため残す）。
+  get "postal", to: "postal#show"
+
   # ============================================================
   # 画面のルート
   # ============================================================
@@ -42,10 +47,13 @@ Rails.application.routes.draw do
   get   "animals/:karte_no/karte/new", to: "karte#new_visit", karte_no: KARTE_NO
   get   "animals/:karte_no/karte/copy_prev", to: "karte#copy_prev", karte_no: KARTE_NO
   post  "animals/:karte_no/karte/cancel", to: "karte#cancel", karte_no: KARTE_NO
+  get   "animals/:karte_no/karte/cancel", to: "application#method_not_allowed", karte_no: KARTE_NO
   get   "animals/:karte_no/karte/print", to: "karte#print", karte_no: KARTE_NO
   get   "animals/:karte_no/karte/:visit_id/print", to: "karte#print_visit", karte_no: KARTE_NO
   post  "animals/:karte_no/karte/:visit_id/delete", to: "karte#delete_visit", karte_no: KARTE_NO
+  get   "animals/:karte_no/karte/:visit_id/delete", to: "application#method_not_allowed", karte_no: KARTE_NO
   post  "animals/:karte_no/karte/:visit_id/restore", to: "karte#restore_visit", karte_no: KARTE_NO
+  get   "animals/:karte_no/karte/:visit_id/restore", to: "application#method_not_allowed", karte_no: KARTE_NO
 
   get   "animals/:karte_no/exam", to: "exams#show", karte_no: KARTE_NO
   post  "animals/:karte_no/exam", to: "exams#save", karte_no: KARTE_NO
@@ -61,13 +69,17 @@ Rails.application.routes.draw do
   get   "papers/:paper_id", to: "papers#show"
   post  "animals/:karte_no/papers", to: "papers#create", karte_no: KARTE_NO
   post  "papers/:paper_id/remove", to: "papers#remove"
+  get   "papers/:paper_id/remove", to: "application#method_not_allowed"
 
   # --- 領域3｜会計・売上 ---
   get   "animals/:karte_no/accounting", to: "accounting#show", karte_no: KARTE_NO
   post  "animals/:karte_no/accounting", to: "accounting#save", karte_no: KARTE_NO
   get   "animals/:karte_no/accounting/history", to: "accounting#history", karte_no: KARTE_NO
-  get   "dm", to: "dm#index"
+  # "dm" は Rails が自動で `(.:format)` を付けるため、先に定義すると
+  # "dm.csv"（format=csv）まで dm#index にマッチしてしまう。
+  # dm#csv を先に定義して奪われないようにする（qa/lane-b.md 参照）。
   get   "dm.csv", to: "dm#csv"
+  get   "dm", to: "dm#index"
   get   "sales", to: "sales#index"
 
   # --- 領域4｜入院・予約・業務 ---
@@ -84,6 +96,7 @@ Rails.application.routes.draw do
   get   "reservations/:id", to: "reservations#show"
   post  "reservations/:id", to: "reservations#update"
   post  "reservations/:id/cancel", to: "reservations#cancel"
+  get   "reservations/:id/cancel", to: "application#method_not_allowed"
 
   get   "todo/:key", to: "todos#show", as: :todo
 
@@ -104,18 +117,22 @@ Rails.application.routes.draw do
   # データのルート（JSON） — 既存のURL形をそのまま活かして追加する
   # ============================================================
   namespace :api do
-    get   "postal", to: "postal#show"
+    get   "postal", to: "/postal#show"
 
     get    "patients", to: "patients#index"
     get    "patients/:karte_no", to: "patients#show", karte_no: KARTE_NO
     patch  "patients/:karte_no", to: "patients#update", karte_no: KARTE_NO
     post   "patients/:karte_no/delete", to: "patients#destroy", karte_no: KARTE_NO
+    get    "patients/:karte_no/delete", to: "/api#method_not_allowed", karte_no: KARTE_NO
     post   "patients/:karte_no/restore", to: "patients#restore", karte_no: KARTE_NO
+    get    "patients/:karte_no/restore", to: "/api#method_not_allowed", karte_no: KARTE_NO
     post   "patients/:karte_no/receptions", to: "patients#create_reception", karte_no: KARTE_NO
+    get    "patients/:karte_no/receptions", to: "/api#method_not_allowed", karte_no: KARTE_NO
 
     get    "owners/:owner_no", to: "owners#show"
     patch  "owners/:owner_no", to: "owners#update"
     post   "owners/:owner_no/delete", to: "owners#destroy"
+    get    "owners/:owner_no/delete", to: "/api#method_not_allowed"
     get    "owners/:owner_no/billings", to: "owner_billings#index"
 
     get    "receptions", to: "receptions#index"
@@ -128,7 +145,9 @@ Rails.application.routes.draw do
     get    "visits/:visit_id", to: "visits#show"
     patch  "visits/:visit_id", to: "visits#update"
     post   "visits/:visit_id/delete", to: "visits#destroy"
+    get    "visits/:visit_id/delete", to: "/api#method_not_allowed"
     post   "visits/:visit_id/restore", to: "visits#restore"
+    get    "visits/:visit_id/restore", to: "/api#method_not_allowed"
 
     get    "patients/:karte_no/lab-tests", to: "lab_tests#index", karte_no: KARTE_NO
     post   "patients/:karte_no/lab-tests", to: "lab_tests#create", karte_no: KARTE_NO
@@ -167,6 +186,7 @@ Rails.application.routes.draw do
     get    "reservations/:id", to: "reservations#show"
     patch  "reservations/:id", to: "reservations#update"
     post   "reservations/:id/cancel", to: "reservations#cancel"
+    get    "reservations/:id/cancel", to: "/api#method_not_allowed"
 
     get    "staff", to: "staff#index"
     get    "features", to: "features#index"

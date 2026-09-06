@@ -6,8 +6,8 @@
  * inserts a second one: it always updates the row it finds, and only
  * inserts the very first row if the table is somehow empty.
  */
-import { getDb, row } from './db';
-import { toWeekdays, type Clinic } from './model';
+import { getDb, row } from './db.ts';
+import { toWeekdays, type Clinic } from './model.ts';
 
 type ClinicRow = Omit<Clinic, 'closed_weekdays'> & { closed_weekdays: string };
 

@@ -1,0 +1,42 @@
+{# 予約の詳細/変更フォーム。`openapi.yaml` /reservations/{id}。
+   保存は同じ画面へPOST（成否によらず200・banner表示）。取消は別画面へ遷移。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner, error_banner %}
+
+{% block title %}予約の詳細{% endblock %}
+
+{% block content %}
+<section {{ screen("reservations") }}>
+  <h1>予約の詳細</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <p>状態: {{ "取消済み" if reservation.status == "cancelled" else "予約中" }}</p>
+
+  <form method="post" action="/reservations/{{ reservation.id }}">
+    <label>カルテNo <input type="text" name="karte_no" value="{{ patient.karte_no if patient else '' }}" required></label>
+    {% if patient %}<p>{{ patient.name_kanji }}</p>{% endif %}
+    <label>開始 <input type="datetime-local" name="starts_at" value="{{ reservation.starts_at.strftime('%Y-%m-%dT%H:%M') }}" required></label>
+    <label>終了 <input type="datetime-local" name="ends_at" value="{{ reservation.ends_at.strftime('%Y-%m-%dT%H:%M') }}" required></label>
+    <label>担当
+      <select name="staff_id" required>
+        {% for s in staff_list %}
+        <option value="{{ s.id }}" {% if s.id == reservation.staff_id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>処置室 <input type="text" name="room" value="{{ reservation.room }}"></label>
+    <label>目的 <input type="text" name="purpose" value="{{ reservation.purpose }}"></label>
+    <label>備考 <input type="text" name="note" value="{{ reservation.note }}"></label>
+    <button type="submit">更新</button>
+  </form>
+
+  {% if reservation.status != "cancelled" %}
+  <form method="post" action="/reservations/{{ reservation.id }}/cancel">
+    <button type="submit">この予約を取り消す</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

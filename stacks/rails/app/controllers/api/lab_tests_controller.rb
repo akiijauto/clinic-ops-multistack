@@ -6,11 +6,46 @@
 # （空 / "H" / "L"）という別名・別語彙。両方を返す（coordination/qa/lane-b.md）。
 module Api
   class LabTestsController < ApiController
+    def index
+      patient = Patient.find_by!(karte_no: params[:karte_no])
+      scope = patient.lab_tests.includes(:lab_test_items).order(tested_on: :desc, id: :desc)
+
+      total = scope.count
+      items = scope.limit(limit_param).offset(offset_param)
+      render json: { items: items.map { |t| lab_test_json(t, patient) }, total: total }
+    end
+
+    def create
+      patient = Patient.find_by!(karte_no: params[:karte_no])
+      lab_test = patient.lab_tests.new(lab_test_params)
+      (params[:items] || []).each do |row|
+        lab_test.lab_test_items.build(item_code: row[:item_code], value_num: row[:value_num], value_text: row[:value_text])
+      end
+      lab_test.save!
+      render json: lab_test_json(lab_test.reload, patient), status: :created
+    end
+
     def show
       lab_test = LabTest.includes(:lab_test_items, :patient).find(params[:id])
-      patient = lab_test.patient
+      render json: lab_test_json(lab_test, lab_test.patient)
+    end
 
-      render json: {
+    private
+
+    def limit_param
+      [ params[:limit].presence&.to_i || 50, 200 ].min
+    end
+
+    def offset_param
+      params[:offset].presence&.to_i || 0
+    end
+
+    def lab_test_params
+      params.permit(:visit_id, :category, :tested_on, :tested_at_time, :staff_id)
+    end
+
+    def lab_test_json(lab_test, patient)
+      {
         id: lab_test.id,
         patient_id: lab_test.patient_id,
         visit_id: lab_test.visit_id,
@@ -21,8 +56,6 @@ module Api
         items: lab_test.lab_test_items.map { |item| item_json(item, patient) }
       }
     end
-
-    private
 
     def item_json(item, patient)
       judgement = item.judgement(patient) # low/normal/high/unknown

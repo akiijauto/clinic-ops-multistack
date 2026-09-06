@@ -1,0 +1,13 @@
+{# 書類（対象となる文書が無いことの案内）。`spec/openapi.yaml` /papers/no-paper。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen %}
+
+{% block title %}書類 — 対象なし{% endblock %}
+
+{% block content %}
+<section {{ screen("papers-no-paper") }}>
+  <h1>書類</h1>
+  <p>対象となる文書がありません。紙カルテがそもそも存在しない動物、または、まだ取り込んでいない動物の案内です。</p>
+  <p><a href="/today">本日の患者へ戻る</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+{# この動物の入院記録。`spec/screens.md` 領域4「18. 入院」/ `openapi.yaml` /animals/{karte_no}/ward。
+   ケア記録は退院済みの入院には追加できない（`/api/hospitalizations/{id}/care-records` 側で強制）。
+   ここでは表示と、新規の入院登録フォームのみを扱う。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty, success_banner, error_banner %}
+
+{% block title %}入院 - {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("ward") }}>
+  <h1>入院（{{ patient.name_kanji }} / カルテNo {{ patient.karte_no }}）</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <h2>入院を登録する</h2>
+  <form method="post" action="/animals/{{ patient.karte_no }}/ward">
+    <label>入院日 <input type="date" name="admitted_on" required></label>
+    <label>処置室 <input type="text" name="room"></label>
+    <button type="submit">入院を登録</button>
+  </form>
+
+  <h2>入院履歴</h2>
+  {% if not hospitalizations %}
+  <p {{ empty("hospitalization") }}>入院履歴はありません。</p>
+  {% endif %}
+  {% for h in hospitalizations %}
+  <article>
+    <h3>処置室: {{ h.room }}</h3>
+    <p>入院期間: {{ h.admitted_on }} 〜 {{ h.discharged_on if h.discharged_on else "（在室中）" }}</p>
+
+    {% if not h.care_records %}
+    <p {{ empty("care-record") }}>ケア記録はありません。</p>
+    {% else %}
+    <table class="care-records">
+      <thead><tr><th>日時</th><th>種別</th><th>内容</th><th>実施者</th></tr></thead>
+      <tbody>
+        {% for r in h.care_records %}
+        <tr {{ row("care-record") }}>
+          <td>{{ r.recorded_at }}</td>
+          <td>{{ r.category }}</td>
+          <td>{{ r.content }}</td>
+          <td data-check="care_record.performed_by">{{ staff_by_id.get(r.performed_by_staff_id, "") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

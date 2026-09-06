@@ -58,8 +58,24 @@ module FixedData
         PREVENTION_CYCLE_MONTHS[code]
       end
 
+      # 契約（spec/openapi.yaml DosingKindId / PreventionKindId）は type: integer
+      # （マスタの行id）だが、`data/seed.json` の dosings/preventions は数値idを持たず
+      # `kind` にコード文字列（例: "heartworm"）しか持たない。共通テストの在庫検査
+      # （tests/inventory.py）は実データから引いた値をそのまま埋めるため、
+      # 数値id（配列順の1始まり）とコード文字列の両方を受け付ける
+      # （Go実装 stacks/go/internal/server/dosing.go の resolveKind と同じ仮決め）。
       def kind_code_for(kind_id)
-        prevention_kinds.find { |k| k[:kind_id] == kind_id.to_i }&.fetch(:code)
+        key = kind_id.to_s
+        by_id = prevention_kinds.find { |k| k[:kind_id].to_s == key }
+        return by_id[:code] if by_id
+
+        by_code = prevention_kinds.find { |k| k[:code] == key }
+        by_code && by_code[:code]
+      end
+
+      def kind_by_code_or_id(kind_id)
+        key = kind_id.to_s
+        prevention_kinds.find { |k| k[:kind_id].to_s == key || k[:code] == key }
       end
 
       def reception_kind_label(code)

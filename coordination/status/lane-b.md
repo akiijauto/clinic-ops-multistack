@@ -251,3 +251,148 @@ crawl到達数が16→**30画面**に伸びた（サブエージェントが途�
 5体のサブエージェントは全員セッション上限で停止した（再開待ち）。
 各自の担当領域の残り画面（フォームの保存・削除・新規作成など、検算8を通す
 最小限を超える完全な作り込み）はまだ途中。指示があれば続きを進める。
+
+---
+
+## 2026-09-06 — 在庫検査で見つかった20件（画面8・API12）の対応
+
+指揮役から渡された20件を実測し直し、`coordination/qa/lane-b.md` Q16 に内訳を記録した。
+詳細はそちら参照。要点だけ:
+
+- 本当にコードが無かったのは **papers（画面）一式**のみ。新規実装した
+  （`app/controllers/papers_controller.rb` + `app/views/papers/{index,show,no_paper}.html.erb`）
+- 10件は「POST専用の実装にGETで探りを入れると404になる」検査側の仕様。
+  405を返すよう `ApplicationController#method_not_allowed` / `ApiController#method_not_allowed`
+  とGETルートを追加（実処理は変更していない）
+- 3〜4件はサンプル値（`key=reception`・`owner_no=1`）がこのアプリの語彙・データ形式と
+  噛み合わないだけで、spec通りの404。**直していない**（契約違反になるため）
+- 1件（karte print/delete/restore）は `karte_no` と `visit_id` の組み合わせがサンプル上
+  存在しないデータの問題。Go実装の既存の仮決め（visit_idだけで引く）と同じ対処をした
+- ついでに `Api::PatientsController` / `Api::OwnersController`（新規）、
+  `Api::ReservationsController#show/create/update/cancel`、
+  `Api::LabTestsController#index/create`、`Api::HospitalizationsController#index/create/update/create_care_record`
+  を実装（20件に対応するために必要だった分）
+
+**予約一覧の日付フィルタ未実装（他レーンからの指摘）→ 対応済み**: `ReservationsController#index`
+（screen）は元から `params[:from]` で `@date` は計算するが、一覧クエリ自体は
+`Reservation.includes(...).order(:starts_at).limit(50)` のままで絞り込んでいなかった。
+spec/openapi.yaml の `screen_reservations`（`from`/`to`/`staff_id`/`room` クエリ）に合わせて
+日付範囲・担当・処置室で絞り込むよう修正し、`from` を変えて別の日を見るフォームを追加した
+（`app/controllers/reservations_controller.rb` `app/views/reservations/index.html.erb`）。
+指示された20件には含まれていなかったが、他レーンの実測指摘なので直しておいた。
+
+### 完了の自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+
+全 3 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+（smoke/money/screen/rules/crawl/inventory 全17件）
+全 17 件 通過
+```
+
+**残っていること（自己申告。次の指示待ち）**:
+
+1. 500になっている未実装コントローラ多数（`Api::ReceptionsController`・`Api::PapersController`・
+   `Api::PreventionsController`・`Api::DosingsController`・`Api::StaffController`・
+   `Api::FeaturesController`・`Api::PostalController`、screen側の`PreventionsController`・
+   `DosingsController`）。在庫検査は404/501/0しか見ないため緑のままだが、実際には
+   まだ大きく欠けている。詳細は `coordination/qa/lane-b.md` Q16
+2. 新規実装した papers 画面・拡張したAPIコントローラ・予約一覧の日付フィルタは、
+   共通テストと在庫検査は通ったが**個別の手動確認（実際にPOSTして書類が消える／
+   予約がキャンセルされる／日付を変えて絞り込まれる等）はまだ**
+
+---
+
+## 2026-09-06 — 訂正後の11件（画面4・API7）+ 発見済み500系をすべて実装
+
+指揮役から在庫検査の欠陥修正（実データから値を引く・visit_idをkarte_noと対にする・
+5xxも「無い」に数える）に伴う訂正を受けた。訂正後に実測し直し、
+`coordination/qa/lane-b.md` Q17 に内訳を記録した。
+
+Q16で「500だがスコープ外」と報告していた項目（`Api::ReceptionsController`・
+`Api::PapersController`・`Api::PreventionsController`・`Api::DosingsController`・
+`Api::StaffController`・`Api::FeaturesController`・`DmController`のcsv gem不在・
+`Api::WardsController`）を、判定器の500検知強化に伴いすべて実装した。
+画面側の `DosingsController` `PreventionsController` も新規実装。
+
+### 完了の自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+  OK  在庫 契約が求める data-testid が画面に出ている  — 34 画面で目印を確認
+
+全 4 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+（smoke/money/screen/rules/crawl/inventory 全18件）
+全 18 件 通過
+```
+
+**残っていること（自己申告）**:
+
+1. `/dm.csv`（CSVダウンロード）が406を返す既存バグに気づいた（`require "csv"` 削除で
+   `/dm`（画面）自体は直ったが、`.csv` 拡張子のフォーマットネゴシエーションが
+   別の理由で失敗している）。`_NOT_SCREEN` で在庫検査の対象外・指示された11件にも
+   含まれていないため未対応。次に見る人へ
+2. 新規実装した dosing/prevention の画面・API、papers/receptions/ward/staff/features
+   のAPIは在庫検査・共通テストは通ったが、**手動確認は代表的な1パターンのみ**
+   （検算相当の網羅的な確認はしていない）
+
+---
+
+## 2026-09-06 — R-20対応・Api::PostalController実測・在庫検査の新チェック2件対応
+
+裁定R-20（記録0件は200で空を返す。404/500にしない）を確認したところ、
+前回実装済みの `Api::DosingsController#show` は既にこの方針で作ってあった
+（記録が無い年度は空欄の年間記録を200で返す）。`Api::PreventionsController#index` も
+0件配列を200で返す既存のActiveRecord挙動でR-20を満たしていた。
+
+指揮役依頼の `Api::PostalController` 実測 → 「あるが別の形」だった（spec上は `/postal`
+だが実装は `/api/postal` に誤って配置され、かつ中身が無く500）。新規実装し、
+ついでに新しい在庫検査（`_others`）が拾った `/dm.csv`（406・ルート順序の問題）も直した。
+詳細は `coordination/qa/lane-b.md` Q18。
+
+### 完了の自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+  OK  在庫 契約が求める data-testid が画面に出ている  — 34 画面で目印を確認
+  OK  在庫 画面でもAPIでもないルートが応答する（CSV配信・死活・外部照会）  — 3/3 件が応答
+
+全 5 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+（smoke/money/screen/rules/crawl/inventory 全19件）
+全 19 件 通過
+```
+
+**残っていること（自己申告）**: 「確かめられない」7件（`/folded/{key}` `/papers/{paper_id}`
+`/papers/{paper_id}/remove` `/todo/{key}` `/api/papers/{paper_id}` `/api/todo/{key}`
+`/api/masters/{key}`）はいずれも実装済みだが、サンプル値の語彙（`key`）が判定器から
+一意に決められないための「確かめられない」であり、無いわけではない
+（`/folded/{key}` `/todo/{key}` は画面から実在するキーを拾って確認済み。papers系は
+data/にpaper自体が無いため確かめようがない）。指揮役の判断が必要なら申告する。

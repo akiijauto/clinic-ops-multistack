@@ -1,0 +1,31 @@
+{# 予約の新規作成フォーム。`openapi.yaml` /reservations/new。
+   karte_no はクエリで動物を先に選んでいる場合の下書き。投稿先は POST /reservations
+   （そこで一覧画面に success-banner/error-banner を出す）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen %}
+
+{% block title %}予約の新規登録{% endblock %}
+
+{% block content %}
+<section {{ screen("reservations") }}>
+  <h1>予約の新規登録</h1>
+
+  <form method="post" action="/reservations">
+    <label>カルテNo <input type="text" name="karte_no" value="{{ karte_no }}" required></label>
+    {% if patient %}<p>{{ patient.name_kanji }}</p>{% endif %}
+    <label>開始 <input type="datetime-local" name="starts_at" required></label>
+    <label>終了 <input type="datetime-local" name="ends_at" required></label>
+    <label>担当
+      <select name="staff_id" required>
+        {% for s in staff_list %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>処置室 <input type="text" name="room"></label>
+    <label>目的 <input type="text" name="purpose"></label>
+    <label>備考 <input type="text" name="note"></label>
+    <button type="submit">登録</button>
+  </form>
+</section>
+{% endblock %}

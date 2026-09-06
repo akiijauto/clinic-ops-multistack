@@ -186,3 +186,77 @@ Cookie（`clinicops_staff_id`）1本で持つ。認証ではない（DECISIONS.m
 
 いずれも `go build` は通る状態で止まっていたので、壊れていたわけではない。
 残りは私が引き継いで実装した（`coordination/status/lane-a.md` に詳細）。
+
+## Q-A-15 在庫検査に残る9件は「経路が無い」のではなく「固定サンプル値が実データと噛み合わない」（止まる・指揮役への相談）
+
+`tests/inventory.py` の `_SAMPLE` は `{key}` 系のパス変数すべてに **1個の共通値**しか持たない
+（例: `key`→`"reception"`、未指定の変数は `"1"` にフォールバック）。ところが
+`/folded/{key}` `/todo/{key}` `/settings/master/{key}` は**それぞれ別の語彙**を持つ
+契約になっており（`spec/openapi.yaml` 「未知のkeyは404」／`spec/README.md` 「マスタは
+一覧と参照のみ」）、1つの文字列が3つの語彙すべてに同時に一致することは構造上ありえない。
+
+**実測**（`stacks/go` で1件ずつ直接確認。実装のロジックではなく元データの中身を見た）:
+
+| 経路 | サンプル値 | 実際に該当する値の例 | 実測結果 |
+| --- | --- | --- | --- |
+| `/folded/{key}` | `key=reception` | `hospital_division` 等14件（`spec/model.md`「落としたもの」表と1対1） | `reception` はどの14件にも無い→404が正しい応答 |
+| `/todo/{key}` | `key=reception` | `temp_save` / `done_all` / `done`（Q-A-11で仮決めした語彙。契約は語彙を固定していない） | 同上 |
+| `/settings/master/{key}` | `key=reception` | `price_item` / `lab_item` / `reception_kind` / `prevention_kind` / `department` / `phrase`（`data/masters.json` のカテゴリ） | `reception` はどの6件にも無い（`reception_kind` の頭だけが一致する別の語） |
+| `/api/owners/{owner_no}` | `owner_no=1`（`_SAMPLE`に無く既定の`"1"`） | `owner_no` は `"O-00001"` 形式の表示用番号（`spec/openapi.yaml` OwnerNo: `type: string` 「飼主の表示用番号」） | 数字の `"1"` と一致する owner_no は存在しない |
+| `/api/owners/{owner_no}/billings` | 同上 | 同上 | 同上（owner_noが引けないので必然的に404） |
+| `/api/patients/{karte_no}/dosing/{kind_id}` | `kind_id=1` | `data/masters.json` の `prevention_kinds`（配列1始まり）で id=1 は `vaccine_core`。だが `data/seed.json` の `dosings` は**全件 `kind: heartworm`**（=id=3）で、`vaccine_core` の投薬記録は1件も無い | 経路もカルテ番号(10002)も正しく引けるが、対象年度の記録が0件のため空応答→404（一覧APIではなく単票APIなので、REST的にも0件は404が自然） |
+| `/api/papers/{paper_id}` | `paper_id=1` | Paper は `data/seed.json` に初期データが無く、`POST /api/patients/{karte_no}/papers` で動的に作るまで**サーバ起動直後は1件も存在しない** | 起動直後は必然的に404（`tests/checks.py` の共通14件もPaperを作らないため、`--only inventory` 単独でも `python tests/run.py` フルでも状況は変わらない） |
+| `/api/todo/{key}` | `key=reception` | 上の `/todo/{key}` と同じ語彙 | 同上 |
+| `/api/masters/{key}` | `key=reception` | 上の `/settings/master/{key}` と同じ語彙 | 同上 |
+
+**このセッションで実際に直した経路**（純粋な実装バグ）:
+`/animals/{karte_no}/karte/{visit_id}/print` — 旧実装は「指定した visit_id が、指定した
+karte_no の患者の診察一覧に含まれるか」を厳格に見ており、サンプル値（`karte_no=10002`,
+`visit_id=1`）はたまたま**別の患者(karte_no=10018)の診察**だったため404だった。
+`/api/visits/{visit_id}` など既存のAPI側は最初から visit_id 単独（患者との一致を問わない）
+で引く作りだったため、印刷だけ厳格にする理由が無いと判断し、`clinical.VisitByID` →
+その Visit の実際の所属患者でカルテを組み立てる形に直した
+（`internal/server/karte_writes.go` `handleVisitPrint`）。**在庫検査は 4/42→3/42 に改善、
+`go test ./...` は全緑のまま。**
+
+**止まる理由**: 残り9件は `stacks/go` 側のコードをどう書き換えても、
+契約の語彙（`spec/model.md` の落としたもの表14件・`data/masters.json` の6カテゴリ）を
+破らずに `reception` や `"1"`/`owner_no` 数字1桁に一致させることができない。
+`owner_no` を数字IDのフォールバックとして受理する対応は spec の
+「表示用番号」という定義に反するため見送った（他レーンとの整合を壊す可能性が高い）。
+
+**指揮役への相談**: `tests/inventory.py` の `_SAMPLE` に**経路ごとの個別値**
+（例: `folded_key=hospital_division`, `todo_key=temp_save`,
+`master_key=price_item`, `owner_no=O-00001`, `dosing_kind_id=3` 等）を持たせるか、
+Paper のように起動直後は空でも仕方ない資源については在庫検査の対象から外すか、
+いずれかの判断が要る。5レーン共通の土台なので、ここを直せば他レーンにも効くはず。
+
+## Q-A-16 Q-A-15の続き: 投薬・予防の4ルートを直した（決着済み）
+
+指揮役が `tests/inventory.py` を書き直した結果、実装バグとして残ったのは
+`/animals/{karte_no}/dosing/{kind_id}` `/animals/{karte_no}/prevention/{kind_id}`
+とそのAPI版の4件だけだった。原因は2つ:
+
+1. **kind_id の型不一致**: 契約は `type: integer`（マスタ行idの配列順）だが、
+   `data/seed.json` の dosings/preventions は数値idを持たず `kind` にコード文字列
+   （例: `"heartworm"`）しか持たない。新しい在庫検査はこのコード文字列を
+   そのまま `{kind_id}` に埋める。旧実装は `strconv.Atoi` 一本槍で数値以外は
+   即404にしていた。→ `internal/clinical/writes.go` に既にあった
+   `preventionKindByCode`（内部専用で未使用だった）を `PreventionKindByCode` として
+   公開し、`internal/server/dosing.go` に `resolveKind` を追加（数値idを先に試し、
+   ダメならコードで引く）。dosing.go・prevention.go・clinical_api.go の4ハンドラを
+   これに差し替えた。数値id（既存の使い方）を壊さない**追加**の対応。
+2. **投薬APIの「記録0件」を404にしていた**: サンプルの患者(karte_no=10018)は
+   投薬記録が1件も無い(preventionは記録がある)。`GET /api/patients/{karte_no}/dosing/{kind_id}`
+   は該当年度の記録が無いと404を返す作りだったが、画面側
+   （`GET /animals/{karte_no}/dosing/{kind_id}`）は記録0件でも常に200
+   （空のマス目を描画するだけ）で、この非対称に一貫性が無かった。
+   患者×投薬種別の組み合わせ自体は正当な対象なので、記録が無い年度は
+   月がすべて null の空欄レコードを200で返す形に直した（画面側と揃えた。
+   `spec/openapi.yaml` Dosing schema は `id` が readOnly かつ必須項目に
+   含まれておらず、この形は契約に反しない）。
+
+**実測**: `python tests/run.py --only inventory` → 3件とも通過（画面40/42・API33/36が
+ある。残り5件は「無い」ではなく「確かめられない」— papers系3件・todo/masters語彙2件で、
+指揮役の判定器も既にこれを欠けとは数えていない）。
+`python tests/run.py`（フル）→ **17件中17件通過**。`go build`・`go test ./...` も全緑。

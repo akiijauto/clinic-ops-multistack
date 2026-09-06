@@ -1,0 +1,49 @@
+{# 予防。`spec/screens.md` 領域2「12. 予防」。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty, success_banner, error_banner %}
+
+{% block title %}予防 — {{ patient.name_kanji }}（{{ kind_name }}）{% endblock %}
+
+{% block content %}
+<section {{ screen("prevention") }}>
+  <h1>予防（{{ kind_name }}）</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <p>カルテNo: {{ patient.karte_no }} / {{ patient.name_kanji }}</p>
+
+  <h2>{{ "記録の更新" if edit_target else "新規記録" }}</h2>
+  <form method="post" action="/animals/{{ patient.karte_no }}/prevention/{{ kind_id }}">
+    <input type="hidden" name="record_id" value="{{ edit_target.id if edit_target else "" }}">
+    <div class="field-row">
+      <label>実施内容 <input type="text" name="content" value="{{ edit_target.content if edit_target else "" }}"></label>
+      <label>実施日 <input type="date" name="performed_date" value="{{ edit_target.performed_date.isoformat() if edit_target and edit_target.performed_date else "" }}" required></label>
+      <label>次回予定日 <input type="date" name="next_due_date" value="{{ edit_target.next_due_date.isoformat() if edit_target and edit_target.next_due_date else "" }}"></label>
+      <label>担当医(Staff ID) <input type="text" name="staff_id" value="{{ edit_target.staff_id if edit_target and edit_target.staff_id is not none else "" }}"></label>
+    </div>
+    <button type="submit" class="btn btn-action">保存</button>
+  </form>
+
+  <h2>実施記録一覧（新しい順）</h2>
+  {% if not rows %}
+  <p {{ empty("prevention") }}>記録がありません。</p>
+  {% else %}
+  <table class="prevention-list">
+    <thead><tr><th>実施内容</th><th>実施日</th><th>次回予定日</th><th>担当医</th><th></th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr {{ row("prevention") }}>
+        <td>{{ r.content }}</td>
+        <td>{{ r.performed_date }}</td>
+        <td>{{ r.next_due_date if r.next_due_date else "" }}</td>
+        <td>{{ staff_by_id.get(r.staff_id, "") if r.staff_id else "" }}</td>
+        <td><a href="/animals/{{ patient.karte_no }}/prevention/{{ kind_id }}?record_id={{ r.id }}">この記録を編集</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

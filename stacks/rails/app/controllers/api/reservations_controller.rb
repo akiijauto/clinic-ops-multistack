@@ -19,7 +19,34 @@ module Api
       render json: { items: items.map { |r| reservation_json(r) }, total: total }
     end
 
+    def show
+      reservation = Reservation.find(params[:id])
+      render json: reservation_json(reservation)
+    end
+
+    def create
+      reservation = Reservation.new(reservation_params)
+      reservation.save!
+      render json: reservation_json(reservation), status: :created
+    end
+
+    def update
+      reservation = Reservation.find(params[:id])
+      reservation.update!(reservation_params)
+      render json: reservation_json(reservation)
+    end
+
+    def cancel
+      reservation = Reservation.find(params[:id])
+      reservation.cancel!
+      render json: reservation_json(reservation)
+    end
+
     private
+
+    def reservation_params
+      params.permit(:patient_id, :starts_at, :ends_at, :staff_id, :room, :purpose, :note)
+    end
 
     def reservation_json(r)
       {

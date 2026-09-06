@@ -1,0 +1,82 @@
+{# 検査。`spec/screens.md` 領域2「10. 検査」。
+   結果値・判定には検算5用の `data-check="lab_test_item.value"` /
+   `data-check="lab_test_item.judgment"`（+ `data-check-flag`）を付ける
+   （`spec/screens.md`「画面の値を機械で確かめる印」表）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner, error_banner %}
+
+{% block title %}検査 — {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("exam") }}>
+  <h1>検査</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <div class="patient-header">
+    <p>カルテNo: {{ patient.karte_no }}</p>
+    <p>{{ patient.name_kanji }}（{{ patient.name_kana }}）</p>
+  </div>
+
+  <a href="/animals/{{ patient.karte_no }}/accounting" class="btn btn-action">会計</a>
+
+  <h2>検査結果を記録</h2>
+  {% if latest_visit %}
+  <form method="post" action="/animals/{{ patient.karte_no }}/exam">
+    <div class="field-row">
+      <label>検査日 <input type="date" name="tested_on"></label>
+      <label>検査カテゴリ <input type="text" name="category" required></label>
+      <label>担当医(Staff ID) <input type="text" name="staff_id"></label>
+    </div>
+    <table class="lab-item-form">
+      <thead><tr><th>項目</th><th>基準値</th><th>単位</th><th>結果値</th></tr></thead>
+      <tbody>
+        {% for item in items_master %}
+        {% set rng = lab_reference_range(item.item_code, patient.species, patient.sex) %}
+        <tr>
+          <td>{{ item.name }}（{{ item.item_code }}）</td>
+          <td>{% if rng %}{{ rng.low }} 〜 {{ rng.high }}{% else %}—{% endif %}</td>
+          <td>{{ item.unit }}</td>
+          <td><input type="text" name="value_{{ item.item_code }}" value=""></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-action">保存</button>
+  </form>
+  {% else %}
+  <p class="empty">この動物にはまだ診察記録が無いため、検査を保存できません。先に「新規診察」でカルテを作成してください。</p>
+  {% endif %}
+
+  <h2>検査一覧（新しい順）</h2>
+  {% if not tests %}
+  <p class="empty">検査記録がありません。</p>
+  {% endif %}
+  {% for t in tests %}
+  <div class="lab-test">
+    <h3>{{ t.tested_on }} — {{ t.category }}</h3>
+    <table class="lab-item-list">
+      <thead><tr><th>項目</th><th>基準値</th><th>単位</th><th>結果値</th><th>判定</th></tr></thead>
+      <tbody>
+        {% for it in t["items"] %}
+        {% set master_item = item_by_code.get(it.item_code) %}
+        <tr>
+          <td>{{ master_item.name if master_item else it.item_code }}</td>
+          <td>
+            {% if it.reference_low is not none or it.reference_high is not none %}
+              {{ it.reference_low }} 〜 {{ it.reference_high }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ master_item.unit if master_item else "" }}</td>
+          <td data-check="lab_test_item.value">{{ it.value_text if it.value_text is not none else (it.value_num if it.value_num is not none else "") }}</td>
+          <td data-check="lab_test_item.judgment" data-check-flag="{{ it.flag }}">{{ it.judgment }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

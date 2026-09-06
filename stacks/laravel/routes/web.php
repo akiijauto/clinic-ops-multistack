@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\PostalController;
 use App\Http\Controllers\Top\TopController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,10 @@ Route::get('/healthz', fn () => response()->json(['status' => 'ok']))->name('hea
 
 // 【仮決め】土台の段階の名残（coordination/qa/lane-c.md B5）。契約に無いので不要なら消す。
 Route::get('/health', fn () => response()->json(['status' => 'ok']))->name('health.alias');
+
+// 郵便番号→住所候補。契約は spec/openapi.yaml `/postal`（api-misc）。認証を素通しする
+// 唯一のルート。外部サービスは呼ばず、架空の郵便番号を数件だけ持つ簡易対応（qa/lane-c.md）。
+Route::get('/postal', [PostalController::class, 'lookup'])->name('postal');
 
 // トップ・このシステムについて。どの領域にも属さない共通ページなので統合点として直接書く。
 Route::get('/', [TopController::class, 'index'])->name('top');

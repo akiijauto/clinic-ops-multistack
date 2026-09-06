@@ -1,0 +1,44 @@
+<% content_for :title, "予防" %>
+<div data-testid="screen-prevention">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の予防（<%= @kind[:name] %>）</h1>
+
+  <% if @success %>
+    <p data-testid="success-banner">保存しました。</p>
+  <% end %>
+  <% if @error %>
+    <p data-testid="error-banner"><%= @error_message %></p>
+  <% end %>
+
+  <% if @preventions.empty? %>
+    <p data-testid="empty-prevention">実施記録はありません。</p>
+  <% else %>
+    <table>
+      <thead><tr><th>実施内容（メモ）</th><th>実施日</th><th>次回予定日</th><th>担当医</th></tr></thead>
+      <tbody>
+        <% @preventions.each do |p| %>
+          <tr data-testid="row-prevention">
+            <td><%= p.content %></td>
+            <td><%= p.performed_date %></td>
+            <td><%= p.next_due_date %></td>
+            <td><%= p.staff&.name %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%= form_with url: "/animals/#{@patient.karte_no}/prevention/#{params[:kind_id]}", method: :post, local: true do %>
+    <input type="text" name="content" placeholder="実施内容">
+    <input type="date" name="performed_date" required>
+    <input type="date" name="next_due_date">
+    <select name="staff_id">
+      <option value="">担当医（未選択）</option>
+      <% @staffs.each do |s| %>
+        <option value="<%= s.id %>"><%= s.name %></option>
+      <% end %>
+    </select>
+    <button type="submit">記録を追加</button>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

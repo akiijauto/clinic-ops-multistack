@@ -1,0 +1,12 @@
+<% content_for :title, "書類詳細" %>
+<div data-testid="screen-paper-detail">
+  <h1><%= @paper.title %></h1>
+  <p>対象: <%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
+  <p>メモ: <%= @paper.note %></p>
+  <p>取込日: <%= @paper.created_at&.to_date %></p>
+  <% if @paper.removed? %>
+    <p>取り消し済み（<%= @paper.removed_at %>）</p>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>/papers">書類一覧へ戻る</a></p>
+</div>

@@ -155,13 +155,34 @@ func (s *Server) handleVisitRestore(w http.ResponseWriter, r *http.Request) {
 // handleVisitPrint は1診察分の印刷（GET /animals/{karte_no}/karte/{visit_id}/print）。
 // カルテ本体（karte_print）と同じ部分テンプレート・同じ組み立て関数を使い、
 // 対象を1件に絞る（検算4「画面と印刷で同じ値」を1件単位でも保つ）。
+//
+// **仮決め**: visit_id は Visit.ID（全体で一意な採番）なので、まず visit_id 自体で
+// 引き、その Visit が実際に属する患者のカルテ番号でカルテを組み立てる。
+// パスの {karte_no} と Visit の所属患者が食い違うとき、以前は常に404にしていたが、
+// `/api/visits/{visit_id}` 等のAPI側は最初から visit_id 単独で引く作りになっており
+// （パスの karte_no との一致は要求しない）、印刷だけ厳格にする理由が無い
+// （coordination/qa/lane-a.md 参照）。
 func (s *Server) handleVisitPrint(w http.ResponseWriter, r *http.Request) {
 	if s.clinical == nil {
 		http.NotFound(w, r)
 		return
 	}
-	visitID, _ := strconv.Atoi(r.PathValue("visit_id"))
-	data, ok := s.buildKarteView(r.PathValue("karte_no"))
+	visitID, err := strconv.Atoi(r.PathValue("visit_id"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	visit, ok := s.clinical.VisitByID(visitID)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	patient, ok := s.clinical.PatientByID(visit.PatientID)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	data, ok := s.buildKarteViewFocused(patient.KarteNo, visitID)
 	if !ok {
 		http.NotFound(w, r)
 		return

@@ -14,45 +14,43 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * 投薬（画面11）。契約: spec/openapi.yaml `/animals/{karte_no}/dosing/{kind_id}`。
- * kind_id は data/masters.json の prevention_kinds 配列の添字（0始まり）。
+ *
+ * `kind_id` は `prevention_kinds` 配列の添字（0始まり）または code文字列
+ * （例: "heartworm"）のどちらでも受け付ける。実データ（`data/seed.json`）の
+ * `dosings.kind` は数値添字ではなくcode文字列を直接持っているため
+ * （裁定R-20、2026-09-06実測。App\Support\FixedData::preventionKind()で解決）。
+ * 記録が1件も無いのは正常（404にしない。年度を選べば空のフォームが出るだけ）。
  */
 class DosingController extends Controller
 {
     private const MONTHS = ['m01','m02','m03','m04','m05','m06','m07','m08','m09','m10','m11','m12'];
 
-    private function kindCode(int $kindId): ?string
-    {
-        $kinds = FixedData::master('prevention_kinds');
-
-        return $kinds[$kindId]['code'] ?? null;
-    }
-
-    public function show(Request $request, string $karteNo, int $kindId): View|Response
+    public function show(Request $request, string $karteNo, string $kindId): View|Response
     {
         $patient = Patient::where('karte_no', $karteNo)->first();
-        $code = $this->kindCode($kindId);
-        if ($patient === null || $code === null) {
+        $kind = FixedData::preventionKind($kindId);
+        if ($patient === null || $kind === null) {
             return ApiError::response(ApiError::NOT_FOUND);
         }
 
         $fiscalYear = (int) $request->query('fiscal_year', BusinessClock::today()->year);
-        $rows = Dosing::where('patient_id', $patient->id)->where('kind', $code)->orderByDesc('fiscal_year')->get();
+        $rows = Dosing::where('patient_id', $patient->id)->where('kind', $kind['code'])->orderByDesc('fiscal_year')->get();
 
         return view('clinical.dosing', [
             'patient' => $patient,
             'kindId' => $kindId,
-            'kindName' => FixedData::master('prevention_kinds')[$kindId]['name'],
+            'kindName' => $kind['name'],
             'fiscalYear' => $fiscalYear,
             'rows' => $rows,
             'current' => $rows->firstWhere('fiscal_year', $fiscalYear),
         ]);
     }
 
-    public function store(Request $request, string $karteNo, int $kindId): View|Response
+    public function store(Request $request, string $karteNo, string $kindId): View|Response
     {
         $patient = Patient::where('karte_no', $karteNo)->first();
-        $code = $this->kindCode($kindId);
-        if ($patient === null || $code === null) {
+        $kind = FixedData::preventionKind($kindId);
+        if ($patient === null || $kind === null) {
             return ApiError::response(ApiError::NOT_FOUND);
         }
 
@@ -69,22 +67,22 @@ class DosingController extends Controller
             $values[$m] = $request->has("months.$m") ? '○' : '';
         }
 
-        $row = Dosing::firstOrNew(['patient_id' => $patient->id, 'kind' => $code, 'fiscal_year' => $fiscalYear]);
+        $row = Dosing::firstOrNew(['patient_id' => $patient->id, 'kind' => $kind['code'], 'fiscal_year' => $fiscalYear]);
         $row->fill($values);
         $row->save();
 
         return $this->render($patient, $kindId, $fiscalYear, null, '保存しました。');
     }
 
-    private function render(Patient $patient, int $kindId, int $fiscalYear, ?string $error = null, ?string $success = null): View
+    private function render(Patient $patient, string $kindId, int $fiscalYear, ?string $error = null, ?string $success = null): View
     {
-        $code = $this->kindCode($kindId);
-        $rows = Dosing::where('patient_id', $patient->id)->where('kind', $code)->orderByDesc('fiscal_year')->get();
+        $kind = FixedData::preventionKind($kindId);
+        $rows = Dosing::where('patient_id', $patient->id)->where('kind', $kind['code'])->orderByDesc('fiscal_year')->get();
 
         return view('clinical.dosing', [
             'patient' => $patient,
             'kindId' => $kindId,
-            'kindName' => FixedData::master('prevention_kinds')[$kindId]['name'],
+            'kindName' => $kind['name'],
             'fiscalYear' => $fiscalYear,
             'rows' => $rows,
             'current' => $rows->firstWhere('fiscal_year', $fiscalYear),

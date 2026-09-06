@@ -7,10 +7,12 @@
 
 from __future__ import annotations
 
+import csv
 import datetime as dt
+import io
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app import models
@@ -46,6 +48,10 @@ def today_screen(request: Request, db: Session = Depends(get_db)):
     patient_by_id = {p.id: p for p in db.query(models.Patient).all()}
     owner_by_id = {o.id: o for o in db.query(models.Owner).all()}
 
+    # `/` は screen-top、`/today` は screen-today（同じ画面だが目印は契約でパスごとに
+    # 違う。2026-09-06、指揮役の新規在庫検査で気づいた——data-testid実装時に対応）。
+    screen_key = "top" if request.url.path == "/" else "today"
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request, "front/today.html",
@@ -54,6 +60,7 @@ def today_screen(request: Request, db: Session = Depends(get_db)):
             "visit_count_today": visit_count_today,
             "patient_by_id": patient_by_id,
             "owner_by_id": owner_by_id,
+            "screen_key": screen_key,
         },
     )
 
@@ -73,15 +80,27 @@ def search_screen(request: Request, q: str | None = None, db: Session = Depends(
     return templates.TemplateResponse(request, "front/search.html", {"patients": patients, "q": q or ""})
 
 
-@router.get("/dm", response_class=HTMLResponse)
-def dm_screen(request: Request, db: Session = Depends(get_db)):
-    rows = (
+def _dm_rows(db: Session) -> list[models.Prevention]:
+    """`/dm`・`/dm.csv` が共有する絞り込み。**2つで書き写すと片方だけ直し忘れる**
+    （`sales.py` の `compute_summary` と同じ考え方）。
+
+    契約（openapi.yaml）は `type`/`field`/`span`/`from`/`to` のクエリを定義しているが、
+    元の画面実装がこれらを使っていなかった（2026-09-06、`/dm.csv` 追加時に気づいた
+    既存の未対応——今回はCSVとHTMLを同じ絞り込みに揃えることを優先し、
+    クエリでの追加絞り込み自体は次段階に送る）。
+    """
+    return (
         db.query(models.Prevention)
         .filter(models.Prevention.next_due_date.is_not(None))
         .order_by(models.Prevention.next_due_date)
         .limit(100)
         .all()
     )
+
+
+@router.get("/dm", response_class=HTMLResponse)
+def dm_screen(request: Request, db: Session = Depends(get_db)):
+    rows = _dm_rows(db)
     patient_by_id = {p.id: p for p in db.query(models.Patient).all()}
     owner_by_id = {o.id: o for o in db.query(models.Owner).all()}
     templates = request.app.state.templates
@@ -89,6 +108,30 @@ def dm_screen(request: Request, db: Session = Depends(get_db)):
         request, "front/dm.html",
         {"rows": rows, "patient_by_id": patient_by_id, "owner_by_id": owner_by_id},
     )
+
+
+@router.get("/dm.csv")
+def dm_csv(db: Session = Depends(get_db)):
+    """DM一覧のCSV書き出し。`/dm` と同じ絞り込み・同じ並び（`_dm_rows` を共有）。"""
+    rows = _dm_rows(db)
+    patient_by_id = {p.id: p for p in db.query(models.Patient).all()}
+    owner_by_id = {o.id: o for o in db.query(models.Owner).all()}
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["karte_no", "owner_name_kanji", "patient_name_kanji", "kind", "next_due_date", "performed_date"])
+    for r in rows:
+        patient = patient_by_id.get(r.patient_id)
+        owner = owner_by_id.get(patient.owner_id) if patient else None
+        writer.writerow([
+            patient.karte_no if patient else "",
+            owner.name_kanji if owner else "",
+            patient.name_kanji if patient else "",
+            r.kind,
+            r.next_due_date.isoformat() if r.next_due_date else "",
+            r.performed_date.isoformat() if r.performed_date else "",
+        ])
+    return PlainTextResponse(buf.getvalue(), media_type="text/csv")
 
 
 @router.get("/sales", response_class=HTMLResponse)

@@ -339,3 +339,27 @@ class CareRecord(Base):
     performed_by_staff_id: Mapped[int] = mapped_column(ForeignKey("staff.id"), nullable=False)
 
     hospitalization: Mapped["Hospitalization"] = relationship(back_populates="care_records")
+
+
+# -- Paper -- 書類（screen 13）--------------------------------------------------
+#
+# `spec/model.md`「落としたもの」表に KartePdf（紙カルテの取込）が載っていたが、
+# 裁定 R-21（`coordination/qa/lane-d.md` D-11 参照）で範囲内と確定した。ここでの
+# Paper は「ファイルの取込」ではなく、動物に紐づく文書の**タイトルと備考だけを持つ台帳**
+# （`openapi.yaml` Paper スキーマにファイル本体の項目が無いことに合わせた）。
+#
+# `removed_at`: `spec/screens.md` 13番「満たすべきこと」が
+# 「取り消したPDFは一覧から消えるが、記録（行）自体は保持される」と明記しているため、
+# Owner/Patient/Visit と同じ論理削除にした（2026-09-06訂正。最初は契約にrestoreが
+# 無いことを理由に物理削除にしていたが、「物理削除しない」はrestoreの有無と無関係の
+# 別の要件だった——見落とし）。
+
+class Paper(Base):
+    __tablename__ = "papers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id"))
+    title: Mapped[str] = mapped_column(String(200))
+    note: Mapped[str | None] = mapped_column(String(1000), default=None)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    removed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)

@@ -64,13 +64,17 @@ class KarteController < ApplicationController
     render layout: false
   end
 
+  # 仮決め: visit_id は全体で一意な採番（Visit.id）なので、まず visit_id 単独で引く。
+  # パスの {karte_no} と Visit の所属患者が食い違っても404にしない
+  # （/api/visits/{visit_id} 等のAPI側も最初から visit_id 単独で引く作りで、
+  # 印刷・削除・復元だけ厳格にする理由が無い。qa/lane-b.md 参照）。
   def print_visit
-    @visits = [ @patient.visits.kept.find(params[:visit_id]) ]
+    @visits = [ Visit.kept.find(params[:visit_id]) ]
     render :print, layout: false
   end
 
   def delete_visit
-    visit = @patient.visits.find(params[:visit_id])
+    visit = Visit.find(params[:visit_id])
     visit.soft_delete!
     load_visits
     @form_visit = @patient.visits.build(visit_date: Date.current)
@@ -79,7 +83,7 @@ class KarteController < ApplicationController
   end
 
   def restore_visit
-    visit = @patient.visits.find(params[:visit_id])
+    visit = Visit.find(params[:visit_id])
     visit.restore!
     load_visits
     @form_visit = visit

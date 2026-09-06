@@ -83,6 +83,29 @@ class FixedData
         return $all[$key];
     }
 
+    /**
+     * `{kind_id}` パス変数（投薬・予防の種別）の解決。spec/openapi.yaml の
+     * DosingKindId / PreventionKindId は「マスタの行id」と説明しているが、実データ
+     * （`data/seed.json` の dosings / preventions の `kind` 列）は数値添字ではなく
+     * code文字列（例: "heartworm"）をそのまま持っている（裁定R-20、2026-09-06実測）。
+     * 数値添字（`prevention_kinds`配列の0始まりの位置）とcode文字列の両方を受け付ける。
+     * 見つからなければ null（呼び出し側で404にする）。
+     */
+    public static function preventionKind(string $kindId): ?array
+    {
+        $kinds = self::master('prevention_kinds');
+        if (ctype_digit($kindId) && isset($kinds[(int) $kindId])) {
+            return $kinds[(int) $kindId];
+        }
+        foreach ($kinds as $kind) {
+            if ($kind['code'] === $kindId) {
+                return $kind;
+            }
+        }
+
+        return null;
+    }
+
     /** @return array<string,mixed> data/seed.json 全体（初期データ投入時にのみ使う）。 */
     public static function seed(): array
     {

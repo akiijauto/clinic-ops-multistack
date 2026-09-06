@@ -52,6 +52,26 @@ export function preventionKindByCode(code: string): PreventionKind | undefined {
   return listPreventionKinds().find((k) => k.code === code);
 }
 
+/**
+ * The `DosingKindId`/`PreventionKindId` path parameter, resolved leniently.
+ *
+ * `data/seed.json`'s `dosings`/`preventions` fixtures only ever carry `kind`
+ * as a string code (e.g. `"heartworm"`) -- there is no numeric id anywhere
+ * in the shared fixtures for this master, which is exactly why this file's
+ * own top comment calls the 1-based-position numbering an *interpretation*,
+ * not something read from spec/. A caller building the path from that
+ * fixture data (as `tests/inventory.py` does) will naturally pass the code
+ * string, not the position. Accepting both here means the openapi-typed
+ * integer path still works for anyone using the documented numbering, while
+ * a caller that only has the raw `kind` code isn't punished with a false
+ * 404 for a route that does exist.
+ */
+export function resolveKindParam(raw: string): PreventionKind | undefined {
+  const id = Number(raw);
+  if (Number.isInteger(id)) return preventionKindById(id);
+  return preventionKindByCode(raw);
+}
+
 function labItems(): Map<string, LabItem> {
   if (!labItemsCache) {
     const raw = JSON.parse(readFileSync(resolve(DATA_DIR, 'lab_items.json'), 'utf8')) as LabItem[];

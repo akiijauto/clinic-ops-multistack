@@ -10,6 +10,24 @@
     <table data-check-key="visit.id" data-check="visit.{{ $visit->id }}">
         <caption>
             {{ $visit->visit_date?->format('Y-m-d') }}（診察No.{{ $visit->visit_no }}）
+            @if ($visit->isDeleted())
+                <em>（削除済み）</em>
+            @endif
+            @if (! empty($interactive))
+                <a class="btn secondary" href="/animals/{{ $patient->karte_no }}/karte/{{ $visit->id }}/print">この診察を印刷</a>
+                @if ($visit->isDeleted())
+                    <form method="post" action="/animals/{{ $patient->karte_no }}/karte/{{ $visit->id }}/restore" style="display:inline">
+                        @csrf
+                        <button class="btn secondary" type="submit">元に戻す</button>
+                    </form>
+                @else
+                    <form method="post" action="/animals/{{ $patient->karte_no }}/karte/{{ $visit->id }}/delete" style="display:inline">
+                        @csrf
+                        <input name="reason" placeholder="削除理由（必須）" required>
+                        <button class="btn secondary" type="submit">削除</button>
+                    </form>
+                @endif
+            @endif
         </caption>
         <thead>
             <tr>

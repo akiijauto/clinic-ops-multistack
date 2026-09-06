@@ -16,4 +16,11 @@ class ApplicationController < ActionController::Base
 
     @current_staff = session[:staff_id].present? ? Staff.active.find_by(id: session[:staff_id]) : nil
   end
+
+  # spec/openapi.yaml でPOST専用と決めているパス（取消・削除・復元等）にGETで来たとき用。
+  # ルート自体は存在する（404にはしない）が、この動詞では受けない、という意味で405を返す
+  # （tests/inventory.py Q: 「404/501/0=無い」判定のため、ここは404にしないことが重要）。
+  def method_not_allowed
+    head :method_not_allowed
+  end
 end

@@ -1,0 +1,41 @@
+<% content_for :title, "書類" %>
+<div data-testid="screen-papers">
+  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の書類</h1>
+
+  <% if @success %>
+    <p data-testid="success-banner">保存しました。</p>
+  <% end %>
+  <% if @error %>
+    <p data-testid="error-banner"><%= @error_message %></p>
+  <% end %>
+
+  <% if @papers.empty? %>
+    <p data-testid="empty-papers">取り込み済みの文書はありません。</p>
+  <% else %>
+    <table>
+      <thead><tr><th>タイトル</th><th>メモ</th><th>取込日</th><th></th></tr></thead>
+      <tbody>
+        <% @papers.each do |paper| %>
+          <tr data-testid="row-paper">
+            <td><a href="/papers/<%= paper.id %>"><%= paper.title %></a></td>
+            <td><%= paper.note %></td>
+            <td><%= paper.created_at&.to_date %></td>
+            <td>
+              <%= form_with url: "/papers/#{paper.id}/remove", method: :post, local: true do %>
+                <button type="submit">取り消す</button>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%= form_with url: "/animals/#{@patient.karte_no}/papers", method: :post, local: true do %>
+    <input type="text" name="title" placeholder="タイトル" required>
+    <input type="text" name="note" placeholder="メモ">
+    <button type="submit">取り込む</button>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

@@ -1,13 +1,20 @@
 {# 予約（新規）。`spec/screens.md` 領域4「19. 予約（新規）」。
-   いまは一覧表示のみ（新規作成・キャンセルのフォームは次段階。APIは既に用意済み）。 #}
+   一覧表示 + 新規作成フォームの投稿先（`/reservations/new` の画面から遷移）。
+   詳細・変更・取消は `/reservations/{id}` `/reservations/{id}/cancel` に分離。 #}
 {% extends "base.html" %}
-{% from "_macros.html" import screen, row, empty %}
+{% from "_macros.html" import screen, row, empty, success_banner, error_banner %}
 
 {% block title %}予約{% endblock %}
 
 {% block content %}
 <section {{ screen("reservations") }}>
   <h1>予約</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <p><a href="/reservations/new">新規予約を登録</a></p>
 
   {% if not reservations %}
   <p {{ empty("reservation") }}>予約はありません。</p>
@@ -19,7 +26,7 @@
     <tbody>
       {% for r in reservations %}
       <tr {{ row("reservation") }} class="status-{{ r.status }}">
-        <td>{{ patient_by_id.get(r.patient_id, "") }}</td>
+        <td><a href="/reservations/{{ r.id }}">{{ patient_by_id.get(r.patient_id, "") }}</a></td>
         <td>{{ r.starts_at }}</td>
         <td>{{ r.ends_at }}</td>
         <td>{{ staff_by_id.get(r.staff_id, "") }}</td>

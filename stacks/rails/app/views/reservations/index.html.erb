@@ -2,6 +2,11 @@
 <div data-testid="screen-reservations">
   <h1>予約</h1>
 
+  <%= form_with url: "/reservations", method: :get, local: true do %>
+    <input type="date" name="from" value="<%= @date.iso8601 %>">
+    <button type="submit">この日を見る</button>
+  <% end %>
+
   <% if @reservations.empty? %>
     <p data-testid="empty-reservation">予約がありません。</p>
   <% else %>

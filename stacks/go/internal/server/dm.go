@@ -2,7 +2,10 @@ package server
 
 import "net/http"
 
-import "clinicops/internal/billing"
+import (
+	"clinicops/internal/apperr"
+	"clinicops/internal/billing"
+)
 
 // handleDM は DM画面（GET /dm）。
 func (s *Server) handleDM(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +42,49 @@ func dmFilterFromQuery(r *http.Request) billing.DMFilter {
 		From:  q.Get("from"),
 		To:    q.Get("to"),
 	}
+}
+
+// dmRowJSON は spec/openapi.yaml の DmRow スキーマに対応するJSON表現。
+type dmRowJSON struct {
+	KarteNo          string  `json:"karte_no"`
+	OwnerNameKanji   string  `json:"owner_name_kanji"`
+	PatientNameKanji string  `json:"patient_name_kanji"`
+	Kind             *string `json:"kind"`
+	NextDueDate      *string `json:"next_due_date"`
+	PerformedDate    *string `json:"performed_date"`
+}
+
+func toDMRowJSON(r billing.DMRow) dmRowJSON {
+	out := dmRowJSON{
+		KarteNo:          r.KarteNo,
+		OwnerNameKanji:   r.OwnerNameKanji,
+		PatientNameKanji: r.PatientNameKanji,
+		NextDueDate:      r.NextDueDate,
+	}
+	if r.Kind != "" {
+		out.Kind = &r.Kind
+	}
+	if r.PerformedDate != "" {
+		out.PerformedDate = &r.PerformedDate
+	}
+	return out
+}
+
+// handleAPIDM は GET /api/dm。
+// 画面（GET /dm）・CSV書き出し（GET /dm.csv）と**同じ絞り込み**を使う
+// （billing.Store.DMRows。ロジックを3箇所に書かない）。
+func (s *Server) handleAPIDM(w http.ResponseWriter, r *http.Request) {
+	if s.billing == nil {
+		apperr.Write(w, apperr.New(apperr.NotFound))
+		return
+	}
+	f := dmFilterFromQuery(r)
+	rows := s.billing.DMRows(f)
+	items := make([]dmRowJSON, len(rows))
+	for i, row := range rows {
+		items[i] = toDMRowJSON(row)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": len(items)})
 }
 
 // handleSales は売上集計画面（GET /sales）。

@@ -1,0 +1,105 @@
+{# 顧客（screens.md 3番）。飼主・動物の基本データを見る／直す。他画面への入口。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty, success_banner, error_banner, action_button %}
+
+{% block title %}顧客 — {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("animal-detail") }}>
+  <h1>顧客</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  {% if patient.deleted_at %}
+  <p class="banner banner-error">この動物は削除済みです（{{ patient.deleted_at }}）。</p>
+  {% endif %}
+  {% if owner and owner.deleted_at %}
+  <p class="banner banner-error">この飼主は削除済みです（{{ owner.deleted_at }}）。</p>
+  {% endif %}
+
+  <p>カルテNo: {{ patient.karte_no }} ／ 飼主番号: {{ owner.owner_no if owner else "-" }}</p>
+
+  <nav class="animal-links">
+    <a href="/animals/{{ patient.karte_no }}/karte">カルテ</a>
+    <a href="/animals/{{ patient.karte_no }}/accounting">会計</a>
+    <a href="/animals/{{ patient.karte_no }}/history">来院履歴</a>
+    <a href="/animals/{{ patient.karte_no }}/delete">削除</a>
+    {% if owner %}
+    <a href="/animals/new?owner={{ owner.owner_no }}">この飼主に動物を追加</a>
+    {% endif %}
+  </nav>
+
+  <form method="post" action="/animals/{{ patient.karte_no }}">
+    <input type="hidden" name="action" value="save">
+    {% if owner %}
+    <fieldset>
+      <legend>飼主</legend>
+      <label>氏名（漢字） <input type="text" name="owner_name_kanji" value="{{ owner.name_kanji }}" required></label>
+      <label>氏名（カナ） <input type="text" name="owner_name_kana" value="{{ owner.name_kana }}"></label>
+      <label>郵便番号 <input type="text" name="owner_postal_code" value="{{ owner.postal_code }}"></label>
+      <label>住所1 <input type="text" name="owner_address1" value="{{ owner.address1 }}"></label>
+      <label>住所2 <input type="text" name="owner_address2" value="{{ owner.address2 }}"></label>
+      <label>電話 <input type="text" name="owner_phone" value="{{ owner.phone }}"></label>
+      <label>携帯 <input type="text" name="owner_mobile" value="{{ owner.mobile }}"></label>
+    </fieldset>
+    {% endif %}
+
+    <fieldset>
+      <legend>動物</legend>
+      <label>氏名（漢字） <input type="text" name="name_kanji" value="{{ patient.name_kanji }}" required></label>
+      <label>氏名（カナ） <input type="text" name="name_kana" value="{{ patient.name_kana }}"></label>
+      <label>種別 <input type="text" name="species" value="{{ patient.species }}" required></label>
+      <label>品種 <input type="text" name="breed" value="{{ patient.breed }}"></label>
+      <label>性別
+        <select name="sex">
+          <option value="male" {% if patient.sex == "male" %}selected{% endif %}>雄</option>
+          <option value="female" {% if patient.sex == "female" %}selected{% endif %}>雌</option>
+          <option value="unknown" {% if patient.sex == "unknown" %}selected{% endif %}>不明</option>
+        </select>
+      </label>
+      <label>生年月日 <input type="date" name="birth_date" value="{{ patient.birth_date or '' }}"></label>
+      <label>不妊・去勢日 <input type="date" name="neuter_date" value="{{ patient.neuter_date or '' }}"></label>
+    </fieldset>
+
+    <button type="submit">保存</button>
+  </form>
+
+  <details>
+    <summary>番号変更</summary>
+    <form method="post" action="/animals/{{ patient.karte_no }}">
+      <input type="hidden" name="action" value="renumber_patient">
+      <label>新しいカルテNo <input type="text" name="new_karte_no"></label>
+      <button type="submit">カルテNoを変更</button>
+    </form>
+    {% if owner %}
+    <form method="post" action="/animals/{{ patient.karte_no }}">
+      <input type="hidden" name="action" value="renumber_owner">
+      <label>新しい飼主番号 <input type="text" name="new_owner_no"></label>
+      <button type="submit">飼主番号を変更</button>
+    </form>
+    {% endif %}
+  </details>
+
+  <h2>未収金・内金</h2>
+  {% if not billing_rows %}
+  <p {{ empty("billing") }}>未収金・内金はありません。</p>
+  {% else %}
+  <ul>
+    {% for b in billing_rows %}
+    <li {{ row("billing") }}>
+      伝票 {{ b.slip_no or "-" }}（{{ b.billed_on }}）: 税込合計 {{ b.total_amount }}円 ／
+      入金済 {{ b.paid_amount }}円 ／ 残額 {{ b.balance }}円
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {# 診察券発行・文書印刷・品種リストは spec/screens.md 3番の「できること」に載っているが、
+     対応する openapi ルート・model.md「落としたもの」表の項目が無く、
+     `app/feature_notes.py`（FOLDED_NOTES はmodel.mdの表と1対1が契約——screens.md 7番・23番）
+     に新規キーを勝手に足せない。契約にもデータにも無い機能なのでボタン自体を出さない
+     （2026-09-06、action_button の b/c 振り分け修正時に見つけて対応。qa/lane-d.md D-17）。 #}
+</section>
+{% endblock %}

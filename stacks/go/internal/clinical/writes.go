@@ -37,6 +37,21 @@ func (s *Store) PreventionKindByID(id int) (PreventionKind, bool) {
 	return k, ok
 }
 
+// PreventionKindByCode は種別コード（`data/masters.json` の `code`。
+// 例: "heartworm"）で種別を引く。
+//
+// 契約（spec/openapi.yaml DosingKindId / PreventionKindId）は type: integer だが、
+// `data/seed.json` の dosings/preventions 自体は数値idを持たず `kind` にコード文字列
+// (例: "heartworm") しか持たない。共通テストの在庫検査（tests/inventory.py）は
+// このコード文字列をそのまま {kind_id} に埋めてくるため、数値idとコードの両方を
+// 受け付けられるようにしておく（PreventionKindByID が失敗したときの窓口）。
+func (s *Store) PreventionKindByCode(code string) (PreventionKind, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	k, ok := s.preventionKindByCode[code]
+	return k, ok
+}
+
 // ---- カルテ（Visit / ProgressNote）の書き込み ----
 
 // NextVisitNo は指定した患者の次の診察番号（保存前から見せる用）を返す。

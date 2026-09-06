@@ -1,13 +1,15 @@
-{# 入院。`spec/screens.md` 領域4「18. 入院」。
+{# 入院（日次表示）。`spec/screens.md` 領域4「18. 入院」。
    ケア記録の追加フォームは次段階（APIは既に用意済み。実施者は必須で弾く）。
-   `data-check="care_record.performed_by"` は acceptance.md 検算7の目印。 #}
+   `data-check="care_record.performed_by"` は acceptance.md 検算7の目印。
+   目印は `screen-ward-day`（`/ward` と `/ward/day` の両方が同じ testid を要求する契約。
+   1動物の入院画面 `/animals/{karte_no}/ward` の `screen-ward` とは別物）。 #}
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty %}
 
 {% block title %}入院{% endblock %}
 
 {% block content %}
-<section {{ screen("ward") }}>
+<section {{ screen("ward-day") }}>
   <h1>入院</h1>
 
   {% if not hospitalizations %}

@@ -1,0 +1,20 @@
+{# 書類（1件の詳細）。`spec/screens.md` 領域2「13. 書類」。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen %}
+
+{% block title %}書類詳細 — {{ paper.title }}{% endblock %}
+
+{% block content %}
+<section {{ screen("paper-detail") }}>
+  <h1>書類詳細</h1>
+  <p>タイトル: {{ paper.title }}</p>
+  <p>メモ: {{ paper.note if paper.note else "" }}</p>
+  <p>取込日: {{ paper.created_at }}</p>
+  {% if patient %}
+  <p>対象: <a href="/animals/{{ patient.karte_no }}/papers">{{ patient.name_kanji }}（{{ patient.karte_no }}）</a></p>
+  {% endif %}
+  <form method="post" action="/papers/{{ paper.id }}/remove">
+    <button type="submit">削除</button>
+  </form>
+</section>
+{% endblock %}

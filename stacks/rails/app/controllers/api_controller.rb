@@ -23,6 +23,12 @@ class ApiController < ActionController::API
     render_api_error(:invalid_json)
   end
 
+  # spec/openapi.yaml でPOST専用のパス（削除・復元・取消等）にGETで来たとき用。
+  # ApplicationController#method_not_allowed のJSON版（tests/inventory.py 参照）。
+  def method_not_allowed
+    head :method_not_allowed
+  end
+
   private
 
   def handle_record_invalid(record)

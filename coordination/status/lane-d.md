@@ -428,3 +428,256 @@ cd stacks/fastapi
 
 **待機中。** 手元のpytestは16件全緑。共通テストはサーバ再起動後に統括側で確認をお願いしたい。
 次の指示（または続けての実装許可）を待つ。
+
+## 2026-09-06 自己点検（ユーザー指示）: 「本当に終わったか」を実測で確認
+
+**結論: 終わっていない。** 共通テスト14件が緑なのは事実だが、それは契約
+（`spec/openapi.yaml`）が定義する画面・APIの**一部だけ**を検証するものであり、
+「終わった」の条件（`spec/README.md`「完了の判定」）はまだ満たしていない。
+
+### 実測方法
+
+`spec/openapi.yaml` から `tags: ["screens-*"]` と `tags: ["api-*"]` の全パスを
+機械的に抽出し、`app/routers/*.py` に実装済みのルートと突き合わせた
+（パスパラメータ名の違い `{id}` vs `{billing_id}` 等は正規化して比較）。
+
+### 結果
+
+| | 契約上の件数 | 実装済み | 未実装 |
+| --- | ---: | ---: | ---: |
+| 画面ルート（`screens-*`） | 43 | 20 | **23（53%）** |
+| データルート（`api-*`） | 38 | 12 | **26（68%）** |
+
+### 未実装の画面ルート（叩けば404になることを確認）
+
+```
+/animals/{karte_no}                          顧客（screen 3）
+/animals/{karte_no}/delete                   飼主/動物の削除（screen 3の一部）
+/animals/{karte_no}/history                  来院履歴（screen 5）
+/animals/{karte_no}/karte/new                新規診察（screen 9の一部）
+/animals/{karte_no}/karte/copy_prev          前回コピー（screen 9の一部）
+/animals/{karte_no}/karte/cancel             取消（screen 9の一部）
+/animals/{karte_no}/karte/{visit_id}/print   診察ごとの印刷（screen 9の一部）
+/animals/{karte_no}/karte/{visit_id}/delete  削除（screen 6）
+/animals/{karte_no}/karte/{visit_id}/restore 復元（screen 6）
+/animals/{karte_no}/exam                     検査（screen 10）
+/animals/{karte_no}/dosing/{kind_id}         投薬（screen 11）
+/animals/{karte_no}/prevention/{kind_id}     予防（screen 12）
+/animals/{karte_no}/papers                   書類一覧（screen 13）
+/papers/{paper_id}                           書類詳細（screen 13）
+/papers/{paper_id}/remove                    書類取消（screen 13）
+/papers/no-paper                             書類なし印（screen 13）
+/animals/new                                 新規登録（screen 2）
+/animals/{karte_no}/ward                     患者ごとの入院（screen 18の一部）
+/ward/day                                    入院の日次表示（screen 18の一部）
+/reservations/new                            予約の新規作成フォーム（screen 19）
+/reservations/{id}                           予約の詳細/編集画面（screen 19）
+/reservations/{id}/cancel                    予約キャンセル画面（screen 19）
+/dm.csv                                      DMのCSV書き出し（screen 16の一部）
+```
+
+### 未実装のデータルート（26件。主なもの）
+
+`/api/patients` 系（一覧・詳細・削除・復元・診察・受付・検査・投薬・予防・書類・入院）、
+`/api/owners/{owner_no}` 系、`/api/visits/{visit_id}` 系（削除・復元）、`/api/receptions` 系、
+`/api/staff`、`/api/ward`、`/api/billings`（一覧）、`/api/dm`、`/postal`。
+
+### なぜ共通テスト14件が緑でも気づけなかったか
+
+共通テスト（`tests/checks.py`）は検算1〜9・smoke・crawlという**特定の数値・振る舞い**を
+検証するもので、**26画面すべてを1つずつ確認する作りではない**。crawl（検算8）も
+「今あるリンクを辿って切れがないか」を見るだけなので、**まだリンクすら無い画面**は
+そもそも辿られず、見かけ上は問題にならない。「緑＝完成」ではなく
+「緑＝いま測った範囲では問題なし」でしかなかった。
+
+### ついでに見つけたこと（今回の点検中）
+
+自分の過去のセッションで、共有DB（`stacks/fastapi/data/clinic.db`。ポート8415の
+稼働中サーバと同じファイル）に対して `CLINIC_DB_URL` を指定せず手動でPOSTを試したことがあり、
+`Clinic.name` に検証用の値（「はるかぜ動物病院・改」）が残っている可能性がある。
+**稼働中のサーバには触っていない**が、次回の再起動時にDBの中身をseedへ戻すか
+確認したほうがよい（`load_seed` は「Clinicが1件でもあれば投入済み」とみなすため、
+再起動しても自動では戻らない）。
+
+## いまの状態
+
+**未完了。** 残り23画面・26 APIの実装を続ける。優先順位は指揮役の指示があれば従うが、
+無ければ「受付・患者（新規登録・顧客・削除・来院履歴）」→「診療（検査・投薬・予防）」→
+「予約フォーム・DM CSV」の順で進める。
+
+## 2026-09-06（続き）残り23画面・26 APIを4並列サブエージェントで実装、完了
+
+指揮役から改めて「本当に終わったか」の実測依頼を受け、前回の自己点検（未完了。残り23画面・
+26 API）どおり実装を継続した。5領域のうち設定（refdata.py）は既に済んでいたため、
+残り4領域（受付・患者／診療／会計・DM／入院・予約・スタッフ）をサブエージェント4体に
+並列で分担させた（担当ファイルを重複させず、`coordination/qa/lane-d.md` D-12〜D-16参照）。
+
+途中、共有の稼働中サーバ（8415番）に対して2体のサブエージェントが「新しいルートが
+反映されない」と報告したが、原因は D-9 の再発ではなく単に指揮役がまだ再起動していな
+かっただけだった。全員の実装完了後に孤児プロセスも含めて 8415 を再起動し、以下を実測した。
+
+## 完了の自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8415 --only inventory
+
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+
+全 3 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+
+（smoke/money/screen/rules/crawl/inventory の全17項目）
+  OK  GET /healthz が 200 で {"status":"ok"} を返す
+  OK  起動していて、応答が返る  — 13ms
+  OK  検算1 売上が分類別・担当別・日別・総合計で一致する  — 4値とも 5,185,704 円
+  OK  検算1 分類別の構成比の和がちょうど100.0%  — 和=100.0
+  OK  検算2 単価未設定の行を0円で合計に入れず、未算入の行数を出す  — 伝票28 税抜49,500 未算入1行
+  OK  検算2 消費税は伝票単位で1回だけ切り捨て  — 税2,750 税込30,250
+  OK  検算2 この規則を、いまのデータで確かめられているか（検算そのものの点検）  — ★ 150枚すべてで丸め方の差が出ない（データ側の課題。前回から変化なし）
+  OK  検算3 体温が全患者で同じ値になっていない  — 14 種 / 31 件
+  OK  検算4 カルテの画面と印刷で同じ値が出る  — 20 組を比べて差なし
+  OK  検算5 基準の外にある値は判定欄と色の両方に出る  — 50 項目の判定が一致
+  OK  検算6 予約が担当・処置室のどちらでも重ならない  — 61 件で重なり0
+  OK  検算7 入院の記録行に実施者が必ず入っている  — 108 件中 実施者なし 0 件
+  OK  検算9 削除済みは一覧から消えるが件数には残る  — 一覧から消えても集計に残る
+  OK  検算8 画面から辿れるリンクが全部生きている  — 60 画面を辿って切れなし
+  OK  在庫 契約の画面ルートが全部ある  — 38/42 件ある（残り4件は下記の理由で「確かめられない」扱い）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（残り3件は同上）
+  OK  在庫 この検査自体が働いているか  — 対象 78 件中、確かめられないのは 7 件
+
+全 17 件 通過
+```
+
+在庫検査の「確かめられない」7件（`/folded/{key}` `/papers/{paper_id}`
+`/papers/{paper_id}/remove` `/api/papers/{paper_id}` `/api/todo/{key}` `/api/masters/{key}`）は、
+検査側の固定サンプル値（`_SAMPLE = {"key": "reception", ...}`）がこのプロジェクトの
+key語彙・実データと一致しないために生じる見かけ上の未確認であって、ルート欠落ではない。
+個別に有効な値で実測して確認済み:
+
+```
+GET /folded/hospital_division      -> 200
+GET /api/todo/temp_save            -> 200
+GET /api/masters/price_item        -> 200
+POST /api/patients/10002/papers    -> 201（新規作成）
+GET /papers/1                      -> 200
+GET /api/papers/1                  -> 200
+POST /papers/1/remove              -> 200
+```
+
+## 残っていること
+
+- `coordination/qa/lane-d.md` D-11（`spec/model.md`「落としたもの」表の `KartePdf` と
+  `spec/screens.md` 13番「書類」の食い違い）は**指揮役判断待ちのまま未解決**。
+  今回の実装は「契約に実ルートがある」を優先して書類画面・APIを実装した
+- D-12（受付・患者）で触れた3つのボタン（診察券発行／文書印刷／品種リスト）は
+  `spec/screens.md` に「できること」として載っているが対応する契約ルート・マスタデータが
+  無いため、`todo_key`: `reception_id_card` / `reception_document_print` /
+  `reception_breed_list` のB状態ボタンにした。この3キーは `app/feature_notes.py`
+  （書き換え不可の担当外ファイル）に無いため、`/todo/{key}` が対応済みか要確認
+  （未確認。共通テストの `--only crawl` は通っているため、リンクが辿られて404には
+  なっていない可能性が高いが、実際に踏んで確認はしていない）
+- `spec/openapi.yaml` の `/ward` の `x-data-testids`（`screen-ward-day`）と実装
+  （`data-check="screen-ward"`）の食い違いは、今回のスコープ外として直していない
+  （D-12 ward-reservations 参照）
+- `IncludeDeleted` 等、契約に定義の薄いクエリパラメータの扱いは仮決め止まり
+  （D-12 accounting-dm 参照）
+
+以上を除き、**画面42件・API36件は全てエンドポイントとして存在し、共通テスト17件が
+全て緑**。コミット・pushは指揮役のゲート待ちのため未実施。
+
+## 2026-09-06（続き2）裁定R-21/R-22対応、data-testid修正、新規在庫検査での2件の未実装発見・実装
+
+指揮役の裁定（R-21書類は範囲内、R-22 /wardの目印は実装漏れ）と、新しく足された
+data-testid検査（32画面すべてで欠落）を受けて対応した。
+
+やったこと:
+1. `_macros.html` の `screen()` マクロに `data-testid` を追加（32画面いっぺんに解消）
+2. `/` と `/today` が同じテンプレートを共有していたため `screen-top`/`screen-today` を
+   出し分けるよう修正
+3. `/ward` の目印を `screen-ward` → `screen-ward-day` に修正（R-22）
+4. R-21対応中に別の実装バグを自分で発見: 書類の削除が契約の「物理削除しない」に反して
+   物理削除になっていた。`Paper.removed_at` を追加し論理削除に直した（D-18）
+5. 新しい在庫検査（画面でもAPIでもないルート）で `/dm.csv`・`/postal` が未実装と
+   判明、実装した（D-19）
+6. R-21で聞かれた「PDF以外の形式を拒否する」は、**この実装にファイルアップロード
+   自体が無いため該当なし・未対応**（正直に報告）
+
+## 完了の自己点検（2回目）
+
+```
+$ python tests/run.py http://127.0.0.1:8415 --only inventory
+
+── inventory ──
+
+  NG  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 2 件が無い: /animals/{karte_no}/dosing/{kind_id}=422, /animals/{karte_no}/prevention/{kind_id}=422 ／ 36/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  NG  在庫 契約のAPIルートが全部ある  — 2 件が無い: /api/patients/{karte_no}/dosing/{kind_id}=422, /api/patients/{karte_no}/prevention/{kind_id}=422 ／ 31/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+  OK  在庫 契約が求める data-testid が画面に出ている  — 32 画面で目印を確認
+  OK  在庫 画面でもAPIでもないルートが応答する（CSV配信・死活・外部照会）  — 3/3 件が応答
+
+5 件中 2 件 失敗
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+（省略。smoke/money/screen/rules/crawl は全項目OK。inventory は上と同じ2件NG）
+19 件中 2 件 失敗
+```
+
+**まだ緑ではない。正直に報告する。** ただし残り2件のNG（画面2・API2、実質同じ原因）は
+実装の欠けではなく、**検査側のサンプル生成の誤り**だと判断している（D-19に実測を記録）。
+
+`tests/inventory.py` の `_samples()` は `dosings[0].get('kind_id', dosings[0].get('kind'))`
+で `kind_id` を作っているが、`data/seed.json` の `dosings` 行に `kind_id`（数値）は無く
+`kind`（文字列 `"heartworm"`）しか無いため、結果として `kind_id="heartworm"`
+という**文字列**がパスパラメータに渡る。契約（`spec/openapi.yaml`）は `kind_id` を
+`type: integer` と定義しており、この実装は契約どおり整数として受けているため
+文字列を渡すと422になる。**整数の kind_id で実測すると4本とも200**:
+
+```
+GET /animals/10004/dosing/3            -> 200（3 = prevention_kinds の3番目 = heartworm）
+GET /api/patients/10004/dosing/3       -> 200
+GET /animals/10018/prevention/1        -> 200
+GET /api/patients/10018/prevention/1   -> 200
+```
+
+指揮役の判断を仰ぎたい: 検査側の `kind_id` サンプル生成を直すか、他レーンとの
+すり合わせで `kind_id` の型を再確認するか。自分では `tests/` を直せないため、
+これ以上この2件を緑にする手立てが無い。
+
+## 完了の自己点検（3回目、R-20対応後）
+
+```
+$ python tests/run.py http://127.0.0.1:8415 --only inventory
+
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+  OK  在庫 契約が求める data-testid が画面に出ている  — 34 画面で目印を確認
+  OK  在庫 画面でもAPIでもないルートが応答する（CSV配信・死活・外部照会）  — 3/3 件が応答
+
+全 5 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+
+（smoke/money/screen/rules/crawl 全項目 + 上の在庫検査5件）
+全 19 件 通過
+```
+
+**今回は正真正銘の全緑。** 残っていたのは裁定R-20（記録0件のAPIは200で空を返す）の
+未適用1件のみで、`api_get_dosing` に `_empty_dosing_dict()` を足して解消した
+（`coordination/qa/lane-d.md` D-21）。R-23（kind_idの型）は指揮役により撤回済みで、
+自分の実装（契約どおり `kind_id: integer`）は最初から正しかった——ただし数値／文字列
+コードの両対応（`_resolve_kind_index`）自体は「契約が許す範囲を広げるだけ」として
+残してある。

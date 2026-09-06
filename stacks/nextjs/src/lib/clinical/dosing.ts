@@ -11,14 +11,15 @@ import { getDb } from '../db.ts';
 import { one, many } from '../area1/query.ts';
 import { ApiError } from '../errors.ts';
 import { getPatientByKarteNo } from '../area1/data.ts';
-import { preventionKindById } from './masters.ts';
+import { resolveKindParam } from './masters.ts';
 import type { Dosing, Patient } from '../model.ts';
 
 export const MONTH_KEYS = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08', 'm09', 'm10', 'm11', 'm12'] as const;
 export type MonthKey = (typeof MONTH_KEYS)[number];
 
-export function requireDosingKind(kindId: number): { id: number; code: string; name: string } {
-  const kind = preventionKindById(kindId);
+/** `kindIdParam` is the raw `{kind_id}` path segment -- see `resolveKindParam`'s note on why both the numbered position and the raw `kind` code are accepted. */
+export function requireDosingKind(kindIdParam: string): { id: number; code: string; name: string } {
+  const kind = resolveKindParam(kindIdParam);
   if (!kind) throw new ApiError('not_found');
   return kind;
 }
@@ -48,7 +49,7 @@ export function getDosingYear(patientId: number, kindCode: string, fiscalYear: n
 
 export function listDosingForKarteNo(karteNo: string, kindId: number): { patient: Patient; kindCode: string; kindName: string; years: Dosing[] } {
   const patient = requirePatient(karteNo);
-  const kind = requireDosingKind(kindId);
+  const kind = requireDosingKind(String(kindId));
   return { patient, kindCode: kind.code, kindName: kind.name, years: listDosingYears(patient.id, kind.code) };
 }
 

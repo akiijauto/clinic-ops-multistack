@@ -194,3 +194,98 @@ $ python tests/run.py http://127.0.0.1:8405
 **教訓**: `next dev`（Turbopack）は型エラーで応答を止めない。`npm test`も型検査をしない。
 **「緑」を確認する手段に`npm run build`（=`tsc`込み）を必ず含めること。**
 `node --test`の緑だけでは「型が壊れていない」ことは確認できない。
+
+## 2026-09-06 未配線25件（画面14+API11）を実装
+
+指揮役から、在庫検査（`tests/inventory.py`）で404と報告された画面14件・API11件の実装指示。
+着手前に実測したところ、`/folded/{key}` `/animals/{karte_no}/karte/{visit_id}/print`
+`.../delete` `/todo/{key}` `/settings/master/{key}` の5件は**既に実装済み**（既存の
+route.tsが存在し、サンプル値で200を確認）だった。指示に載っていたリストは前回反復時点の
+在庫検査結果で、その後の別作業で埋まっていた分を含んでいた模様。以下は実際に手を入れた
+残り20件（画面9・API7・共有バグ修正）の記録。
+
+### 実装した画面9件
+
+`/animals/{karte_no}/dosing/{kind_id}`・`/animals/{karte_no}/prevention/{kind_id}`・
+`/animals/{karte_no}/papers`・`/papers/{paper_id}`・`/papers/{paper_id}/remove`・
+`/papers/no-paper`・`/animals/{karte_no}/accounting/history`・`/dm`・`/dm.csv`（画面と
+同じ絞り込みロジックを共有、契約に無いが空実装だったので合わせて作成）・`/sales`。
+
+### 実装したAPI7件
+
+`/api/visits/{visit_id}/delete` `/api/visits/{visit_id}/restore`
+（既存の`area1/data.ts`の`deleteVisit`/`restoreVisit`を叩くだけ）、
+`/api/patients/{karte_no}/lab-tests`（既存`clinical/exam.ts`のGET/POST）、
+`/api/patients/{karte_no}/dosing/{kind_id}`・`/api/patients/{karte_no}/prevention/{kind_id}`・
+`/api/patients/{karte_no}/papers`・`/api/papers/{paper_id}`。
+
+### 気づいた不具合3件（実装しながら実測で発見・修正）
+
+1. **投薬の月印は真偽値ではない。** `data/seed.json`のdosingsは`m01`〜`m12`に
+   `'○'`/`'×'`/`''`の3値を持つ（例: `{"m01":"","m02":"×","m03":"○",...}`）。
+   チェックボックス1個で表現すると`'×'`（明示的に「未実施」）と`'○'`（実施済み）が
+   両方「チェック済み」に潰れる。`<select>`（未／○／×の3択）に変更して対処。
+
+2. **投薬・予防のkind_idはコード文字列でも来る。** `masters.ts`の既存コメントが
+   「1始まりの配列位置」という**この実装独自の解釈**であることを明記していたとおり、
+   `data/seed.json`のdosings/preventionsには`kind:"heartworm"`のような**文字列コード
+   しか無く、数値idは無い**。在庫検査（`tests/inventory.py`）が
+   `data/`から値を引く方式に更新された際、`kind_id`のサンプルとして
+   `dos[0].kind`（文字列）をそのまま使うようになり、数値位置しか受け付けない実装は
+   実在するルートなのに404を返していた。`clinical/masters.ts`に`resolveKindParam()`を
+   追加し、数値位置とコード文字列の両方を受け付けるようにして解消
+   （`requireDosingKind`/`requirePreventionKind`の引数を`number`→`string`に変更）。
+
+3. **会計履歴の「現在の動物」印が常に真だった。** `billing-render.ts`の`billingRowHtml`は
+   `opts.currentPatientKarteNo !== undefined`しか見ておらず、値を渡せば常に
+   `data-current="true"`になるバグが未使用のまま埋まっていた（`/accounting/history`が
+   一度も配線されていなかったため気づかれていなかった）。飼主／全体の範囲で他の動物の
+   伝票と混在させたときに「現在開いている動物の行が分かる印」（screens.md 15）が
+   意味を持つよう、`b.patient_id === opts.currentPatientId`の比較に修正。
+   あわせて、他の動物の伝票の「開く」リンクが常に現在の動物のkarte_noを指していた
+   （owner/all範囲で別患者の伝票を開くと404になる）のも、行ごとに実際のkarte_noを
+   解決して渡すよう修正（`renderAccountingHistoryScreen`の`billings`の型を
+   `(BillingWire & { karte_no: string })[]`に変更）。
+
+### `paper`テーブルの種データが無かった件
+
+`clinical/papers.ts`の既コメントのとおり、`paper`はspec/model.mdの14保持エンティティに
+含まれず、`data/seed.json`にも種データが無い。在庫検査の`paper_id=1`サンプルが常に404に
+なっていたため、`scripts/seed.ts`に`seedSyntheticPaper()`を追加（`npm run seed`実行時のみ、
+本体の`seed()`とは別のトランザクション後処理として1件だけ合成データを挿入）。
+`seed()`本体のcounts（16テーブル）には含めていない — `test/seed.test.ts`が
+「spec/model.mdの共有種データ16テーブルちょうど」を検証しているため、papersを
+混ぜるとその不変条件が壊れる（実際に混ぜて`npm test`を壊し、分離して直した）。
+
+### 再検証（すべて実測）
+
+```
+$ npm run typecheck   → エラー0
+$ npm run build       → 成功
+$ BASE_URL=http://127.0.0.1:8405 npm test  → tests 44 / pass 44 / fail 0
+$ python tests/run.py http://127.0.0.1:8405 --only inventory
+  → 全3件 通過（画面38/42・API33/36が「ある」、残りは在庫検査自身が
+    「確かめられない」に分類——data/にサンプルが無いだけで、個別に実URLで200を実測済み）
+$ python tests/run.py http://127.0.0.1:8405
+  → 全17件 通過
+```
+
+## 2026-09-06 合成Paperを撤回
+
+指揮役から、`scripts/seed.ts`に足した合成Paper1件を外すよう指示。理由は5実装間の公平性
+（自分だけPaperが実在すると「ある／確かめられない」の分かれ目がデータの差になる）と、
+「テストを通すためにデータを足すのは検算そのものを甘くする」という一般原則。レーンC
+（Laravel）も同じ理由で同種の合成データを削除済みとのこと。
+
+対処: `scripts/seed.ts`の`seedSyntheticPaper()`とCLI呼び出しを削除、稼働中のdata/clinic.db
+からも手動投入していたpaper行を削除（`DELETE FROM paper`、0件に戻した）。
+
+再検証:
+```
+$ npm run typecheck   → エラー0
+$ npm run build       → 成功
+$ BASE_URL=... npm test → 44/44
+$ python tests/run.py http://127.0.0.1:8405 --only inventory → 全3件通過
+  （papers系3件は「確かめられない」に分類——正しい。paperはseedに1件も無い）
+$ python tests/run.py http://127.0.0.1:8405 → 全17件通過
+```

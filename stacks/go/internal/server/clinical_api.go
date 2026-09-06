@@ -361,12 +361,7 @@ func (s *Server) handleAPIDosing(w http.ResponseWriter, r *http.Request) {
 		apperr.Write(w, apperr.New(apperr.NotFound))
 		return
 	}
-	kindID, convErr := strconv.Atoi(r.PathValue("kind_id"))
-	if convErr != nil {
-		apperr.Write(w, apperr.New(apperr.NotFound))
-		return
-	}
-	kind, ok := s.clinical.PreventionKindByID(kindID)
+	kind, ok := s.resolveKind(r.PathValue("kind_id"))
 	if !ok {
 		apperr.Write(w, apperr.New(apperr.NotFound))
 		return
@@ -381,7 +376,14 @@ func (s *Server) handleAPIDosing(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		apperr.Write(w, apperr.New(apperr.NotFound))
+		// まだ記録が無い年度（患者×種別の組み合わせ自体は存在する）。
+		// 404にはせず、空欄（月はすべてnull）の年間記録として200で返す
+		// （画面側（GET /animals/{karte_no}/dosing/{kind_id}）も記録0件を
+		// 404にはせず空のマス目で描画しており、それと揃える）。
+		if fiscalYear == 0 {
+			fiscalYear = time.Now().In(config.JST).Year()
+		}
+		writeJSON(w, http.StatusOK, dosingJSON{PatientID: patient.ID, Kind: kind.Code, FiscalYear: fiscalYear})
 		return
 	}
 
@@ -428,12 +430,7 @@ func (s *Server) handleAPIPrevention(w http.ResponseWriter, r *http.Request) {
 		apperr.Write(w, apperr.New(apperr.NotFound))
 		return
 	}
-	kindID, convErr := strconv.Atoi(r.PathValue("kind_id"))
-	if convErr != nil {
-		apperr.Write(w, apperr.New(apperr.NotFound))
-		return
-	}
-	kind, ok := s.clinical.PreventionKindByID(kindID)
+	kind, ok := s.resolveKind(r.PathValue("kind_id"))
 	if !ok {
 		apperr.Write(w, apperr.New(apperr.NotFound))
 		return

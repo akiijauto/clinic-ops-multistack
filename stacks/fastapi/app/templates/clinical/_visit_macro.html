@@ -4,8 +4,9 @@
    （acceptance.md「なぜ必要か」に書かれている実際の不具合と同じ構図）。 #}
 {% from "_macros.html" import row %}
 
-{% macro render_visit(v) %}
+{% macro render_visit(v, extra_actions=None) %}
 <li {{ row("visit") }}>
+  {% if v.deleted_at %}<p class="visit-deleted-mark">（削除済み）</p>{% endif %}
   <h3>{{ v.visit_date }}（第{{ v.visit_no }}回）</h3>
   <p>体重: {{ v.body_weight_kg if v.body_weight_kg is not none else "" }} kg</p>
   <p>主訴: {{ v.chief_complaint }}</p>
@@ -35,5 +36,6 @@
       {% endfor %}
     </tbody>
   </table>
+  {% if extra_actions %}{{ extra_actions | safe }}{% endif %}
 </li>
 {% endmacro %}

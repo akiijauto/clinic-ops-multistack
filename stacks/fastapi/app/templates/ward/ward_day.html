@@ -1,0 +1,34 @@
+{# 入院の日次表示。`openapi.yaml` /ward/day。指定日（省略時はJST本日）に在院中の入院一覧。
+   D-12: 「在院中」は admitted_on <= 対象日 かつ（discharged_on が無い、または discharged_on >= 対象日）で仮決め。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}入院（日次） - {{ target_date }}{% endblock %}
+
+{% block content %}
+<section {{ screen("ward-day") }}>
+  <h1>入院（日次: {{ target_date }}）</h1>
+
+  <form method="get" action="/ward/day">
+    <label>日付 <input type="date" name="date" value="{{ target_date }}"></label>
+    <button type="submit">表示</button>
+  </form>
+
+  {% if not hospitalizations %}
+  <p {{ empty("hospitalization") }}>この日に在院中の患者はいません。</p>
+  {% else %}
+  <table class="ward-day-list">
+    <thead><tr><th>患者</th><th>処置室</th><th>入院期間</th></tr></thead>
+    <tbody>
+      {% for h in hospitalizations %}
+      <tr {{ row("hospitalization") }}>
+        <td>{{ patient_by_id[h.patient_id].name_kanji if h.patient_id in patient_by_id else h.patient_id }}</td>
+        <td>{{ h.room }}</td>
+        <td>{{ h.admitted_on }} 〜 {{ h.discharged_on if h.discharged_on else "（在室中）" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,82 @@
+{# 診察の入力フォーム。新規診察・前回コピー・既存診察の編集で共有する。
+   `VisitForm` のフィールド名はこのレーンで仮決めした（`coordination/qa/lane-d.md` D-12）。 #}
+
+{% macro render_form(karte_no, target, form_values) %}
+{% set fv = form_values or {} %}
+{% set visit_id = fv.get("visit_id", (target.id if target else "")) %}
+{% set visit_date = fv.get("visit_date", (target.visit_date.isoformat() if target and target.visit_date else "")) %}
+{% set body_weight_kg = fv.get("body_weight_kg", (target.body_weight_kg if target else "")) %}
+{% set chief_complaint = fv.get("chief_complaint", (target.chief_complaint if target else "")) %}
+{% set symptom = fv.get("symptom", (target.symptom if target else "")) %}
+{% set diagnosis = fv.get("diagnosis", (target.diagnosis if target else "")) %}
+{% set treatment = fv.get("treatment", (target.treatment if target else "")) %}
+{% set staff_id = fv.get("staff_id", (target.staff_id if target else "")) %}
+{% if "notes" in fv %}
+  {% set notes = fv.get("notes") %}
+{% elif target %}
+  {% set notes = target.progress_notes %}
+{% else %}
+  {% set notes = [] %}
+{% endif %}
+
+<form method="post" action="/animals/{{ karte_no }}/karte" class="visit-form">
+  <input type="hidden" name="visit_id" value="{{ visit_id }}">
+
+  <div class="field-row">
+    <label>来院日 <input type="date" name="visit_date" value="{{ visit_date }}" required></label>
+    <label>体重(kg) <input type="text" name="body_weight_kg" value="{{ body_weight_kg if body_weight_kg is not none else "" }}"></label>
+    <label>担当医(Staff ID) <input type="text" name="staff_id" value="{{ staff_id if staff_id is not none else "" }}"></label>
+  </div>
+  <div class="field-row">
+    <label>主訴 <input type="text" name="chief_complaint" value="{{ chief_complaint }}"></label>
+  </div>
+  <div class="field-row">
+    <label>症状 <textarea name="symptom">{{ symptom }}</textarea></label>
+  </div>
+  <div class="field-row">
+    <label>診断 <textarea name="diagnosis">{{ diagnosis }}</textarea></label>
+  </div>
+  <div class="field-row">
+    <label>治療 <textarea name="treatment">{{ treatment }}</textarea></label>
+  </div>
+
+  <h3>経過記録</h3>
+  <table class="progress-notes-form">
+    <thead>
+      <tr>
+        <th>日付</th><th>体温</th><th>脈拍</th><th>呼吸</th><th>体重</th>
+        <th>経過</th><th>処置</th><th>メモ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for n in notes %}
+      {% set is_dict = n is mapping %}
+      <tr>
+        <td><input type="date" name="entry_date[]" value="{{ n.entry_date if is_dict else n.entry_date.isoformat() }}"></td>
+        <td><input type="text" name="temperature_c[]" value="{{ (n.temperature_c if is_dict else n.temperature_c) if (n.temperature_c if is_dict else n.temperature_c) is not none else "" }}"></td>
+        <td><input type="text" name="pulse[]" value="{{ (n.pulse if is_dict else n.pulse) if (n.pulse if is_dict else n.pulse) is not none else "" }}"></td>
+        <td><input type="text" name="respiration[]" value="{{ (n.respiration if is_dict else n.respiration) if (n.respiration if is_dict else n.respiration) is not none else "" }}"></td>
+        <td><input type="text" name="note_body_weight_kg[]" value="{{ (n.body_weight_kg if is_dict else n.body_weight_kg) if (n.body_weight_kg if is_dict else n.body_weight_kg) is not none else "" }}"></td>
+        <td><input type="text" name="symptom_course[]" value="{{ n.symptom_course if is_dict else n.symptom_course }}"></td>
+        <td><input type="text" name="treatment_rx[]" value="{{ n.treatment_rx if is_dict else n.treatment_rx }}"></td>
+        <td><input type="text" name="note[]" value="{{ n.note if is_dict else n.note }}"></td>
+      </tr>
+      {% endfor %}
+      {% for _ in range(3) %}
+      <tr>
+        <td><input type="date" name="entry_date[]" value=""></td>
+        <td><input type="text" name="temperature_c[]" value=""></td>
+        <td><input type="text" name="pulse[]" value=""></td>
+        <td><input type="text" name="respiration[]" value=""></td>
+        <td><input type="text" name="note_body_weight_kg[]" value=""></td>
+        <td><input type="text" name="symptom_course[]" value=""></td>
+        <td><input type="text" name="treatment_rx[]" value=""></td>
+        <td><input type="text" name="note[]" value=""></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="submit" class="btn btn-action">保存</button>
+</form>
+{% endmacro %}

@@ -1,15 +1,21 @@
 {# カルテ画面。`spec/screens.md` 領域2「9. カルテ」。
    検算3・4（acceptance.md）の要点は router 側のコメントに書いた。
-   1診察ぶんの描画は `_visit_macro.html` に共通化してある（印刷画面と共有するため）。 #}
+   1診察ぶんの描画は `_visit_macro.html` に共通化してある（印刷画面と共有するため）。
+   入力フォームは `_visit_form_macro.html`（新規診察・前回コピー・編集で共有）。 #}
 {% extends "base.html" %}
-{% from "_macros.html" import screen %}
+{% from "_macros.html" import screen, row, empty, success_banner, error_banner %}
 {% from "clinical/_visit_macro.html" import render_visit %}
+{% from "clinical/_visit_form_macro.html" import render_form %}
 
 {% block title %}カルテ — {{ patient.name_kanji }}{% endblock %}
 
 {% block content %}
 <section {{ screen("karte") }}>
   <h1>カルテ</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
 
   <div class="patient-header">
     <p>カルテNo: {{ patient.karte_no }}</p>
@@ -18,13 +24,49 @@
     <p>{{ patient.species }} / {{ patient.breed }} / {{ patient.sex }}</p>
   </div>
 
+  <div class="karte-actions">
+    <a href="/animals/{{ patient.karte_no }}/karte/new" class="btn btn-action">新規診察</a>
+    {% if has_prev_visit %}
+      <a href="/animals/{{ patient.karte_no }}/karte/copy_prev" class="btn btn-action">前回コピー</a>
+    {% else %}
+      <span class="btn btn-disabled" aria-disabled="true">前回コピー</span>
+    {% endif %}
+    <form method="post" action="/animals/{{ patient.karte_no }}/karte/cancel" style="display:inline">
+      <button type="submit" class="btn btn-action">取消</button>
+    </form>
+    <a href="/animals/{{ patient.karte_no }}/karte/print" class="btn btn-action">カルテ印刷（全体）</a>
+    {% if show_deleted %}
+      <a href="/animals/{{ patient.karte_no }}/karte">削除済みを隠す</a>
+    {% else %}
+      <a href="/animals/{{ patient.karte_no }}/karte?show_deleted=1">削除済みも表示</a>
+    {% endif %}
+  </div>
+
+  <h2>診察の入力</h2>
+  {{ render_form(patient.karte_no, target, form_values) }}
+
   <h2>診察一覧（新しい順）</h2>
   {% if not visits %}
-  <p class="empty" data-check="empty-visit">診察記録がありません。</p>
+  <p class="empty" {{ empty("visit") }}>診察記録がありません。</p>
   {% endif %}
   <ul class="visit-list">
     {% for v in visits %}
-      {{ render_visit(v) }}
+      {% set actions %}
+      <div class="visit-row-actions">
+        <a href="/animals/{{ patient.karte_no }}/karte?visit_id={{ v.id }}">この回を編集</a>
+        <a href="/animals/{{ patient.karte_no }}/karte/{{ v.id }}/print">この回を印刷</a>
+        {% if v.deleted_at %}
+        <form method="post" action="/animals/{{ patient.karte_no }}/karte/{{ v.id }}/restore" style="display:inline">
+          <button type="submit">復元</button>
+        </form>
+        {% else %}
+        <form method="post" action="/animals/{{ patient.karte_no }}/karte/{{ v.id }}/delete" style="display:inline">
+          <button type="submit">削除</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endset %}
+      {{ render_visit(v, extra_actions=actions) }}
     {% endfor %}
   </ul>
 </section>

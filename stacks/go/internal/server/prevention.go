@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"strconv"
 
 	"clinicops/internal/clinical"
 )
@@ -36,13 +35,12 @@ func (s *Server) handlePrevention(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	karteNo := r.PathValue("karte_no")
-	kindID, _ := strconv.Atoi(r.PathValue("kind_id"))
 	patient, ok := s.clinical.PatientByKarteNo(karteNo)
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
-	kind, ok := s.clinical.PreventionKindByID(kindID)
+	kind, ok := s.resolveKind(r.PathValue("kind_id"))
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -62,7 +60,7 @@ func (s *Server) handlePrevention(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	data := preventionView{KindID: kindID, KindName: kind.Name, KarteNo: karteNo}
+	data := preventionView{KindID: kind.ID, KindName: kind.Name, KarteNo: karteNo}
 	for _, p := range s.clinical.Preventions(patient.ID, kind.Code) {
 		row := preventionRowView{ID: p.ID, Content: p.Content, PerformedDate: p.PerformedDate}
 		if p.NextDueDate != nil {

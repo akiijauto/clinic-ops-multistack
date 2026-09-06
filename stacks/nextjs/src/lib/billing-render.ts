@@ -137,8 +137,8 @@ export function renderAccountingScreen(opts: {
   return htmlResponse(page({ title: `会計 — ${patient.name_kanji}`, screenKey: 'screen-accounting', body }));
 }
 
-export function billingRowHtml(karteNo: string, b: BillingWire, opts: { currentPatientKarteNo?: string } = {}): string {
-  const isCurrent = opts.currentPatientKarteNo !== undefined;
+export function billingRowHtml(karteNo: string, b: BillingWire, opts: { currentPatientId?: number } = {}): string {
+  const isCurrent = opts.currentPatientId !== undefined && b.patient_id === opts.currentPatientId;
   return `<tr data-testid="row-billing"${isCurrent ? ' data-current="true"' : ''}>
     <td>${b.slip_no ? e(b.slip_no) : '（未確定）'}</td>
     <td>${e(b.billed_on)}</td>
@@ -154,14 +154,19 @@ export function billingRowHtml(karteNo: string, b: BillingWire, opts: { currentP
 export function renderAccountingHistoryScreen(opts: {
   patient: Patient & { owner: Owner };
   scope: 'patient' | 'owner' | 'all';
-  billings: BillingWire[];
+  // `owner`/`all` scope can list other animals' billings, each of which must
+  // link to *its own* `/animals/{karte_no}/accounting` (opening a billing
+  // under the wrong karte_no 404s -- `resolveBilling` checks patient_id), so
+  // the caller resolves each billing's own karte_no rather than this screen
+  // assuming every row belongs to `patient`.
+  billings: (BillingWire & { karte_no: string })[];
 }): Response {
   const { patient, scope, billings } = opts;
   const scopeLink = (s: 'patient' | 'owner' | 'all', label: string) =>
     `<a href="/animals/${e(patient.karte_no)}/accounting/history?scope=${s}"${s === scope ? ' aria-current="true"' : ''}>${label}</a>`;
 
   const rows = billings.length
-    ? billings.map((b) => billingRowHtml(patient.karte_no, b, { currentPatientKarteNo: patient.karte_no })).join('\n')
+    ? billings.map((b) => billingRowHtml(b.karte_no, b, { currentPatientId: patient.id })).join('\n')
     : '<tr data-testid="empty-accounting-history"><td colspan="8">該当する伝票はありません。</td></tr>';
 
   const body = `

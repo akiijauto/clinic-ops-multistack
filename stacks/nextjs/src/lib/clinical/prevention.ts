@@ -7,7 +7,7 @@ import { getDb } from '../db.ts';
 import { one, many } from '../area1/query.ts';
 import { ApiError } from '../errors.ts';
 import { getPatientByKarteNo } from '../area1/data.ts';
-import { preventionKindById, preventionKindByCode } from './masters.ts';
+import { preventionKindByCode, resolveKindParam } from './masters.ts';
 import type { Prevention, Patient } from '../model.ts';
 
 function requirePatient(karteNo: string): Patient {
@@ -16,8 +16,9 @@ function requirePatient(karteNo: string): Patient {
   return p;
 }
 
-export function requirePreventionKind(kindId: number) {
-  const kind = preventionKindById(kindId);
+/** `kindIdParam` is the raw `{kind_id}` path segment -- see `masters.ts`'s `resolveKindParam` for why both the numbered position and the raw `kind` code are accepted. */
+export function requirePreventionKind(kindIdParam: string) {
+  const kind = resolveKindParam(kindIdParam);
   if (!kind) throw new ApiError('not_found');
   return kind;
 }
@@ -36,7 +37,7 @@ export function getPrevention(id: number): Prevention | undefined {
 
 export function listPreventionForKarteNo(karteNo: string, kindId: number): { patient: Patient; kindCode: string; kindName: string; items: Prevention[] } {
   const patient = requirePatient(karteNo);
-  const kind = requirePreventionKind(kindId);
+  const kind = requirePreventionKind(String(kindId));
   return { patient, kindCode: kind.code, kindName: kind.name, items: listPrevention(patient.id, kind.code) };
 }
 
@@ -66,7 +67,7 @@ export type PreventionInput = {
  */
 export function createPrevention(karteNo: string, kindId: number, input: PreventionInput): Prevention {
   const patient = requirePatient(karteNo);
-  const kind = requirePreventionKind(kindId);
+  const kind = requirePreventionKind(String(kindId));
   if (typeof input.performed_date !== 'string' || input.performed_date.length === 0) {
     throw new ApiError('invalid_input', [{ field: 'performed_date', message: '実施日（performed_date）は必須です。' }]);
   }

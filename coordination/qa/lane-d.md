@@ -195,3 +195,318 @@
   （画面に「できます」と書いて出来ていない状態を作らない、の逆）に抵触しうる
 - **止まるか**: 止まらない（書類画面は他の契約記述に従って実装を進める）。
   **`model.md` の表からこの行を外すか、書類画面の実装を取りやめるか、指揮役の判断を仰ぎたい**
+
+## D-12: accounting-dm（会計・DMの残りAPI）の実装と、動作確認できなかった点
+
+- **実装した**: `app/routers/api_extra.py` に以下4本を実装（`serialize_billing` を再利用）
+  - `GET /api/patients/{karte_no}/billings`（`Patient.deleted_at is None` で絞り、
+    見つからなければ `not_found`。`Limit`/`Offset` 対応、`billed_on` 降順）
+  - `GET /api/owners/{owner_no}/billings`（同様に `Owner` を解決してから絞り込み）
+  - `GET /api/billings`（`from`/`to` は任意の日付絞り込み。`from` はPython予約語のため
+    `from_: str | None = Query(None, alias="from")` で受けている）
+  - `GET /api/dm`（`front.py` の `dm_screen` と同じ `Prevention.next_due_date is not None`
+    を基本条件にし、`field`（`next_due_date`/`performed_date`）で絞り込み対象の日付列を
+    切り替え、`from`/`to` で範囲を絞る。論理削除済みの `Patient`/`Owner` に紐づく行は除外）
+- **仮決め**: `IncludeDeleted` パラメータがこの4本に無いため、`Patient`/`Owner` の
+  論理削除は既定どおり除外（CLAUDE.md/D-1〜同様の「既定は除外」方針に合わせた）
+- **仮決め**: `/api/dm` の `type`（integer）クエリは、契約に語彙の定義が無く
+  `Prevention` に対応する分類列も見当たらないため、**受け取るが絞り込みには使わない**
+  （壊さないための最小対応。指揮役の定義待ち）
+- **未解決（重要）**: 稼働中の `http://127.0.0.1:8415` に対して動作確認しようとしたが、
+  実装した4エンドポイントがすべて `404`（`/api/` 配下用の `not_found` エラー形）を返した。
+  一方で `GET /healthz`（200）・既存の `GET /api/billings/{id}`（200、正しいデータ）は
+  正常に応答しており、サーバプロセス自体は生きている。`api_extra.router` は
+  `main.py` に元から登録済みで自分は触っていないため、**このプロセスが
+  今回の実装内容を読み込めていない（オートリロードが効いていない）可能性が高い**。
+  構文チェック（`ast.parse`）は通過済み。指示により自分ではサーバを再起動していない。
+  **サーバの再起動後に再確認をお願いしたい。**
+
+## D-12: 入院・予約・スタッフの残り画面/APIを仮決めで実装した（サブエージェント「ward-reservations」）
+
+- **実装した範囲**:
+  - 画面: `GET/POST /animals/{karte_no}/ward`（この動物の入院一覧＋新規入院登録フォーム）、
+    `GET /ward/day`（指定日・省略時JST本日の在院中一覧）、`GET /reservations/new`（新規予約フォーム）、
+    `GET/POST /reservations/{id}`（予約詳細・変更）、`POST /reservations/{id}/cancel`（取消・事後の確認画面）、
+    `POST /reservations`（`/reservations/new` からの投稿先。一覧画面へ success/error banner 付きで戻す）
+  - API: `GET /api/ward`（指定日在院中一覧）、`GET/POST /api/patients/{karte_no}/hospitalizations`、
+    `GET /api/staff`（`is_active` 絞り込み対応。`password_hash` は返さない——`model.md` の指示どおり）
+- **仮決め①**: `/ward/day` の「在院中」は `admitted_on <= 対象日` かつ
+  （`discharged_on` が無い、または `discharged_on >= 対象日`）とした（契約の絞り込み条件が薄いため、
+  タスク指示の仮決めルールをそのまま採用）。`/api/ward` も同じ条件。
+- **仮決め②**: 予約の新規作成フォーム（`/reservations/new`）は動物を**カルテNo（文字列）**で
+  指定させ、POST時にサーバ側で `Patient` を引いて `patient_id` に変換する（画面は人が読む
+  カルテNoを、APIのスキーマは内部IDを使う既存の非対称にそのまま合わせた）。カルテNoが
+  見つからない場合は `/reservations` の一覧へ error-banner で戻す。
+- **仮決め③**: `/reservations/{id}/cancel` は契約上POSTのみでGET（確認質問画面）が無いため、
+  詳細画面 (`/reservations/{id}`) に「取消」ボタン（フォームでPOST直送）を置き、
+  取消後に確認結果を表示する専用画面（`reservation_cancel.html`, success-banner）を
+  「予約キャンセル確認」画面として実装した。
+- **仮決め④**: `/animals/{karte_no}/ward` のケア記録追加フォームは今回のスコープに含めず
+  表示のみとした（契約のPOSTはこのURLでは「入院の開始」だけを扱うため。ケア記録追加の
+  API `/api/hospitalizations/{id}/care-records` は既存のまま変更していない）。
+- **気づいた食い違い（要確認・止まらず報告のみ）**: `spec/openapi.yaml` の既存 `/ward`
+  （`screen_ward_today`）は `x-data-testids` が `screen-ward-day`/`row-hospitalization`/
+  `empty-hospitalization` だが、実装（既存コード、今回変更していない）は
+  `data-check="screen-ward"` を出している（`row`/`empty` は一致）。新規追加した
+  `/ward/day` 側は契約どおり `screen-ward-day` にした。`/ward` 自体の testid 食い違いは
+  このサブタスクの担当範囲外のため直していない。
+- **未解決**: 実装後に `python -c "import ast; ast.parse(...)"` で3ファイルとも構文OKを
+  確認したが、共有稼働中サーバ（`http://127.0.0.1:8415`、`/openapi.json` で確認）は
+  reload=True にも関わらず新しいルート（`/api/staff` `/ward/day` `/reservations/new` 等）を
+  まだ認識していない（`/openapi.json` の paths に出てこない）。D-9 で報告済みの
+  「reloaderを止めても孤児のworkerが応答し続ける」系の再発の可能性がある。
+  **自分では再起動しない指示のため、レーン本体側での確認・再起動を依頼したい。**
+
+## D-12: 受付・患者ドメイン（`app/routers/patients.py`）実装時の仮決め
+
+- **`karte_no` の書式**: `openapi.yaml` の `KarteNo` パラメータは
+  `pattern: "^[0-9]+-[0-9]+$"`（例: `1001-1`）と書いているが、`data/seed.json` の
+  実データは `"10001"` のような単純な数字連番で、このパターンに一致しない
+  （`karte.py` 等の既存ルーターも書式チェックせず文字列一致で引いている）。
+  **仮決め**: `karte_no` は書式チェックしない不透明な文字列として扱い、新規発行も
+  既存データと同じ「数字だけの連番」（既存の最大値+1）にした。`owner_no` は
+  既存データの `"O-00001"` 形式に合わせて発行する
+- **`/api/receptions` の `kind` クエリ**: `Reception` モデルには独立した「種別」の列が無い
+  （`owner_purpose`/`medical_purpose` はあるが、`data/masters.json` の
+  `reception_kinds` に対応する専用列が無い）。**仮決め**: `kind` は
+  `owner_purpose` または `medical_purpose` への完全一致で代用した
+- **`/animals/{karte_no}` に POST を追加した**: `spec/openapi.yaml` はこのパスに GET しか
+  定義していないが、`spec/screens.md` 3番はこの画面に「保存」「番号変更」を求めている。
+  `/settings`（`screens-settings`）が同じ画面パスへ GET/POST を両方定義している前例に倣い、
+  この画面専用の保存フォーム（`action=save|renumber_patient|renumber_owner`）を追加した。
+  契約に無いルートの追加であり、共通テストの対象外の可能性が高いが、実害は無いと判断した
+- **来院履歴（`/animals/{karte_no}/history`）は `AuditLog` 抜きの縮小版**: `AuditLog`
+  （登録・修正・削除の項目別の前後値を記録するもの）は `model.md`「落としたもの」表・
+  `app/feature_notes.py` の `audit_log` キーで**意図して外されている**機能。
+  `spec/screens.md` 5番は「登録・修正・削除・復元を新しいものから並べて見る」
+  「変更前→変更後がペアで分かる」ことを満たすべきこととして書いているが、
+  この項目別diffを支えるテーブルが無いため字義通りには実装できない。
+  **仮決め**: `Visit`（削除済みを含む）の一覧を新しい順に出し、削除済みの行には
+  「元に戻す」（実行自体は `screens-clinical` 側の
+  `/animals/{karte_no}/karte/{visit_id}/restore` に委ねる）への導線を付け、
+  画面上に「詳しい変更履歴は監査ログとして扱っていない」旨を明示した
+  （`action_button` の B状態、`todo_key="audit_log"` で `/todo/audit_log` に飛ぶ）。
+  Owner/Patient の変更履歴・削除復元は一切出していない（そもそも Owner/Patient に
+  restore の画面導線が契約に無い——APIの `/api/patients/{karte_no}/restore` と
+  `/api/owners/{owner_no}/restore相当` のうち後者は契約に無く、前者のみ存在する）
+- **診察券発行／文書印刷／品種リスト**: `spec/screens.md` 3番の「できること」に載っているが、
+  対応する openapi ルートが無く、品種マスタ等の裏付けデータも `data/masters.json` に無い。
+  **仮決め**: 実装せず、`action_button` の B状態（`todo_key`:
+  `reception_id_card` / `reception_document_print` / `reception_breed_list`）にした。
+  これらの3キーは `app/feature_notes.py` の `FOLDED_NOTES`（14件）とは別枠
+  （model.md の表に対応する項目ではないため）で、`/todo/{key}` の個別文言だけで説明する
+  想定。**`app/feature_notes.py` は書き換えない担当外ファイルのため、この3キーの
+  ToDo文言をレーン本体側で用意してもらう必要がある**（現状は `/todo/` 側の実装次第で
+  未知キーが404になる可能性がある。要確認）
+- **実施した確認**: `TestClient` で `/animals/new`（GET/POST）→ 発行された `karte_no` で
+  `/animals/{karte_no}`・`/history`・`/delete`（GET/POST）、`/api/patients`
+  （一覧・取得・PATCH・delete・restore）、`/api/owners`（取得・PATCH・delete）、
+  `/api/patients/{karte_no}/receptions`・`/api/receptions/{id}`、
+  `/api/patients/{karte_no}/visits`（進行記録つき作成）を一通り実行し、
+  いずれも契約どおりのステータス・内容を確認した（一時DBを使い、共有DBには触れていない）
+
+## D-12: `VisitForm` のフィールド名を仮決めした（カルテ保存フォーム）
+
+- **状況**: `spec/openapi.yaml` の `VisitForm` は「説明文だけ」（`description` のみ）で、
+  具体的なフィールド名を定義していない
+- **仮決め**: `visit_id`（空なら新規診察）／`visit_date`／`body_weight_kg`／
+  `chief_complaint`／`symptom`／`diagnosis`／`treatment`／`staff_id` に加え、経過記録は
+  `entry_date[]` `temperature_c[]` `pulse[]` `respiration[]` `note_body_weight_kg[]`
+  `symptom_course[]` `treatment_rx[]` `note[]` の並列配列（同じindexが同じ行）とした。
+  `body_weight_kg` は Visit本体・行の両方にあるため、行側は `note_body_weight_kg[]` と
+  別名にして衝突を避けた
+- **保存方式**: 保存のたびに対象 `Visit` の `ProgressNote` を全行削除して入れ直す
+  （部分更新の混線を避ける最も単純な方式。検算3「行ごとに独立」の対策と両立する）
+- **前回コピー**: 直前の診察が無いときは一覧側のボタンを灰色にし、`/karte/copy_prev`
+  自体も404を返す（`openapi.yaml` に404レスポンスが定義済みのため整合）
+- **取消**: この企画には手で押す一時保存が無い（`karte_draft` はB状態、`temp_save` は
+  ToDo/C状態）ため、「新規診察フォームへ戻す」だけの操作にした。実質いつでも押せる
+- **削除済みの表示**: `screens.md`「共通の約束」の「削除済みも表示」を選べば見える、を
+  `GET /animals/{karte_no}/karte?show_deleted=1` で実装した
+- **実施した確認**: 一時DB（`CLINIC_DB_URL` を差し替え、ポートも8931に分離）で、
+  カルテ新規保存→一覧・行の値の突き合わせ、印刷・削除・復元・取消の一通りを
+  実際にHTTPで叩いて確認した（共有DB・共有サーバには触れていない）
+
+## D-13: 検査・投薬・予防・書類も一時DBで実HTTP確認した
+
+- 検査: 新規保存→一覧再表示で `data-check="lab_test_item.value"` /
+  `data-check="lab_test_item.judgment"` + `data-check-flag` が意図どおり
+  （範囲内=normal/空、範囲外=high/`H`）に出ることを確認
+  - 実装中に一度500が出た：Jinja で辞書の `t.items` と書くと `dict.items`（組み込み
+    メソッド）に化けてイテレートできない事故だった（`t["items"]` に修正）。
+    今後このファイル群で辞書を渡す変数に `items` というキーを使うときは要注意
+- 投薬: 年度追加→月の3択（空／○／×）保存→再表示で値が反映されることを確認。
+  月ごとに空／○／×のセレクトにしたのは、チェックボックスでは「未送信」と
+  「明示的に外した」を区別できないため（`models.py` Dosing のコメントと同じ理由）
+- 予防: 新規記録保存→一覧反映を確認。次回予定日は常に「未入力なら空のまま」とした
+  （D-14参照）
+- 書類: API（POST/GET/DELETE）・画面（一覧・詳細・削除・no-paper案内）を一通り確認
+
+## D-14: 予防の「基本周期」は全種別「未設定」として扱った
+
+- **事実**: `spec/screens.md` 12番は「次回予定日を空で保存すると、その種別の基本周期が
+  設定されている場合に限り自動計算する」としているが、`data/masters.json` の
+  `prevention_kinds` には周期を表す列が無い（`code`/`name` のみ）
+- **仮決め**: 基本周期のデータが存在しないため、全種別を「周期未設定」として扱い、
+  次回予定日を空で保存した場合は常に空のまま保存する（契約の「周期が未設定なら
+  次回予定日は空のまま保存される」分岐のとおり）。周期の自動計算ロジック自体は
+  実装したが、呼び出す元データが無い状態
+- **止まるか**: 止まらない。契約上「未設定なら空のまま」という正しい状態の一種として
+  扱える
+
+## D-15: 書類画面の作成経路はAPIのみ（画面にはフォームを置かない）
+
+- **事実**: `spec/openapi.yaml` の `/animals/{karte_no}/papers` は GET のみ定義されており、
+  POST（画面からの新規作成）が無い。作成は `/api/patients/{karte_no}/papers`（POST）だけ
+- **仮決め**: 画面（`clinical/papers.html`）は一覧・削除のみとし、新規作成フォームは
+  置かない（契約に無い操作を画面にだけ追加しない）。取込は API 経由（他クライアント・
+  テストから）を前提とする
+
+## D-16: サブエージェント4体の実装完了、統合・再起動して全共通テスト緑を確認（レーン本体）
+
+- 4領域（受付・患者 / 診療 / 会計・DM / 入院・予約・スタッフ）を並列サブエージェントに
+  分担させ（D-12〜D-15参照）、`stacks/fastapi/` 以外・他領域のファイルには触れさせず実装した
+- **D-12（accounting-dm）・D-12（ward-reservations）が「サーバがreloadを反映しない」と
+  報告した件**: これは D-9 の再発ではなく、**単に指揮役（自分）がその時点でまだ
+  8415番のプロセスを再起動していなかっただけ**だった。両エージェントとも指示どおり
+  「自分ではサーバを再起動しない」を守っていたため、当然まだ古いプロセスを見ていた。
+  実際に一度 `Stop-Process`（孤児のworker含め全PID）→ 再起動したところ、
+  4領域すべての新規ルートが `/openapi.json` に反映され、実HTTPで200を確認できた
+- 在庫検査（`tests/inventory.py`）は42画面中38件・36API中33件を直接確認でき、残り7件
+  （`/folded/{key}` `/papers/{paper_id}` `/papers/{paper_id}/remove` `/api/papers/{paper_id}`
+  `/api/todo/{key}` `/api/masters/{key}`。もう1件は在庫検査のカウント上の重複表記）は
+  検査側の固定サンプル値（`_SAMPLE`）がこのプロジェクトの語彙・実データと一致しないための
+  「確かめられない」であり、**実際に個別へ有効な値（`hospital_division` / `temp_save` /
+  `price_item` / 作成直後の paper id）で叩くと全部200**であることを実測で確認済み
+  （ルート欠落ではない）
+- `python tests/run.py http://127.0.0.1:8415`（全17件）・`--only inventory` とも
+  全件通過。詳細は `coordination/status/lane-d.md` の「完了の自己点検」を参照
+
+## D-17: `action_button` マクロがb状態のリンク先を間違えていた（レーン本体・自分の実装バグ）
+
+- **事実**: `_macros.html` の `action_button` は state が `"a"` 以外なら**常に** `/todo/{key}`
+  へリンクしていた。しかし `/todo/{key}` のルーター（`refdata.py`）は
+  `kind == "todo"`（C状態・3件）しか受け付けず、B状態（`kind == "folded"`）のキーを渡すと
+  404になる
+- **見つけ方**: D-12（受付・患者）で追加された `animal_history.html` の
+  `action_button("監査ログ", "b", todo_key="audit_log")` を実際に踏むと
+  `/todo/audit_log` が404だった（`audit_log` は `FOLDED_NOTES` にしかない）。
+  在庫検査・crawlはこの画面の該当ボタンをリンクとして辿っていなかったため、
+  それだけでは気づけなかった（＝またしても「作った（だがリンクが壊れている）のに
+  緑」に近い穴。crawlは「辿れたリンク」しか見ないため、辿り方次第で漏れる）
+- **対処**: `state == "b"` は `/folded/{key}`、`state == "c"` は `/todo/{key}` に
+  振り分けるよう `_macros.html` を修正した
+- **副作用の対処**: `animal_detail.html`（診察券発行／文書印刷）・`animal_new.html`
+  （品種リスト）が使っていた `reception_id_card` / `reception_document_print` /
+  `reception_breed_list` は `app/feature_notes.py` の `FOLDED_NOTES`（model.mdの表と
+  1対1が契約）にも `TODO_NOTES` にも存在しないキーだった。この3件は
+  勝手に新規キーを足さず（表との1対1を壊すため）、**ボタンごと削除**した
+  （`spec/screens.md` 3番の「できること」に載ってはいるが、対応する契約ルート・
+  マスタデータが無い機能のため）
+- 修正後、`tests/run.py`（全17件）を再実行し、緑を再確認した
+
+## D-18: 裁定R-21・R-22への対応、および書類の物理削除バグを自分で見つけて直した
+
+- **R-22（`/ward` の目印）**: 実装漏れだった。`app/templates/ward/ward.html` の
+  `screen("ward")` を `screen("ward-day")` に直した（`/animals/{karte_no}/ward` 用の
+  `ward/animal_ward.html` は元から `screen("ward")` のままで正しい）
+- **32画面のdata-testid欠落**: `_macros.html` の `screen()` マクロが `data-check` しか
+  出しておらず `data-testid` を出していなかった（`spec/README.md` の2系統の片方だけ実装した
+  実装漏れ）。マクロに `data-testid="screen-{{ key }}"` を追加し、ほぼ全画面が
+  このマクロ経由だったため1箇所の修正で32画面すべてに反映された。例外は
+  `/` と `/today`（同じ `front/today.html` を共有していたため、契約が要求する
+  `screen-top` と `screen-today` を出し分けられていなかった）で、
+  `today_screen()` がリクエストパスを見て `screen_key` を切り替えるようにした
+- **R-21（書類は範囲内）を受けての確認**: `spec/screens.md` 13番「PDF以外の形式のファイルは
+  取り込みを拒否する」については、**この実装にファイルアップロード自体が無い**
+  （`Paper` は `title`/`note` のみを持つ台帳で、ファイル本体を扱わない設計に
+  したため）。したがって「拒否する」判定は該当なし・未実装。指揮役へ報告する
+- **R-21対応中に見つけた別の実装バグ（自己発見・修正）**: `spec/screens.md` 13番
+  「満たすべきこと」に「取り消したPDFは一覧から消えるが、記録（行）自体は保持される
+  （物理削除しない）」と明記されているのに、実装（`api_delete_paper` /
+  `paper_remove`）は `db.delete(paper)` の**物理削除**になっていた。当初のコメントには
+  「契約に restore が無いから物理削除でよい」と書いていたが、これは誤りだった——
+  「物理削除しない」は restore ボタンの有無とは独立の別要件で、見落としていた。
+  `models.Paper` に `removed_at`（Owner/Patient/Visitと同じ論理削除の型）を追加し、
+  一覧系（`api_list_papers` / `papers_screen`）は `removed_at IS NULL` で絞り、
+  削除系は `removed_at` に日時を入れるだけに直した。詳細取得（`api_get_paper` /
+  `paper_detail`）は削除済みでも見られるようにしてある（記録が保持される、を
+  実際に確認できるようにするため）
+
+## D-19: 新しい在庫検査（画面でもAPIでもないルート）で /dm.csv・/postal の未実装を発見、実装した
+
+- 指揮役が足した5つ目の在庫検査（`_NOT_SCREEN` に入っていた `/dm.csv` `/postal` `/healthz`
+  が実際に応答するかを見る）で、`/dm.csv`・`/postal` を一度も実装していなかったことが
+  分かった（元々の欠けリストでも「画面でもAPIでもない」ため対象外になっていて、
+  誰も気づいていなかった）
+- **`/dm.csv`**: `app/routers/front.py` に追加。`/dm` 画面と絞り込みロジック
+  （`_dm_rows`）を共有し、書き写しによる食い違いを防いだ。ただし契約が定義する
+  `type`/`field`/`span`/`from`/`to` クエリは、**元の `/dm` 画面自体がまだ対応していない**
+  ため、`/dm.csv` 側でも今回は対応を見送った（「画面と同じ絞り込み」を守ることを
+  優先し、`/dm` にだけクエリ対応を先に足す非対称は作らなかった）。次段階で `/dm`・
+  `/dm.csv` 両方にクエリ対応を足す必要がある
+- **`/postal`**: `app/routers/staff_api.py`（prefixなしの `no_prefix_router` を追加）に
+  実装。**住所マスタ（郵便番号→住所の対応表）が `data/` に存在しない**ため、
+  形式（`\d{3}-?\d{4}`）だけ検証し、正しければ契約どおり
+  `{"candidates": [], "reason": "..."}` を返す。形式が壊れていれば422。
+  実在の住所は一切返せない（データが無いため）
+- **`/animals/{karte_no}/dosing/{kind_id}` `/animals/{karte_no}/prevention/{kind_id}`
+  `/api/patients/{karte_no}/dosing/{kind_id}` `/api/patients/{karte_no}/prevention/{kind_id}`
+  が在庫検査で422**: 検査のサンプル生成が `dosings[0].get('kind_id', dosings[0].get('kind'))`
+  で、`data/seed.json` の `dosings` に `kind_id`（数値）が無く `kind`（文字列
+  `"heartworm"`）しか無いため、`kind_id="heartworm"` という**文字列**が実際に渡っている。
+  契約（openapi.yaml）は `kind_id` を `type: integer` と定義しており、この実装は
+  契約どおり整数のパスパラメータとして受けている（文字列だと422になるのは正しい
+  Pydantic/FastAPIの型検証）。**整数の kind_id（`prevention_kinds` の1始まり
+  インデックス。heartwormは3番目なので `kind_id=3`）で実測すると4本とも200**:
+  ```
+  GET /animals/10004/dosing/3            -> 200
+  GET /animals/10004/prevention/3        -> 200（または該当データがあれば200）
+  GET /api/patients/10004/dosing/3       -> 200
+  GET /api/patients/10018/prevention/1   -> 200
+  ```
+  したがってこれは実装の欠けではなく、**検査側のサンプル生成が`kind_id`と`kind`を
+  混同している**ことによる誤検知（`tests/inventory.py` は自分の担当外のため直せない。
+  指揮役へ報告する）
+
+## D-20: 裁定R-23（kind_idの数値／文字列コード両対応）を適用した
+
+- `app/routers/clinical_extra.py` の `kind_id` パスパラメータを `int` → `str` に変更し、
+  `_resolve_kind_index()` に集約: 数字なら `prevention_kinds` への1始まりインデックス、
+  数字でなければ `code` 完全一致で解決する（後方互換: 既存の数値idでの呼び出しは
+  そのまま通る）。対象4ルート
+  （画面2: `/animals/{karte_no}/dosing/{kind_id}` `/animals/{karte_no}/prevention/{kind_id}`、
+  API2: `/api/patients/{karte_no}/dosing/{kind_id}` `/api/patients/{karte_no}/prevention/{kind_id}`。
+  それぞれGET/POSTまたはGET/PATCH両方）
+- 実測: `kind_id=3`（数値）・`kind_id=heartworm`（文字列コード）のどちらでも
+  4ルートとも200を確認
+- 再実行後、在庫検査は**1件だけ**残った: `/api/patients/{karte_no}/dosing/{kind_id}=404`
+  （検査のサンプル `karte_no=10018, kind_id=3` の組み合わせ）。実測したところ、
+  **patient 10018 は heartworm(kind_id=3) の投薬記録を持っていない**（`data/seed.json`
+  の40件の投薬記録は特定の患者に偏って割り当てられており、10018は含まれない）。
+  正しい組み合わせ（`karte_no=10004`）では同じAPIが200を返すことを確認した
+  ```
+  GET /api/patients/10018/dosing/3  -> 404（そのkindの記録がまだ無い患者。契約が
+                                          定義する正しい404）
+  GET /api/patients/10004/dosing/3  -> 200（記録がある患者）
+  ```
+  `GET /api/patients/{karte_no}/dosing/{kind_id}` はopenapi.yamlが404を正式なレスポンスとして
+  定義している（「記録がまだ無い」を表す正しい404）ため、これは実装の欠けではなく、
+  検算6・検算8で修正済みの「visit_idはkarte_noと対にする」と同じ構図の
+  **サンプルのペアリング不足**（karte_noとkind_idも対にする必要がある）だと考えている。
+  指揮役へ報告する
+
+## D-21: 裁定R-20（記録0件は404でも500でもなく200で空を返す）を投薬APIに適用
+
+- `GET /api/patients/{karte_no}/dosing/{kind_id}` が記録0件のとき404を返していた
+  （R-20発行時点でこの実装はまだ無く、後から実装した際にR-20を見落として404にしていた）
+- `_empty_dosing_dict()` を追加し、該当する `Dosing` 行が無いときは404の代わりに
+  `id: null, patient_id, kind, fiscal_year(クエリ指定 or 当年), m01〜m12はすべて空文字`
+  を200で返すようにした（`/animals/{karte_no}/dosing/{kind_id}` 画面側は元々0件でも
+  200で空のマス目を出していたので、これで画面とAPIが揃った）
+- 予防（`GET /api/patients/{karte_no}/prevention/{kind_id}`）は元から一覧形式
+  （`{items: [], total: 0}`）で、0件でも200を返す実装だったため対応不要だった
+- 実測: `GET /api/patients/10018/dosing/3` -> 200
+  `{"id":null,"patient_id":18,"kind":"heartworm","fiscal_year":2026,"m01":"",...}`
+- `python tests/run.py http://127.0.0.1:8415`（全19件）・`--only inventory`（全5件）
+  とも全件通過を確認

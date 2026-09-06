@@ -374,13 +374,20 @@ func parseLimitOffset(r *http.Request) (limit, offset int) {
 // ---- /postal ----------------------------------------------------------
 
 // Postal は GET /postal?code=。
+// Postal は GET /postal（郵便番号から住所候補を引く）。
+//
+// spec/openapi.yaml はこの経路に "200" しか定義していない（`code` は
+// required だが、エラー用の4xxレスポンスが契約に無い）。以前は `code` が
+// 空のとき422を返していたが、契約どおりに読むなら「候補が見つからない」の
+// 一種として常に200で返すのが正しい（`reason` に理由を入れる形は
+// 「該当なし」も「codeが無い」も同じ形で表現できる）。
 func (h *Handlers) Postal(w http.ResponseWriter, r *http.Request) {
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
 	if digitsOnly(code) == "" {
-		apperr.Write(w, apperr.New(apperr.InvalidInput).WithDetails(apperr.Detail{
-			Field:   "code",
-			Message: "郵便番号（code）は必須です。",
-		}))
+		writeJSON(w, http.StatusOK, map[string]any{
+			"candidates": []PostalCandidate{},
+			"reason":     "郵便番号（code）が指定されていません。",
+		})
 		return
 	}
 	candidates, reason := LookupPostal(code)

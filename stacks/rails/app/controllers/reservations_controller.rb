@@ -1,9 +1,18 @@
 # 予約（新）一覧・登録・変更・取消。spec/screens.md #19・検算6。
 # 重なり判定そのものは Reservation モデルのバリデーション（no_overlap）に集約済み。
 class ReservationsController < ApplicationController
+  # 日付を切り替えて別の日の予約を見る（spec/screens.md #19）。
+  # `to` を省略したときは `from`（無指定なら本日）の1日ぶんだけに絞る。
   def index
     @date = params[:from].present? ? Date.parse(params[:from]) : Date.current
-    @reservations = Reservation.includes(:patient, :staff).order(:starts_at).limit(50)
+    range_to = params[:to].present? ? Date.parse(params[:to]) : @date
+
+    scope = Reservation.includes(:patient, :staff)
+                        .where("starts_at >= ? AND starts_at < ?", @date.beginning_of_day, (range_to + 1).beginning_of_day)
+    scope = scope.where(staff_id: params[:staff_id]) if params[:staff_id].present?
+    scope = scope.where(room: params[:room]) if params[:room].present?
+
+    @reservations = scope.order(:starts_at).limit(50)
   end
 
   def new

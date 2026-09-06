@@ -14,8 +14,17 @@ use Illuminate\Support\Facades\Route;
 | ビューは resources/views/clinical 配下に置く。
 */
 
-Route::get('/animals/{karte_no}/karte', [KarteController::class, 'show'])->name('animals.karte');
+// リテラル区間（new/copy_prev/cancel/print）を {visit_id} より先に置く
+// （順序が逆だと new 等が visit_id として食われる）。
+Route::get('/animals/{karte_no}/karte/new', [KarteController::class, 'newForm'])->name('animals.karte.new');
+Route::get('/animals/{karte_no}/karte/copy_prev', [KarteController::class, 'copyPrev'])->name('animals.karte.copy_prev');
+Route::post('/animals/{karte_no}/karte/cancel', [KarteController::class, 'cancel'])->name('animals.karte.cancel');
 Route::get('/animals/{karte_no}/karte/print', [KarteController::class, 'print'])->name('animals.karte.print');
+
+Route::get('/animals/{karte_no}/karte', [KarteController::class, 'show'])->name('animals.karte');
+Route::post('/animals/{karte_no}/karte', [KarteController::class, 'store'])->name('animals.karte.store');
+
+Route::get('/animals/{karte_no}/karte/{visit_id}/print', [KarteController::class, 'printOne'])->name('animals.karte.visit.print');
 Route::post('/animals/{karte_no}/karte/{visit_id}/delete', [KarteController::class, 'deleteVisit'])->name('animals.karte.visit.delete');
 Route::post('/animals/{karte_no}/karte/{visit_id}/restore', [KarteController::class, 'restoreVisit'])->name('animals.karte.visit.restore');
 

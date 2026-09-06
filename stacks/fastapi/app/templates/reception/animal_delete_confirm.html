@@ -1,0 +1,34 @@
+{# 削除（screens.md 3番の「動物削除」「飼主削除」に対応する確認画面）。
+   `spec/openapi.yaml` の説明どおり物理削除はしない。Patient.deleted_at を入れ、
+   その飼主の残り動物が全部削除済みなら Owner.deleted_at にも入れる。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner, error_banner %}
+
+{% block title %}削除の確認 — {{ patient.name_kanji }}{% endblock %}
+
+{% block content %}
+<section {{ screen("delete-confirm") }}>
+  <h1>削除の確認</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <p>カルテNo: {{ patient.karte_no }}</p>
+  <p>動物: {{ patient.name_kanji }}（{{ patient.species }}）</p>
+  <p>飼主: {{ owner.name_kanji if owner else "-" }}</p>
+
+  {% if patient.deleted_at %}
+  <p>現在の状態: 削除済み（{{ patient.deleted_at }}）</p>
+  {% else %}
+  <p>現在の状態: 削除されていません</p>
+  <form method="post" action="/animals/{{ patient.karte_no }}/delete">
+    <p>削除すると、この動物は「本日の患者」「検索」の既定表示から外れます（物理削除ではありません）。
+       この動物が飼主にとって最後の1頭の場合、飼主も同時に削除扱いになります。</p>
+    <button type="submit">削除を実行する</button>
+  </form>
+  {% endif %}
+
+  <p><a href="/animals/{{ patient.karte_no }}">顧客画面に戻る</a></p>
+</section>
+{% endblock %}

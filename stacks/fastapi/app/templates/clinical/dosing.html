@@ -1,0 +1,57 @@
+{# 投薬。`spec/screens.md` 領域2「11. 投薬」。
+   月ごとの値は空／○／×の3択（チェックボックスの有無では
+   「送られなかった月」と「外した月」を区別できないため）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner, error_banner %}
+
+{% block title %}投薬 — {{ patient.name_kanji }}（{{ kind_name }}）{% endblock %}
+
+{% block content %}
+<section {{ screen("dosing") }}>
+  <h1>投薬（{{ kind_name }}）</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <p>カルテNo: {{ patient.karte_no }} / {{ patient.name_kanji }}</p>
+
+  <h2>年度を追加</h2>
+  <form method="post" action="/animals/{{ patient.karte_no }}/dosing/{{ kind_id }}">
+    <label>年度 <input type="number" name="fiscal_year" required></label>
+    <button type="submit" class="btn btn-action">追加</button>
+  </form>
+
+  <h2>年度ごとの記録</h2>
+  {% if not rows %}
+  <p class="empty">記録がありません。</p>
+  {% endif %}
+  {% for r in rows %}
+  <form method="post" action="/animals/{{ patient.karte_no }}/dosing/{{ kind_id }}">
+    <input type="hidden" name="fiscal_year" value="{{ r.fiscal_year }}">
+    <h3>{{ r.fiscal_year }}年度</h3>
+    <table class="dosing-grid">
+      <thead>
+        <tr>{% for m in range(1, 13) %}<th>{{ m }}月</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        <tr>
+          {% for m in range(1, 13) %}
+          {% set key = "m%02d" | format(m) %}
+          {% set val = r | attr(key) %}
+          <td>
+            <select name="{{ key }}">
+              <option value="" {{ "selected" if val == "" else "" }}></option>
+              <option value="○" {{ "selected" if val == "○" else "" }}>○</option>
+              <option value="×" {{ "selected" if val == "×" else "" }}>×</option>
+            </select>
+          </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-action">保存</button>
+  </form>
+  {% endfor %}
+</section>
+{% endblock %}

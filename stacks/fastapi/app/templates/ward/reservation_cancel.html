@@ -1,0 +1,17 @@
+{# 予約キャンセル確認。`openapi.yaml` /reservations/{id}/cancel（POSTのみ・確認は事後表示）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner %}
+
+{% block title %}予約の取消{% endblock %}
+
+{% block content %}
+<section {{ screen("reservations") }}>
+  <h1>予約の取消</h1>
+
+  {{ success_banner(banner[1]) }}
+
+  <p>{{ patient.name_kanji if patient else "" }} の予約（{{ reservation.starts_at }} 〜 {{ reservation.ends_at }}）を取り消しました。</p>
+  <p><a href="/reservations/{{ reservation.id }}">この予約の詳細に戻る</a></p>
+  <p><a href="/reservations">予約一覧に戻る</a></p>
+</section>
+{% endblock %}

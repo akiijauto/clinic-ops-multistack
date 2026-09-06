@@ -66,6 +66,7 @@ func (s *Server) Handler() http.Handler {
 	s.handle(mux, "POST /api/patients/{karte_no}/billings", s.handleAPIPatientBillings)
 	s.handle(mux, "GET /api/owners/{owner_no}/billings", s.handleAPIOwnerBillings)
 	s.handle(mux, "GET /api/sales/summary", s.handleSalesSummary)
+	s.handle(mux, "GET /api/dm", s.handleAPIDM)
 	s.handle(mux, "GET /api/lab-tests/{id}", s.handleGetLabTest)
 	s.handle(mux, "GET /api/reservations", s.handleListReservations)
 	s.handle(mux, "POST /api/reservations", s.handleCreateReservationAPI)
@@ -117,7 +118,15 @@ func (s *Server) Handler() http.Handler {
 	s.handle(mux, "POST /api/hospitalizations/{id}/care-records", s.handleAPICreateCareRecord)
 	s.handle(mux, "GET /api/todo/{key}", s.handleAPITodo)
 
-	s.handle(mux, "GET /", s.handleTop)
+	// "GET /" は net/http.ServeMux の仕様上、末尾が "/" のパターンは
+	// 「他に合う登録が無いときの受け皿」になり、**存在しないパス・
+	// メソッド不一致のパスも全部トップ画面(200)に落ちてしまう**
+	// （2026-09-06 実測。POST専用の /animals/{karte_no}/karte/cancel 等へ
+	// GETすると screen-top が200で返り、本来のスクリーンの目印(screen-*)を
+	// 出していないと誤検出される — 在庫検査「data-testidが画面に出ている」で発覚）。
+	// "{$}" を付けてトップを"/"の完全一致だけに絞り、それ以外は
+	// net/httpの既定の404に落とす。
+	s.handle(mux, "GET /{$}", s.handleTop)
 	s.handle(mux, "GET /reservations", s.handleReservationsScreen)
 	s.handle(mux, "POST /reservations", s.handleReservationsScreen)
 	s.handle(mux, "GET /reservations/new", s.handleReservationNew)

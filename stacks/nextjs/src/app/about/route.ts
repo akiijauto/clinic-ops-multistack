@@ -1,5 +1,10 @@
-import { DROPPED_FEATURES } from '@/lib/dropped-features';
-import { page } from '@/lib/render';
+// Relative imports here on purpose, not the project's usual `@/lib/...`
+// alias: `test/area5-about.test.ts` imports this route module directly
+// (no server, no DB) to prove `/about` needs neither -- Node's plain
+// `node --test` runner has no tsconfig `paths` support, only Next's
+// bundler does, so `@/...` would resolve at build time but not under test.
+import { DROPPED_FEATURES } from '../../lib/dropped-features.ts';
+import { page } from '../../lib/render.ts';
 
 // GET /about -- spec/screens.md「26. このシステムについて」.
 // Must stand on its own even without a DB connection (openapi's own
