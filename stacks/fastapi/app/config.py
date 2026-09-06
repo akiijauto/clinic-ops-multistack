@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,22 @@ from zoneinfo import ZoneInfo
 # 業務の時刻はすべてこれで扱う（spec/README.md「日付・時刻は JST。集計の月境界も JST」）。
 # datetime.now() を素で呼ばないこと。呼ぶと動かす機械のタイムゾーンに引きずられる。
 JST = ZoneInfo("Asia/Tokyo")
+
+
+def jst_isoformat(value: dt.datetime) -> str:
+    """DateTime(timezone=True) 列をJSON化するとき、これを通してから `isoformat()` する。
+
+    2026-09-06、監査役の指摘（`POST /api/reservations` の500、
+    `coordination/qa/lane-d.md` D-24）を追った際に見つけた副産物: SQLiteは
+    `DateTime(timezone=True)` でも実際にはtzinfoを保持しない。書き込み時は
+    `+09:00` 付きの値を渡しても、読み戻すとnaiveに戻る。**無印のまま
+    `isoformat()` すると、レスポンスのタイムゾーンがどこかを読み手が判断できない**
+    （実害は無くても契約の `format: date-time` の意図には合わない）。
+    値は業務上すべてJSTで扱っているので、naiveならJSTと見なして付け直す。
+    """
+    if value.tzinfo is None:
+        return value.replace(tzinfo=JST).isoformat()
+    return value.astimezone(JST).isoformat()
 
 BASE_DIR = Path(__file__).resolve().parent
 STACK_DIR = BASE_DIR.parent

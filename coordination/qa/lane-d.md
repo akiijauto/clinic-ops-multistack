@@ -552,3 +552,46 @@
 - `python tests/run.py http://127.0.0.1:8415 --only inventory`（全8件、新規2項目
   「見た目 指示したクラスが実際に画面に付いている」「契約 押しても何も起きない
   ボタンにしない」を含む）・フル（全22件）とも全件通過
+
+## D-24: `POST /api/reservations` の500を直し、書き込み経路を一通り監査した
+
+- **原因**: `app/routers/reservations.py` の `_overlaps` が
+  `a_start < b_end and b_start < a_end` を直接比較していたが、リクエスト本文
+  （Pydanticが `+09:00` 付きのままawareに保持）と、SQLiteから読み戻した
+  `Reservation.starts_at`/`ends_at`（**SQLiteは`DateTime(timezone=True)`でも
+  実際にはtzinfoを保持しない**ためnaive）を直接比較し、
+  `TypeError: can't compare offset-naive and offset-aware datetimes` で落ちていた
+- **対処**: `_naive_jst()` を追加し、`_overlaps` に渡す4値すべてをJSTのnaiveに
+  揃えてから比較するようにした（片方だけ変換すると逆方向のケースでまた壊れるため、
+  両方を通す）
+- **副産物として見つけた別件**: 同じ理由（SQLiteがtzinfoを保持しない）で、
+  `Reservation`/`Reception`/`CareRecord`/`Paper`/`Owner`/`Patient`/`Visit` の
+  DateTime列を素の `.isoformat()` でJSON化すると、**タイムゾーンオフセットが
+  落ちた文字列**（例: `"2026-09-01T09:00:00"`）を返していた（500にはならないが、
+  契約の `format: date-time` の意図とは合わない）。`app/config.py` に
+  `jst_isoformat()` を追加し、`reservations.py` `patients.py` `ward.py`
+  `clinical_extra.py` の該当箇所をすべてこれに置き換えた
+- **書き込み経路の監査**（指揮役の依頼どおり、実データで作って→確かめて→
+  取り消す往復。後片付け方法も記録）:
+  | エンドポイント | 結果 | 後片付け |
+  | --- | --- | --- |
+  | `POST /api/reservations` | 修正前500→修正後201 | `POST .../cancel` 後、直接DB削除 |
+  | `PATCH /api/reservations/{id}` | 200 | 同上（同じ行） |
+  | `POST /api/receptions` | 201 | 削除APIが契約に無いため直接DB削除 |
+  | `PATCH /api/receptions/{id}` | 200 | 同上 |
+  | `POST /api/visits/{id}/delete` → `/restore` | 200/200 | 往復で相殺（残留なし） |
+  | `POST /api/patients/{karte_no}/delete` → `/restore` | 200/200 | 同上（2頭以上いる飼主の動物で試し、飼主側への連鎖を避けた） |
+  | `POST /api/patients/{karte_no}/papers` → `DELETE /api/papers/{id}` | 201/200 | 論理削除が正しい終着点だが、テストデータのため直接DB削除もした |
+  | `PATCH /api/owners/{owner_no}` | 200 | `seed.json` の値へAPI経由で書き戻し |
+  | `PATCH /api/patients/{karte_no}/dosing/{kind_id}` | 200 | 元と同じ値で上書きなので実質変化なし |
+  | `POST /api/patients/{karte_no}/prevention/{kind_id}` | 201 | 削除APIが契約に無いため直接DB削除 |
+
+  **契約に削除／取消のAPIが無いエンドポイント（`/api/receptions` `.../prevention`）
+  は、テスト用に作った行を直接DBから消すしかなかった。** 稼働中サーバのDBファイルへ
+  `sqlite3` で直接 `DELETE` した（`stacks/fastapi/data/clinic.db`。本リポジトリ外への
+  影響は無い）
+- 500・プレーンテキスト応答はこの1箇所（`POST /api/reservations`。連動して
+  `PATCH`も同じ関数を通るため影響していた）以外に見つからなかった
+- 実測: `python tests/run.py http://127.0.0.1:8415 --only inventory`（全9件、
+  指揮役が追加した「書き込み 作って・確かめて・取り消せる」を含む）・
+  フル（全23件）とも全件通過

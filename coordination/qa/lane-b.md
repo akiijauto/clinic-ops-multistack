@@ -488,3 +488,37 @@ $ python tests/run.py http://127.0.0.1:8414 --only inventory
 $ python tests/run.py http://127.0.0.1:8414
 全 22 件 通過
 ```
+
+---
+
+## Q21. 開発DBが古い `data/seed.json` のままだった（指揮役の実測で発覚・記録）
+
+指揮役から「owner id=18 の氏名が `data/seed.json` と食い違う」と指摘があった。実測したところ、
+姓（`name_kanji` `name_kana`）だけが古い値のままで、住所・電話は一致していた
+（住所・電話は生成ロジック上たまたま変わっていなかっただけとみられる）。
+
+**古い姓は報告・コード双方に書かない**（指揮役の注意どおり。過去に公開ゲートで
+引っかかった経緯があるため）。指すときは `owner id=18` で統一する。
+
+### 対応
+
+1. `bundle exec rails db:seed` で `data/seed.json` から入れ直した
+   （`db/seeds.rb` は変更禁止だが、実行は妨げられていない）
+2. owner id=18 の `name_kanji` `name_kana` `phone` `address1` が `data/seed.json` と
+   一致することを実測で確認
+3. owners（5件おき8件）・patients（6件おき10件）・staff（全10件）・visits（20件おき10件）・
+   clinic の主要文字列項目、計95項目をサンプル突合し、**全一致**を確認
+4. 入れ直し前後で `/api/sales/summary` の `total_net_amount` が **5,185,704円のまま**変化しないことを確認
+
+### 確認結果
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+全 10 件 通過（新しい「書き込み」「データ」チェック含む。データ照合は30項目一致）
+
+$ python tests/run.py http://127.0.0.1:8414
+全 24 件 通過
+```
+
+**原因の見当（未確認）**: いつ・なぜ古いデータが入ったままだったかは追っていない。
+一時的な作業用DBのまま`db:seed`を再実行せずに使い続けていた可能性が高いが、断定はしない。

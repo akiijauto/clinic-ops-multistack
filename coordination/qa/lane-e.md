@@ -289,3 +289,50 @@ $ python tests/run.py http://127.0.0.1:8405 --only inventory → 全3件通過
   （papers系3件は「確かめられない」に分類——正しい。paperはseedに1件も無い）
 $ python tests/run.py http://127.0.0.1:8405 → 全17件通過
 ```
+
+## 2026-09-06 古いDBの入れ直し＋visit_noの"1.0"化バグを発見・修正
+
+指揮役から、owner id=18の氏名がdata/seed.jsonと不一致（3実装が古い値のまま）と指摘。
+実測すると、**実際にHTTPで配信されるDB（`data/clinic.db`）だけが古かった**。
+`data/dev-area4.db`／`data/dev-area5.db`（コード上どこからも参照されていない、
+過去のアドホック実行の副産物とみられるファイル）は既に最新のseed.jsonと一致していた。
+
+### 対処
+
+1. `data/clinic.db`を`npm run seed`で入れ直す前に、ポート8405の`next dev`を停止する必要があった
+   （WALロックが原因で削除が黙って失敗し、`UNIQUE constraint failed`になっていた）
+2. `data/dev-area4.db`の入れ直し時、**ポート3104で`next start`（本番ビルド）が別プロセスとして
+   常駐しており**、そのDBファイルをロックしていた。このプロセスはコード上どこからも
+   起動されておらず、古いビルド（新規実装前のルート構成）を配信していたため停止した
+3. 3つのDBすべてを`npm run seed`で入れ直し、owner id=18を含む全テーブル・全フィールドを
+   `data/seed.json`と突き合わせ（自作の検証スクリプトで、owners/patients/staff/receptions/
+   visits/progress_notes/preventions/dosings/lab_tests/lab_test_items/billings/
+   billing_details/reservationsの全カラムを1件ずつ比較）、**0件の不一致**を確認
+
+### ついでに見つけた別の不一致: `visit.visit_no`が"1.0"のように保存されていた
+
+入れ直しの確認中、`visit_no`（スキーマ上はTEXT列）がseed.jsonでは整数`1`なのに、
+DBには文字列`"1.0"`として入っていることを発見。カルテ画面の「診察番号 1.0」という
+表示になっていた（`karte-render.ts`が`v.visit_no`をそのまま表示）。
+
+**原因**: `node:sqlite`はJSの`number`を（整数値でも）常にSQLiteのREAL格納クラスとして
+bindする。INTEGER親和性の列では自動変換され気づかないが、TEXT親和性の列では
+REALの文字列表現（小数点付き）がそのまま保存される。`scripts/seed.ts`の`toSqlite()`が
+整数値をそのまま`number`型で返していたのが原因。
+
+**対処**: `toSqlite()`で整数値の`number`を`BigInt`に変換してからbindするよう修正。
+BigIntはSQLiteのINTEGER格納クラスとしてbindされるため、どの列親和性でも
+整数の文字列表現（"1"）になる。修正後、3DBとも`visit_no`を含め全カラムが
+seed.jsonと一致することを再確認。
+
+### 再検証
+
+```
+$ npm run typecheck   → エラー0
+$ python tests/run.py http://127.0.0.1:8405 --only inventory
+  → 全10件通過（新規追加の「データ 実装が読んでいる中身がdata/と一致する」含む、30項目一致）
+$ python tests/run.py http://127.0.0.1:8405
+  → 全24件通過
+$ BASE_URL=... npm test → 44/44
+$ curl .../api/sales/summary → total_net_amount: 5185704（入れ直し前後で変わらず）
+```

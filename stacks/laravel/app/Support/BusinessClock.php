@@ -7,23 +7,25 @@ use Carbon\CarbonImmutable;
 /**
  * この業務が言う「本日」。
  *
- * data/make_data.py は `datetime.now()` を使わず、常に `ANCHOR_DATE = 2026-09-01`
- * を基準にデータを作っている（data/README.md「日付計算はすべて ANCHOR_DATE を基準にする」）。
- * 画面側が実際の壁時計（`now()`）で「本日」を判定すると、種データの当日分
- * （本日の患者25件など）が、アンカー日以外に動かした瞬間ぜんぶ0件に見えてしまう
- * （2026-09-06 実測：実際の日付で /today を開くと 0 件だった）。
+ * 【2026-09-06 裁定で壁時計へ変更】以前はここを`data/seed.json`の`anchor_date`
+ * （種データ生成の基準日）に固定していた。理由は「実際の壁時計で判定すると、
+ * 種データの当日分がアンカー日以外に開いた瞬間ぜんぶ0件に見える」という実測だった。
  *
- * 「本日」は常にアンカー日として扱う。これは種データとの整合のためであり、
- * ユーザーが新しく作った受付・診察はアンカー日付で保存すること
- * （各コントローラの保存処理も BusinessClock::today() を使う）。
+ * しかし他4実装（Go/Rails/FastAPI/Next.js）はすべて壁時計を使っており、
+ * このレーンだけアンカー日固定だったため、同時刻に`/today`を叩くとこのレーンだけ
+ * 25件・他は0件という食い違いが実測された（指揮役・レビュー役の指摘）。
+ * `anchor_date`は「データ生成の基準日」であって「いまが何日か」ではない
+ * （`data/README.md`）。5実装の一致を優先し、壁時計に統一する。
+ *
+ * 種データの当日分が壁時計の日付では0件に見えるのは、
+ * **その通りの状態を正しく表示している**だけであり、そのこと自体は不具合ではない
+ * （coordination/qa/lane-c.md参照）。
  */
 final class BusinessClock
 {
     public static function today(): CarbonImmutable
     {
-        $anchor = FixedData::seed()['anchor_date'];
-
-        return CarbonImmutable::parse($anchor, 'Asia/Tokyo')->startOfDay();
+        return CarbonImmutable::now('Asia/Tokyo')->startOfDay();
     }
 
     public static function todayString(): string

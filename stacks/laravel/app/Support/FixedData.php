@@ -19,17 +19,26 @@ class FixedData
         return realpath(base_path('../../data')) ?: base_path('../../data');
     }
 
+    /**
+     * `data/` は基本的に凍結ディレクトリだが、指揮役が内容を訂正することがある
+     * （2026-09-06実測: `data/seed.json`のOwner氏名が古い値のままキャッシュされ、
+     * DBを`migrate:fresh --seed`しても直らなかった——`rememberForever`で永久キャッシュに
+     * していたのが原因）。ファイルの更新日時をキャッシュキーに含めることで、
+     * ファイルが変わったら自動的に新しいキーに切り替わり、`cache:clear`を手で
+     * 叩かなくても追従する。
+     */
     private static function readJson(string $filename): array
     {
-        return Cache::rememberForever("fixed_data.$filename", function () use ($filename) {
-            $path = self::dir().DIRECTORY_SEPARATOR.$filename;
-            if (! is_file($path)) {
-                throw new \RuntimeException("固定データが見つかりません: $path");
-            }
-            $json = file_get_contents($path);
-            $data = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+        $path = self::dir().DIRECTORY_SEPARATOR.$filename;
+        if (! is_file($path)) {
+            throw new \RuntimeException("固定データが見つかりません: $path");
+        }
+        $mtime = filemtime($path) ?: 0;
 
-            return $data;
+        return Cache::rememberForever("fixed_data.$filename.$mtime", function () use ($path) {
+            $json = file_get_contents($path);
+
+            return json_decode($json, true, flags: JSON_THROW_ON_ERROR);
         });
     }
 

@@ -237,6 +237,15 @@ _VAR = re.compile(r"\{([A-Za-z_]+)\}")
 
 def register(check, Client, Report):
 
+    # 鍵の文字クラスに **`.` を含める。**
+    # 最初は `[A-Za-z0-9_-]` だけで拾っていたので、`today.complete_delete_all` の
+    # ような**点を含む鍵が `today` に切り詰められ**、2つの別々の鍵が同じものに見えた。
+    # その結果「灰色のボタンが1個しか無い」と誤って報告した
+    # （2026-09-06、レーンCが原因を突き止めた。判定器の欠陥8件目）。
+    #
+    #     判定器が**読み取れる文字を狭く決めた**せいで、
+    #     正しく作ってあるものが「無い」ことにされた。
+
     _REQ = _required_query()
 
     def _resolve(c, path, sample):
@@ -292,7 +301,7 @@ def register(check, Client, Report):
                 if st != 200 or not html:
                     continue
                 for sg in segs:
-                    m = re.search(r"/" + re.escape(sg) + r"/([A-Za-z0-9_\-]+)", html)
+                    m = re.search(r"/" + re.escape(sg) + r"/([A-Za-z0-9_.\-]+)", html)
                     if m:
                         cand = m.group(1)
                         break
@@ -573,7 +582,7 @@ def register(check, Client, Report):
             st, html, _ = c.get(real)
             if st != 200 or not html:
                 continue
-            keys.update(re.findall(r"/todo/([A-Za-z0-9_\-]+)", html))
+            keys.update(re.findall(r"/todo/([A-Za-z0-9_.\-]+)", html))
         if len(keys) < 3:
             return False, (f"灰色のボタンが {len(keys)} 個しか無い（3つ必要）"
                            f"{'：' + ', '.join(sorted(keys)) if keys else ''}")
@@ -585,6 +594,161 @@ def register(check, Client, Report):
         if dead:
             return False, f"理由の行き先が生きていない: {', '.join(dead)}"
         return True, f"{len(keys)} 個: {', '.join(sorted(keys))}"
+
+    @check("inventory", "書き込み 作って・確かめて・取り消せる（GETだけでは分からない）")
+    def _write_roundtrip(c, rep):
+        """**書き込み経路を一度も検査していなかった。**
+
+        検算はすべてGETで、`POST` / `PATCH` / `DELETE` を1本も送っていない。
+        そのため `POST /api/reservations` が **FastAPI だけ500** を返していても、
+        「5実装 × 22件すべて通過」と表示され続けた（2026-09-06、監査役が発見）。
+
+            読めることと、書けることは別。
+            **読むだけの検査は、書き込みが壊れていても緑になる。**
+
+        しかも同じ欠陥は、読むだけの役が **07:30 に既に報告していた**。
+        指揮役がそれを拾わなかったので、4時間気づかれなかった。
+
+        ここでは**往復で見る**。作って、返り値を確かめて、取り消す。
+        **状態を残さない。** 残すと次の測定が前の測定に影響される。
+        """
+        seed_path = os.path.join(_DATA, "seed.json")
+        try:
+            with open(seed_path, encoding="utf-8") as f:
+                seed = json.load(f)
+        except Exception:
+            return False, "data/seed.json が読めない（検査が働いていない）"
+
+        pats = seed.get("patients") or []
+        staff = seed.get("staff") or []
+        if not pats or not staff:
+            return False, "患者か担当がデータに無い（検査が働いていない）"
+
+        body = {
+            "patient_id": pats[0]["id"],
+            "staff_id": staff[0]["id"],
+            # **既存と重ならない未来の時間**を選ぶ。重なると正しく拒否され、
+            # それを「壊れている」と誤認する（検算6は重なりを拒否する規則）。
+            "starts_at": "2027-12-31T09:00:00+09:00",
+            "ends_at": "2027-12-31T09:30:00+09:00",
+            "room": "処置室1",
+            "note": "判定器の往復確認",
+        }
+        status, text, _ = c.post("/api/reservations", body)
+        if status not in (200, 201):
+            head = (text or "")[:80].replace("\n", " ")
+            return False, f"作れない: POST /api/reservations = {status} {head}"
+
+        try:
+            made = json.loads(text)
+        except Exception:
+            return False, f"作れたが応答がJSONでない: {(text or '')[:80]}"
+        new_id = made.get("id")
+        if new_id is None:
+            return False, f"作れたが id が返らない: {list(made)[:6]}"
+
+        # 取り消す。**後片付けまでが検査。**
+        st2, _, _ = c.post(f"/api/reservations/{new_id}/cancel", {})
+        if st2 not in (200, 201, 204):
+            return False, (f"作れたが取り消せない: "
+                           f"POST /api/reservations/{new_id}/cancel = {st2}"
+                           f"（判定器がデータを残した。手で消す必要がある）")
+        return True, f"作成→取消の往復ができた（id={new_id}）"
+
+    @check("inventory", "データ 実装が読んでいる中身が data/ と一致する（数字だけ見ても分からない）")
+    def _same_data(c, rep):
+        """**5実装が同じデータを読んでいるかを、誰も確かめていなかった。**
+
+        2026-09-06、読むだけの役が画面を見て気づいた。3実装が**古い `seed.json` を
+        取り込んだまま**動いていて、飼主の氏名が `data/seed.json` と違っていた。
+        住所と電話は正しく、**氏名だけ**がずれていた。
+
+        判定器はこれを永久に見つけられない作りだった。検算が見ているのは
+        **数値**（売上・件数・重なり・体温の散らばり）だけで、**文字列を1つも
+        照合していなかった**。売上が5実装とも 5,185,704円 で一致していたのは、
+        **差が名前だけだったから**である。数字が合っていたので誰も疑わなかった。
+
+            **判定器が見ている範囲の外では、データがずれていても緑になる。**
+            そして「同じ契約から同じものが出る」の土台は、
+            **同じデータを読んでいること**である。そこを確かめていなかった。
+
+        ここでは**文字列の項目**を `data/seed.json` と突き合わせる。
+        数字は他の検算が見ているので、ここでは見ない。
+        """
+        try:
+            with open(os.path.join(_DATA, "seed.json"), encoding="utf-8") as f:
+                seed = json.load(f)
+        except Exception:
+            return False, "data/seed.json が読めない（検査が働いていない）"
+
+        # **先頭数件だけ見ると空振りする。**
+        # 最初は `[:6]` で組んでいたが、実際にずれていた `owner id=18` が対象外で、
+        # **3実装が古いデータのまま緑になった**（2026-09-06、検査を足した直後に気づいた）。
+        #
+        #     一部だけ見る検査は、**見ていないところがずれていても緑**になる。
+        #     「代表を見れば足りる」は、ずれ方を知っているときにしか言えない。
+        #
+        # だから**全件見る**。要求数は増えるが、ここを削ると検査の意味が消える。
+        # **項目名を推測で書かない。** `data/` に実在するキーだけを対象にする。
+        #
+        # 最初は `tel` と `name` を見ていた。実際のキーは `phone` と `name_kanji` で、
+        # **どちらも存在しないので `.get()` が None を返し、静かに飛ばされていた。**
+        # つまり **動物の氏名と電話番号を1件も照合していなかった** — この検査が
+        # まさに捕まえるはずだったものである（2026-09-06、読むだけの役がコードを
+        # 読んで見つけた。判定器の欠陥9件目）。
+        #
+        #     **存在しないキーを読んでも、例外もエラーも出ない。**
+        #     照合したつもりで、何も照合していない状態が緑になる。
+        #
+        # 対策として、下で「実在するキーだけを使ったか」を数え、
+        # 対象が痩せていたら検査自体を失敗させる。
+        OWNER_FLDS = ("name_kanji", "name_kana", "address1", "address2", "phone", "mobile")
+        PAT_FLDS = ("name_kanji", "name_kana", "species", "breed", "sex")
+
+        avail_o = set(seed["owners"][0].keys()) if seed.get("owners") else set()
+        avail_p = set(seed["patients"][0].keys()) if seed.get("patients") else set()
+        unknown = [f for f in OWNER_FLDS if f not in avail_o] + \
+                  [f for f in PAT_FLDS if f not in avail_p]
+        if unknown:
+            return False, f"data/ に無い項目名を見ようとしている: {', '.join(unknown)}"
+
+        checks = []
+        for o in (seed.get("owners") or []):
+            for fld in OWNER_FLDS:
+                if o.get(fld):
+                    checks.append((f"/api/owners/{o['owner_no']}", fld, o[fld]))
+        for p in (seed.get("patients") or []):
+            for fld in PAT_FLDS:
+                if p.get(fld):
+                    checks.append((f"/api/patients/{p['karte_no']}", fld, p[fld]))
+
+        if len(checks) < 40:
+            return False, f"照合できる項目が {len(checks)} 件しか組めない（検査が働いていない）"
+
+        bad, looked = [], 0
+        for path, fld, want in checks:
+            status, text, _ = c.get(path)
+            if status != 200 or not text:
+                continue                       # 在る・無いは別の検査の仕事
+            try:
+                got = json.loads(text)
+            except Exception:
+                continue
+            if not isinstance(got, dict) or fld not in got:
+                continue
+            looked += 1
+            if str(got.get(fld)) != str(want):
+                # **値そのものは書かない。** 古いデータの氏名が公開物へ入る事故を
+                # 一度起こしかけている。**どこが違うかだけ**を出す。
+                bad.append(f"{path}:{fld}")
+        if looked < 40:
+            return False, f"{looked} 項目しか照合できていない（検査が働いていない）"
+        if bad:
+            return False, (f"{len(bad)} 項目が data/ と違う: {', '.join(bad[:5])}"
+                           f"（古いデータを取り込んだまま入れ直していない疑い）")
+        return True, f"{looked} 項目が data/ と一致"
+
+
 
 
 

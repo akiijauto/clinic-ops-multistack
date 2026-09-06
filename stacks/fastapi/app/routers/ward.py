@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app import models
-from app.config import JST
+from app.config import JST, jst_isoformat
 from app.db import get_db
 from app.errors import ApiError
 
@@ -69,7 +69,7 @@ def _care_record_dict(r: models.CareRecord) -> dict:
     return {
         "id": r.id,
         "hospitalization_id": r.hospitalization_id,
-        "recorded_at": r.recorded_at.isoformat(),
+        "recorded_at": jst_isoformat(r.recorded_at),
         "category": r.category,
         "content": r.content,
         "performed_by_staff_id": r.performed_by_staff_id,

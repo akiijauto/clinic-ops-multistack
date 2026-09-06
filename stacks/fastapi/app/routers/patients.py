@@ -33,7 +33,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.billing_calc import DetailLike, calc_billing_totals
-from app.config import JST
+from app.config import JST, jst_isoformat
 from app.db import get_db
 from app.errors import ApiError
 
@@ -145,7 +145,7 @@ def _serialize_owner(o: models.Owner) -> dict:
         "address2": o.address2,
         "phone": o.phone,
         "mobile": o.mobile,
-        "deleted_at": o.deleted_at.isoformat() if o.deleted_at else None,
+        "deleted_at": jst_isoformat(o.deleted_at) if o.deleted_at else None,
     }
 
 
@@ -161,7 +161,7 @@ def _serialize_patient(p: models.Patient) -> dict:
         "sex": p.sex,
         "birth_date": p.birth_date.isoformat() if p.birth_date else None,
         "neuter_date": p.neuter_date.isoformat() if p.neuter_date else None,
-        "deleted_at": p.deleted_at.isoformat() if p.deleted_at else None,
+        "deleted_at": jst_isoformat(p.deleted_at) if p.deleted_at else None,
     }
 
 
@@ -312,7 +312,7 @@ def _serialize_reception(r: models.Reception) -> dict:
         "id": r.id,
         "patient_id": r.patient_id,
         "display_no": r.display_no,
-        "received_at": r.received_at.isoformat(),
+        "received_at": jst_isoformat(r.received_at),
         "owner_purpose": r.owner_purpose,
         "medical_purpose": r.medical_purpose,
         "status": r.status,
@@ -464,7 +464,7 @@ def _serialize_visit(v: models.Visit) -> dict:
         "diagnosis": v.diagnosis,
         "treatment": v.treatment,
         "staff_id": v.staff_id,
-        "deleted_at": v.deleted_at.isoformat() if v.deleted_at else None,
+        "deleted_at": jst_isoformat(v.deleted_at) if v.deleted_at else None,
         "progress_notes": [_serialize_progress_note(n) for n in v.progress_notes],
     }
 

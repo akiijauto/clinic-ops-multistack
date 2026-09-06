@@ -23,10 +23,25 @@ function readJson(name: string): Json {
   return JSON.parse(readFileSync(resolve(REPO_DATA, name), 'utf8')) as Json;
 }
 
-/** SQLite has no boolean and no array. Booleans become 0/1, arrays become JSON. */
-function toSqlite(v: unknown): string | number | null {
+/**
+ * SQLite has no boolean and no array. Booleans become 0/1, arrays become JSON.
+ *
+ * A whole-number JS `number` is bound as a `bigint`, not left as `number`.
+ * `node:sqlite` binds every plain JS number as SQLite's REAL storage class,
+ * integer or not -- harmless into an INTEGER-affinity column (SQLite
+ * coerces REAL 1.0 back to INTEGER 1), but a TEXT-affinity column (this
+ * schema keeps a few numeric-looking fields as TEXT, e.g. `visit.visit_no`)
+ * stores and reads back the literal text "1.0", not "1". That surfaced as
+ * `診察番号 1.0` on the karte screen instead of `1` (found 2026-09-06 while
+ * checking for other stale/string-mismatch fields after `owner.name_kanji`
+ * turned out to disagree with data/seed.json). Binding as `bigint` makes
+ * SQLite store it with INTEGER storage class, which every affinity (TEXT
+ * included) renders back as a plain integer string.
+ */
+function toSqlite(v: unknown): string | number | bigint | null {
   if (v === null || v === undefined) return null;
   if (typeof v === 'boolean') return v ? 1 : 0;
+  if (typeof v === 'number' && Number.isInteger(v)) return BigInt(v);
   if (Array.isArray(v) || typeof v === 'object') return JSON.stringify(v);
   return v as string | number;
 }

@@ -729,3 +729,22 @@ $ python tests/run.py http://127.0.0.1:8415
 `/today` に「完了全削除」「完了削除」、`/animals/{karte_no}/karte` に「一時保存」を
 状態Cのボタンとして追加（`feature_notes.py` の既存キーへ繋いだだけで新規キーは
 作っていない）。詳細は `coordination/qa/lane-d.md` D-23。
+
+## 完了の自己点検（6回目、POST /api/reservations 500対応・書き込み経路監査後）
+
+```
+$ python tests/run.py http://127.0.0.1:8415 --only inventory
+全 9 件 通過
+```
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 23 件 通過
+```
+
+`POST /api/reservations`（PATCHも同じ関数経由で影響していた）の500を修正
+（offset-naive/aware datetimeの比較エラー。SQLiteが`DateTime(timezone=True)`でも
+tzinfoを保持しないことが原因）。副産物で見つかった、複数箇所のDateTime列が
+タイムゾーン情報を落として返っていた件も `app/config.py` の `jst_isoformat()` に
+一本化して直した。書き込み経路を一通り実測し、他に500・プレーンテキスト応答は
+無いことを確認。テスト用に作ったデータは全て後片付け済み（詳細は
+`coordination/qa/lane-d.md` D-24）。

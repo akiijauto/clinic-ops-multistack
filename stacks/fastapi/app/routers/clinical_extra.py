@@ -36,7 +36,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app import fixtures, models
-from app.config import JST
+from app.config import JST, jst_isoformat
 from app.db import get_db
 from app.errors import ApiError
 from app.routers.lab import _serialize_lab_test
@@ -137,10 +137,10 @@ def _paper_dict(row: models.Paper) -> dict:
         "patient_id": row.patient_id,
         "title": row.title,
         "note": row.note,
-        "created_at": row.created_at.isoformat(),
+        "created_at": jst_isoformat(row.created_at),
         # openapi.yaml の Paper スキーマには無い項目だが、論理削除（下記）を外から
         # 見えるようにするために付けた（billing.py が互換名を併記するのと同じ考え方）。
-        "removed_at": row.removed_at.isoformat() if row.removed_at else None,
+        "removed_at": jst_isoformat(row.removed_at) if row.removed_at else None,
     }
 
 

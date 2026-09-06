@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app import models
+from app.config import JST, jst_isoformat
 from app.db import get_db
 from app.errors import ApiError
 
@@ -34,7 +35,27 @@ class ReservationCreate(BaseModel):
     note: str | None = None
 
 
+def _naive_jst(value: dt.datetime) -> dt.datetime:
+    """比較用にJSTのnaive datetimeへ揃える。
+
+    2026-09-06、監査役の指摘で実測: `POST /api/reservations` が500になっていた
+    （`coordination/qa/lane-d.md` D-24）。原因は
+    「offset-naive と offset-aware の datetime は比較できない」——リクエスト本文は
+    `+09:00` 付きで届く（Pydanticがawareのまま保持）が、SQLiteから読み戻した
+    `Reservation.starts_at`/`ends_at` はtzinfoが落ちてnaiveになる（SQLiteの
+    `DateTime(timezone=True)` はPostgresと違い実際にはtzを保持しない）。
+    片方だけ変換すると次に逆のケースで壊れるので、**両方をこの関数に通してから
+    比較する**ことにした。
+    """
+    if value.tzinfo is not None:
+        return value.astimezone(JST).replace(tzinfo=None)
+    return value
+
+
 def _overlaps(a_start, a_end, b_start, b_end) -> bool:
+    a_start, a_end, b_start, b_end = (
+        _naive_jst(a_start), _naive_jst(a_end), _naive_jst(b_start), _naive_jst(b_end),
+    )
     return a_start < b_end and b_start < a_end
 
 
@@ -54,8 +75,8 @@ def _serialize(r: models.Reservation) -> dict:
     return {
         "id": r.id,
         "patient_id": r.patient_id,
-        "starts_at": r.starts_at.isoformat(),
-        "ends_at": r.ends_at.isoformat(),
+        "starts_at": jst_isoformat(r.starts_at),
+        "ends_at": jst_isoformat(r.ends_at),
         "staff_id": r.staff_id,
         "room": r.room,
         "purpose": r.purpose,
