@@ -182,6 +182,17 @@ try:
 except Exception as _e:  # 検算が読めなくても smoke は走らせる
     print(f"※ 検算を読み込めませんでした: {type(_e).__name__}: {_e}", file=sys.stderr)
 
+# ── 在庫検査を読み込む ──────────────────────────────
+#
+# 「作っていないものは検査に引っかからない」という穴を塞ぐ。
+# 2026-09-06、共通テストが緑のまま 23画面・26API が未実装だった事故を受けて追加。
+
+try:
+    import inventory as _inventory
+    _inventory.register(check, Client, Report)
+except Exception as _e:
+    print(f"※ 在庫検査を読み込めませんでした: {type(_e).__name__}: {_e}", file=sys.stderr)
+
 
 # ── 実行 ─────────────────────────────────────────
 
