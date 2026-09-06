@@ -76,16 +76,16 @@ export async function GET(req: Request): Promise<Response> {
   <tbody>${rows || `<tr data-testid="empty-reception"><td colspan="10">該当する受付はありません。</td></tr>`}</tbody>
 </table>
 <p>
-  <a id="link-detail" data-testid="action-detail" aria-disabled="true">顧客</a> ｜
-  <a id="link-karte" data-testid="action-karte" aria-disabled="true">カルテ</a> ｜
-  <a id="link-accounting" data-testid="action-accounting" aria-disabled="true">会計</a> ｜
-  <a id="link-reservation" data-testid="action-reservation" aria-disabled="true">予約</a> ｜
+  <a id="link-detail" class="disabled" data-testid="action-detail" aria-disabled="true">顧客</a> ｜
+  <a id="link-karte" class="disabled" data-testid="action-karte" aria-disabled="true">カルテ</a> ｜
+  <a id="link-accounting" class="disabled" data-testid="action-accounting" aria-disabled="true">会計</a> ｜
+  <a id="link-reservation" class="disabled" data-testid="action-reservation" aria-disabled="true">予約</a> ｜
   <button id="btn-up" type="button" disabled data-testid="action-up">上へ</button>
   <button id="btn-down" type="button" disabled data-testid="action-down">下へ</button>
 </p>
 <p>
-  <a href="/todo/reception-complete-delete-all" data-testid="disabled-action-reception-complete-delete-all">完了全削除</a> ｜
-  <a href="/todo/reception-complete-delete" data-testid="disabled-action-reception-complete-delete">完了削除</a>
+  <a class="disabled" href="/todo/reception-complete-delete-all" data-testid="disabled-action-reception-complete-delete-all">完了全削除</a> ｜
+  <a class="disabled" href="/todo/reception-complete-delete" data-testid="disabled-action-reception-complete-delete">完了削除</a>
 </p>
 <script>
 (function () {
@@ -98,6 +98,7 @@ export async function GET(req: Request): Promise<Response> {
       var el = document.getElementById('link-' + k);
       el.href = links[k].replace(/%s/g, karteNo);
       el.removeAttribute('aria-disabled');
+      el.classList.remove('disabled');
     });
     upBtn.disabled = false;
     downBtn.disabled = false;

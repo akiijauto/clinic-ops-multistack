@@ -21,7 +21,7 @@
       {% for r in rows %}
       <tr {{ row("master") }}>
         {% for col, val in r.items() %}
-        <td>
+        <td{% if col in ("unit_price", "quantity", "count") %} class="num"{% endif %}>
           {%- if col == "unit_price" and val is none -%}
             <span class="hint">未設定</span>
           {%- else -%}

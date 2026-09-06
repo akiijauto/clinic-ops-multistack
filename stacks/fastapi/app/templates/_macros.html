@@ -22,11 +22,11 @@
 {% macro value_check(key) %}data-check="{{ key }}"{% endmacro %}
 
 {% macro success_banner(message) %}
-<div data-check="success-banner" class="banner banner-success">{{ message }}</div>
+<div data-check="success-banner" class="banner success-banner">{{ message }}</div>
 {% endmacro %}
 
 {% macro error_banner(message) %}
-<div data-check="error-banner" class="banner banner-error">{{ message }}</div>
+<div data-check="error-banner" class="banner error-banner">{{ message }}</div>
 {% endmacro %}
 
 {# ボタンの3状態（spec/screens.md「共通の約束」）。
@@ -38,10 +38,11 @@
      - "c"（あえて動かさない・ToDo） → /todo/{key} #}
 {% macro action_button(label, state, href=None, todo_key=None) %}
 {%- if state == "a" -%}
-<a href="{{ href }}" class="btn btn-action">{{ label }}</a>
+<a href="{{ href }}" class="button">{{ label }}</a>
 {%- else -%}
+{# `spec/ui.css` の `.disabled`（消さないこと。押せるが動かないことを見せるための印）。 #}
 <a href="{{ '/folded/' if state == 'b' else '/todo/' }}{{ todo_key }}"
-   class="btn btn-disabled"
+   class="button disabled"
    aria-disabled="true"
    data-check="disabled-action-{{ todo_key }}">{{ label }}</a>
 {%- endif -%}

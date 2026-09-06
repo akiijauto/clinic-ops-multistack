@@ -7,10 +7,10 @@
         <h1>予約詳細 #{{ $reservation->id }}</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <p>患者: {{ $reservation->patient?->name_kanji }} / 状態: {{ $reservation->status }}</p>
@@ -28,13 +28,13 @@
             </label></p>
             <p><label>処置室 <input name="room" value="{{ $reservation->room }}"></label></p>
             <p><label>目的 <input name="purpose" value="{{ $reservation->purpose }}"></label></p>
-            <button class="btn" type="submit">更新</button>
+            <button class="button" type="submit">更新</button>
         </form>
 
         @if ($reservation->status === 'booked')
             <form method="post" action="/reservations/{{ $reservation->id }}/cancel">
                 @csrf
-                <button class="btn secondary" type="submit">キャンセル</button>
+                <button class="button secondary" type="submit">キャンセル</button>
             </form>
         @endif
     </div>

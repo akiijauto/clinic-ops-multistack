@@ -8,7 +8,7 @@
 
         <p>
             @foreach ($keys as $k)
-                <a class="btn {{ $k === $key ? '' : 'secondary' }}" href="/settings/master/{{ $k }}">{{ $k }}</a>
+                <a class="button {{ $k === $key ? '' : 'secondary' }}" href="/settings/master/{{ $k }}">{{ $k }}</a>
             @endforeach
         </p>
 

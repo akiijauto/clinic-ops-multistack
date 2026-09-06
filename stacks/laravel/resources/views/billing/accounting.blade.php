@@ -7,10 +7,10 @@
         <h1>会計 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if ($error)
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if ($success)
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <p>
@@ -27,15 +27,15 @@
                     <tr data-testid="row-billing-detail">
                         <td>{{ $d->price_code }}</td>
                         <td>{{ $d->name }}</td>
-                        <td>{{ $d->hasPrice() ? number_format($d->unit_price) : '未設定' }}</td>
-                        <td>{{ rtrim(rtrim((string) $d->quantity, '0'), '.') ?: $d->quantity }}</td>
+                        <td class="num">{{ $d->hasPrice() ? number_format($d->unit_price) : '未設定' }}</td>
+                        <td class="num">{{ rtrim(rtrim((string) $d->quantity, '0'), '.') ?: $d->quantity }}</td>
                         <td>{{ $d->is_taxable ? '課税' : '非課税' }}</td>
-                        <td>{{ $d->hasPrice() ? number_format($d->quantity * $d->unit_price) : '（未算入）' }}</td>
+                        <td class="num">{{ $d->hasPrice() ? number_format($d->quantity * $d->unit_price) : '（未算入）' }}</td>
                         <td>
                             @if ($billing->status !== 'confirmed')
                                 <form method="post" action="/animals/{{ $patient->karte_no }}/accounting/details/{{ $d->id }}/remove">
                                     @csrf
-                                    <button class="btn secondary" type="submit">削除</button>
+                                    <button class="button secondary" type="submit">削除</button>
                                 </form>
                             @endif
                         </td>
@@ -71,23 +71,23 @@
                         @endforeach
                     </select>
                     <input type="number" name="quantity" value="1" min="0.01" step="0.01" style="width:5em">
-                    <button class="btn" type="submit">追加</button>
+                    <button class="button" type="submit">追加</button>
                 </form>
 
                 <form method="post" action="/animals/{{ $patient->karte_no }}/accounting/{{ $billing->id }}/clear">
                     @csrf
-                    <button class="btn secondary" type="submit">全削除</button>
+                    <button class="button secondary" type="submit">全削除</button>
                 </form>
 
                 <form method="post" action="/animals/{{ $patient->karte_no }}/accounting/{{ $billing->id }}/confirm">
                     @csrf
-                    <button class="btn" type="submit">確定</button>
+                    <button class="button" type="submit">確定</button>
                 </form>
             </div>
         @else
             <p><em>確定済みのため、明細の追加・削除・全削除はできません。</em></p>
         @endif
 
-        <p><a class="btn secondary" href="/animals/{{ $patient->karte_no }}/accounting/history">会計履歴へ</a></p>
+        <p><a class="button secondary" href="/animals/{{ $patient->karte_no }}/accounting/history">会計履歴へ</a></p>
     </div>
 @endsection

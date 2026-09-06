@@ -7,10 +7,10 @@
         <h1>入院 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <div class="card">
@@ -19,7 +19,7 @@
                 @csrf
                 <label>入院日 <input type="date" name="admitted_on"></label>
                 <label>処置室 <input name="room" placeholder="入院室1"></label>
-                <button class="btn" type="submit">開始</button>
+                <button class="button" type="submit">開始</button>
             </form>
         </div>
 
@@ -42,7 +42,7 @@
                                 <td data-check="care_record.performed_by">{{ $c->performedBy?->name }}</td>
                             </tr>
                         @empty
-                            <tr data-testid="empty-care-record"><td colspan="4">記録はありません。</td></tr>
+                            <tr data-testid="empty-care-record"><td colspan="4" class="empty">記録はありません。</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -62,13 +62,13 @@
                                 <option value="{{ $s->id }}">{{ $s->name }}</option>
                             @endforeach
                         </select>
-                        <button class="btn secondary" type="submit">記録を追加</button>
+                        <button class="button secondary" type="submit">記録を追加</button>
                     </form>
 
                     <form method="post" action="/animals/{{ $patient->karte_no }}/ward/{{ $h->id }}/discharge">
                         @csrf
                         <label>退院日 <input type="date" name="discharged_on"></label>
-                        <button class="btn secondary" type="submit">退院にする</button>
+                        <button class="button secondary" type="submit">退院にする</button>
                     </form>
                 @endif
             </div>

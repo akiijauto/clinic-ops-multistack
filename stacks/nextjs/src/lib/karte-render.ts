@@ -109,7 +109,7 @@ function visitForm(karteNo: string, visitId: number | null, draft: VisitInput): 
     <button type="submit">取消（書きかけを捨てる）</button>
   </form>
   <p>
-    <a data-testid="disabled-action-karte-temp-save" href="/todo/karte-temp-save" aria-disabled="true">一時保存（このボタンは押せません）</a>
+    <a class="disabled" data-testid="disabled-action-karte-temp-save" href="/todo/karte-temp-save" aria-disabled="true">一時保存（このボタンは押せません）</a>
   </p>`;
 }
 
@@ -132,7 +132,7 @@ export function renderKarteScreen(
   banner?: { kind: 'success' | 'error'; message: string },
 ): Response {
   const bannerHtml = banner
-    ? `<p data-testid="${banner.kind}-banner" class="banner-${banner.kind}">${e(banner.message)}</p>`
+    ? `<p data-testid="${banner.kind}-banner" class="${banner.kind}-banner">${e(banner.message)}</p>`
     : '';
   const hasPrev = visits.length > 0;
   // The currently open Visit is rendered read-only through the same

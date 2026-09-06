@@ -7,7 +7,7 @@
         <h1>病院設定</h1>
 
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <form method="post" action="/settings">
@@ -30,13 +30,13 @@
                     </label>
                 @endforeach
             </p>
-            <button class="btn" type="submit">保存</button>
+            <button class="button" type="submit">保存</button>
         </form>
 
         <p>
-            <a class="btn secondary" href="/settings/features">機能設定</a>
-            <a class="btn secondary" href="/settings/import">取込</a>
-            <a class="btn secondary" href="/settings/master">マスタ</a>
+            <a class="button secondary" href="/settings/features">機能設定</a>
+            <a class="button secondary" href="/settings/import">取込</a>
+            <a class="button secondary" href="/settings/master">マスタ</a>
         </p>
     </div>
 @endsection

@@ -5,7 +5,7 @@
 @section('content')
     <div class="card" data-testid="screen-reservations">
         <h1>予約一覧（{{ $from }} 〜 {{ $to }}）</h1>
-        <p><a class="btn" href="/reservations/new">新規予約</a></p>
+        <p><a class="button" href="/reservations/new">新規予約</a></p>
         <table>
             <thead><tr><th>開始</th><th>終了</th><th>患者</th><th>担当</th><th>処置室</th><th>状態</th><th></th></tr></thead>
             <tbody>
@@ -21,10 +21,10 @@
                         <td>{{ $r->staff?->name }}</td>
                         <td>{{ $r->room }}</td>
                         <td>{{ $r->status }}</td>
-                        <td><a class="btn secondary" href="/reservations/{{ $r->id }}">開く</a></td>
+                        <td><a class="button secondary" href="/reservations/{{ $r->id }}">開く</a></td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-reservation"><td colspan="7">予約がありません。</td></tr>
+                    <tr data-testid="empty-reservation"><td colspan="7" class="empty">予約がありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -7,6 +7,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}動物病院 窓口業務システム（学習・研究用）{% endblock %}</title>
+  {# 5実装が共有する唯一のスタイル（spec/ui.css）。中身は変えない・全画面はここ経由で
+     読む（base.html が全画面共通の <head> を持つため、ここ1箇所で足りる）。 #}
+  <link rel="stylesheet" href="/ui.css">
   <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
 </head>
 <body>

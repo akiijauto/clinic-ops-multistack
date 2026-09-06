@@ -13,10 +13,10 @@
           <tr data-testid="lab-item-<%= item.item_code %>">
             <td><%= item.item_code %></td>
             <td><%= range ? "#{range[:low]}〜#{range[:high]}" : "-" %></td>
-            <td data-testid="lab-item-<%= item.item_code %>-value">
+            <td class="num <%= "out-of-range" if %w[high low].include?(j) %>" data-testid="lab-item-<%= item.item_code %>-value">
               <span data-check="lab_test_item.value"><%= item.value_num || item.value_text %></span>
             </td>
-            <td data-testid="lab-item-<%= item.item_code %>-judgment" data-check-flag="<%= j %>">
+            <td class="<%= "out-of-range" if %w[high low].include?(j) %>" data-testid="lab-item-<%= item.item_code %>-judgment" data-check-flag="<%= j %>">
               <span data-check="lab_test_item.judgment"><%= { "high" => "H", "low" => "L" }[j] || "" %></span>
             </td>
           </tr>

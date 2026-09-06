@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -67,6 +68,15 @@ def create_app() -> FastAPI:
 
     settings.static_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/static", StaticFiles(directory=settings.static_dir), name="static")
+
+    # 5実装が共有する唯一のスタイル（`spec/ui.css`）。**中身は1文字も変えず**
+    # `app/static/ui.css` へコピーして配る。`/static/ui.css` ではなく `/ui.css`
+    # 直下で配ることが指揮役の指定（2026-09-06）。
+    ui_css_path = settings.static_dir / "ui.css"
+
+    @app.get("/ui.css", include_in_schema=False)
+    def _ui_css() -> FileResponse:
+        return FileResponse(ui_css_path, media_type="text/css")
 
     # テンプレートは app.state に載せる。各領域のルーターはここから取る。
     # モジュール読み込み時に作らないのは、テストが差し替えられなくなるため。

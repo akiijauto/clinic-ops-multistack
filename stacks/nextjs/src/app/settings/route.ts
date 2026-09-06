@@ -61,7 +61,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (!parsed.ok) {
     const body =
-      `<p data-testid="error-banner" class="banner-error">${escapeHtml(
+      `<p data-testid="error-banner" class="error-banner">${escapeHtml(
         ERROR_MESSAGE.invalid_input,
       )}（${escapeHtml(parsed.message)}）</p>` +
       form({
@@ -80,6 +80,6 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const saved = saveClinic(parsed.value);
-  const body = `<p data-testid="success-banner" class="banner-success">保存しました。</p>${form(saved)}`;
+  const body = `<p data-testid="success-banner" class="success-banner">保存しました。</p>${form(saved)}`;
   return page('設定（病院設定）', 'screen-settings', body);
 }

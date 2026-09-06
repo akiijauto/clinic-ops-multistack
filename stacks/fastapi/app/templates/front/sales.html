@@ -14,13 +14,13 @@
 
   <h2>分類別</h2>
   <table>
-    <thead><tr><th>分類</th><th>税抜合計</th><th>構成比</th></tr></thead>
+    <thead><tr><th>分類</th><th class="num">税抜合計</th><th class="num">構成比</th></tr></thead>
     <tbody>
       {% for r in summary.by_category %}
       <tr {{ row("sales-category") }}>
         <td>{{ r.category }}</td>
-        <td data-check-axis="category" data-check-key="{{ r.category }}" data-check="sales_summary.net_amount">{{ r.net_amount }}</td>
-        <td data-check-axis="category" data-check-key="{{ r.category }}" data-check="sales_summary.share_pct">{{ r.share_pct }}</td>
+        <td class="num" data-check-axis="category" data-check-key="{{ r.category }}" data-check="sales_summary.net_amount">{{ r.net_amount }}</td>
+        <td class="num" data-check-axis="category" data-check-key="{{ r.category }}" data-check="sales_summary.share_pct">{{ r.share_pct }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -28,12 +28,12 @@
 
   <h2>担当別</h2>
   <table>
-    <thead><tr><th>担当ID</th><th>税抜合計</th></tr></thead>
+    <thead><tr><th>担当ID</th><th class="num">税抜合計</th></tr></thead>
     <tbody>
       {% for r in summary.by_staff %}
       <tr {{ row("sales-staff") }}>
         <td>{{ r.staff_id }}</td>
-        <td data-check-axis="staff" data-check-key="{{ r.staff_id }}" data-check="sales_summary.net_amount">{{ r.net_amount }}</td>
+        <td class="num" data-check-axis="staff" data-check-key="{{ r.staff_id }}" data-check="sales_summary.net_amount">{{ r.net_amount }}</td>
       </tr>
       {% endfor %}
     </tbody>

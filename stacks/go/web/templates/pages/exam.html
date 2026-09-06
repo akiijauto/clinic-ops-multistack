@@ -36,7 +36,7 @@
             {{if not $.CurrentID}}<input name="value" value="{{.Value}}">{{end}}
           </td>
           <td data-check-flag="{{.Flag}}">
-            <span data-check="lab_test_item.judgment">{{.Judgment}}</span>
+            <span data-check="lab_test_item.judgment"{{if or (eq .Flag "high") (eq .Flag "low")}} class="out-of-range"{{end}}>{{.Judgment}}</span>
           </td>
         </tr>
         {{end}}

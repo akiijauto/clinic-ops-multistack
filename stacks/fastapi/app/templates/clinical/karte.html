@@ -25,16 +25,16 @@
   </div>
 
   <div class="karte-actions">
-    <a href="/animals/{{ patient.karte_no }}/karte/new" class="btn btn-action">新規診察</a>
+    <a href="/animals/{{ patient.karte_no }}/karte/new" class="button">新規診察</a>
     {% if has_prev_visit %}
-      <a href="/animals/{{ patient.karte_no }}/karte/copy_prev" class="btn btn-action">前回コピー</a>
+      <a href="/animals/{{ patient.karte_no }}/karte/copy_prev" class="button">前回コピー</a>
     {% else %}
-      <span class="btn btn-disabled" aria-disabled="true">前回コピー</span>
+      <span class="button disabled" aria-disabled="true">前回コピー</span>
     {% endif %}
     <form method="post" action="/animals/{{ patient.karte_no }}/karte/cancel" style="display:inline">
-      <button type="submit" class="btn btn-action">取消</button>
+      <button type="submit" class="button">取消</button>
     </form>
-    <a href="/animals/{{ patient.karte_no }}/karte/print" class="btn btn-action">カルテ印刷（全体）</a>
+    <a href="/animals/{{ patient.karte_no }}/karte/print" class="button">カルテ印刷（全体）</a>
     {% if show_deleted %}
       <a href="/animals/{{ patient.karte_no }}/karte">削除済みを隠す</a>
     {% else %}

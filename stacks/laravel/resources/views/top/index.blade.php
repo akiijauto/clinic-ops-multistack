@@ -23,6 +23,6 @@
         <p>対象日（{{ \App\Support\BusinessClock::todayString() }}）の診察件数:
             <strong data-check="visit_count.today">{{ $todayCount }}</strong>
         </p>
-        <p><a class="btn" href="/today">中へ入る（本日の患者へ）</a></p>
+        <p><a class="button" href="/today">中へ入る（本日の患者へ）</a></p>
     </div>
 @endsection

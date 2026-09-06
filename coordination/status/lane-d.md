@@ -681,3 +681,36 @@ $ python tests/run.py http://127.0.0.1:8415
 自分の実装（契約どおり `kind_id: integer`）は最初から正しかった——ただし数値／文字列
 コードの両対応（`_resolve_kind_index`）自体は「契約が許す範囲を広げるだけ」として
 残してある。
+
+## 完了の自己点検（4回目、/ui.css 対応後）
+
+```
+$ python tests/run.py http://127.0.0.1:8415 --only inventory
+
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+  OK  在庫 契約が求める data-testid が画面に出ている  — 34 画面で目印を確認
+  OK  在庫 画面でもAPIでもないルートが応答する（CSV配信・死活・外部照会）  — 3/3 件が応答
+  OK  見た目 共通CSS(/ui.css)を配っていて、全画面が読んでいる  — 34 画面すべてが読んでいる
+
+全 6 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 20 件 通過
+```
+
+`/ui.css` は `spec/ui.css` と無改変で完全一致（diffなし）。`app/static/ui.css` へコピーし、
+`/ui.css` 直下で配る専用ルートを `main.py` に追加、`base.html` の `<head>` から
+`<link>` で読む（全画面が `base.html` を継承しているため1箇所で足りた）。
+クラス名（`success-banner`/`error-banner`/`button`/`disabled`/`num`/`out-of-range`）を
+`ui.css` の定義に合わせて実装側を修正した。詳細は `coordination/qa/lane-d.md` D-22。
+
+**残っているもの（正直な棚卸し）**: `coordination/qa/lane-d.md` D-11・R-21の
+「PDF以外の形式のファイルは取り込みを拒否する」は該当なし・未対応のまま
+（この実装にファイルアップロード自体が無いため）。指揮役側で `screens.md` を
+直す方針と聞いている。それ以外の既知の欠けは無い。

@@ -7,7 +7,7 @@
         <h1>新規予約</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
 
         <form method="post" action="/reservations">
@@ -24,7 +24,7 @@
             </label></p>
             <p><label>処置室 <input name="room" placeholder="診察室1"></label></p>
             <p><label>目的 <input name="purpose"></label></p>
-            <button class="btn" type="submit">予約する</button>
+            <button class="button" type="submit">予約する</button>
         </form>
     </div>
 @endsection

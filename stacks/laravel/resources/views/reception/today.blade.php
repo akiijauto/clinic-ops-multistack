@@ -12,12 +12,12 @@
         </p>
 
         <p>
-            <a class="btn secondary" href="/today{{ $hideDone ? '' : '?hide=1' }}">
+            <a class="button secondary" href="/today{{ $hideDone ? '' : '?hide=1' }}">
                 {{ $hideDone ? '完了行も表示する' : '完了行を隠す' }}
             </a>
-            <a class="btn is-disabled" href="/todo/today.complete_delete_all">完了全削除</a>
-            <a class="btn is-disabled" href="/todo/today.complete_delete_one">完了削除</a>
-            <a class="btn is-disabled" href="/folded/hospital_division">分院</a>
+            <a class="button disabled" href="/todo/today.complete_delete_all">完了全削除</a>
+            <a class="button disabled" href="/todo/today.complete_delete_one">完了削除</a>
+            <a class="button disabled" href="/folded/hospital_division">分院</a>
         </p>
 
         <table>
@@ -44,13 +44,13 @@
                         <td>{{ $r->status }}</td>
                         <td>
                             @if ($r->patient)
-                                <a class="btn secondary" href="/animals/{{ $r->patient->karte_no }}/karte">カルテ</a>
-                                <a class="btn secondary" href="/animals/{{ $r->patient->karte_no }}/accounting">会計</a>
+                                <a class="button secondary" href="/animals/{{ $r->patient->karte_no }}/karte">カルテ</a>
+                                <a class="button secondary" href="/animals/{{ $r->patient->karte_no }}/accounting">会計</a>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-reception"><td colspan="9">本日の受付はありません。</td></tr>
+                    <tr data-testid="empty-reception"><td colspan="9" class="empty">本日の受付はありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

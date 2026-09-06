@@ -49,7 +49,7 @@
     {{if .Form.PreviousExists}}
     <a href="/animals/{{.Patient.KarteNo}}/karte/copy_prev">前回コピー</a>
     {{else}}
-    <span aria-disabled="true">前回コピー（直前の診察がありません）</span>
+    <span class="disabled" aria-disabled="true">前回コピー（直前の診察がありません）</span>
     {{end}}
     <form method="post" action="/animals/{{.Patient.KarteNo}}/karte/cancel" style="display:inline">
       <button type="submit">取消</button>

@@ -7,7 +7,7 @@
         <h1>削除確認 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($deleted))
-            <div data-testid="success-banner">
+            <div data-testid="success-banner" class="success-banner">
                 削除しました（一覧からは隠れますが、記録は残ります。物理削除はしていません）。
             </div>
         @else
@@ -15,8 +15,8 @@
                 一覧表示から隠れるだけです。飼主に他の動物が残っていなければ、飼主も同様に扱います。</p>
             <form method="post" action="/animals/{{ $patient->karte_no }}/delete">
                 @csrf
-                <button class="btn" type="submit">削除する</button>
-                <a class="btn secondary" href="/animals/{{ $patient->karte_no }}">キャンセル</a>
+                <button class="button" type="submit">削除する</button>
+                <a class="button secondary" href="/animals/{{ $patient->karte_no }}">キャンセル</a>
             </form>
         @endif
     </div>

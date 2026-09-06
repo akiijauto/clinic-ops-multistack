@@ -45,18 +45,18 @@ export async function POST(req: Request): Promise<Response> {
     const formData = await req.formData();
     const file = formData.get('file');
     if (!(file instanceof File) || file.size === 0) {
-      banner = `<p data-testid="error-banner" class="banner-error">${escapeHtml(ERROR_MESSAGE.invalid_input)}（ファイルが選択されていません）</p>`;
+      banner = `<p data-testid="error-banner" class="error-banner">${escapeHtml(ERROR_MESSAGE.invalid_input)}（ファイルが選択されていません）</p>`;
     } else {
       const text = await file.text();
       const lines = text.split(/\r\n|\n|\r/).filter((l) => l.length > 0);
       const columns = (lines[0] ?? '').split(',').map((c) => c.trim());
       const dataRowCount = Math.max(lines.length - 1, 0);
-      banner = `<p data-testid="success-banner" class="banner-success">
+      banner = `<p data-testid="success-banner" class="success-banner">
         「${escapeHtml(file.name)}」を確認しました。列: ${columns.map(escapeHtml).join(', ') || '(なし)'} /
         件数: ${dataRowCount}件。<strong>内容は保存していません。</strong></p>`;
     }
   } catch {
-    banner = `<p data-testid="error-banner" class="banner-error">${escapeHtml(ERROR_MESSAGE.invalid_input)}（ファイルを読み取れませんでした）</p>`;
+    banner = `<p data-testid="error-banner" class="error-banner">${escapeHtml(ERROR_MESSAGE.invalid_input)}（ファイルを読み取れませんでした）</p>`;
   }
   return page('取込', TESTID, body(banner));
 }

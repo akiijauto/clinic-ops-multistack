@@ -592,3 +592,48 @@ $ python tests/run.py http://127.0.0.1:8401
 （`internal/server/dosing.go`）。
 
 `stacks/go/` 以外は変更していない。コミット・pushはしていない。残っていること: 無し。
+
+---
+
+## 追記5（2026-09-06、共通CSS /ui.css の配布）
+
+指揮役の指示どおり `spec/ui.css` を1文字も変えずに配った。
+
+1. `spec/ui.css` を `stacks/go/web/static/ui.css` へコピー（`diff` で同一確認済み）。
+2. `web/web.go` に `Assets.UICSSHandler()` を追加。内容ハッシュ付きの
+   `/static/...?v=...` とは別枠で、**`/ui.css` のまま**返す（ハッシュも
+   キャッシュ長期化も無し）。`internal/server/server.go` に `GET /ui.css`
+   として配線した（`server.New` の引数を1つ増やした。呼び出し元
+   `cmd/clinicops/main.go`・`internal/server/server_test.go` も直した）。
+3. `web/templates/layouts/base.html` の `<head>` を
+   `<link rel="stylesheet" href="/ui.css">` に統一。既存の内容ハッシュ付き
+   `app.css`（5行のみ・#main paddingなど）への参照は外した
+   （`#main`のID指定は要素セレクタの`ui.css`より詳細度が高く残ると
+   打ち消せないため。`app.css`のファイル自体・関連ユニットテストは変更していない）。
+   base.htmlは全画面共通の1枚のレイアウトなので、これで**全33画面**が読む形になる。
+4. `ui.css` が求める3つのclassを、既存の要素に付けた（新しい要素は作っていない）:
+   - `num`（td/th向け）／`amount`（dd/span等の非セル要素向け。`ui.css`の
+     `.amount, .money`セレクタを使用）: `accounting.html`（明細の単価・数量・金額、
+     税抜/税込/消費税/未算入行数、料金ピッカーの単価）・`accounting_history.html`
+     （一覧の4項目）・`sales.html`（総合計・未算入行数・各行の金額・構成比）
+   - `disabled`: `karte.html`の「前回コピー（直前の診察がありません）」
+     （既存の`aria-disabled="true"`要素、他に該当箇所は無し）
+   - `out-of-range`: `exam.html`の判定欄（`Flag`が`high`/`low`のときだけ。
+     既存のテキストによる判定表示に加えて色でも示す）
+   `data-testid`・`data-check`は1件も削除していない。
+
+### 実測
+
+```
+$ python tests/run.py http://127.0.0.1:8401 --only inventory
+（既存5項目すべてOK、加えて）
+  OK  見た目 共通CSS(/ui.css)を配っていて、全画面が読んでいる  — 33 画面すべてが読んでいる
+全 6 件 通過
+
+$ python tests/run.py http://127.0.0.1:8401
+全 20 件 通過
+```
+
+`/ui.css` の中身は `diff` で `spec/ui.css` と完全一致を確認済み。
+`go build ./...` / `go test ./...` も全緑。`stacks/go/` 以外は変更していない。
+コミット・pushはしていない。

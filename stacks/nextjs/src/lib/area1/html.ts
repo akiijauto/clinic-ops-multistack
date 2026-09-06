@@ -25,7 +25,7 @@ const e = escapeHtml;
 export function page(opts: { title: string; screenKey: string; nav?: string; body: string }): string {
   return `<!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><title>${e(opts.title)}</title></head>
+<head><meta charset="utf-8"><title>${e(opts.title)}</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
 <header><a href="/">トップ</a> ｜ <a href="/today">本日の患者</a> ｜ <a href="/search">検索</a></header>
 <div data-testid="${e(opts.screenKey)}">
@@ -48,11 +48,11 @@ export function notFoundHtml(message = '指定されたデータが見つかり�
 }
 
 export function successBanner(message: string): string {
-  return `<p data-testid="success-banner">${e(message)}</p>`;
+  return `<p data-testid="success-banner" class="success-banner">${e(message)}</p>`;
 }
 
 export function errorBanner(message: string): string {
-  return `<p data-testid="error-banner">${e(message)}</p>`;
+  return `<p data-testid="error-banner" class="error-banner">${e(message)}</p>`;
 }
 
 /** Parses `application/x-www-form-urlencoded` bodies for screen POSTs. */

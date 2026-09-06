@@ -11,17 +11,17 @@
         </small></p>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <form method="post" action="/animals/{{ $patient->karte_no }}/papers">
             @csrf
             <p><label>題名 <input name="title"></label></p>
             <p><label>メモ <input name="note"></label></p>
-            <button class="btn" type="submit">取り込む</button>
+            <button class="button" type="submit">取り込む</button>
         </form>
 
         <table>
@@ -35,12 +35,12 @@
                         <td>
                             <form method="post" action="/papers/{{ $p->id }}/remove">
                                 @csrf
-                                <button class="btn secondary" type="submit">取消</button>
+                                <button class="button secondary" type="submit">取消</button>
                             </form>
                         </td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-papers"><td colspan="4">書類はありません。</td></tr>
+                    <tr data-testid="empty-papers"><td colspan="4" class="empty">書類はありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -11,8 +11,8 @@
 
   <p>
     総合計
-    <span data-check="sales_summary.net_amount" data-check-axis="total">{{.TotalAmount}}</span>
-    円 ／ 未算入行数 <span data-check="billing.excluded_count">{{.ExcludedCount}}</span>
+    <span class="amount" data-check="sales_summary.net_amount" data-check-axis="total">{{.TotalAmount}}</span>
+    円 ／ 未算入行数 <span class="amount" data-check="billing.excluded_count">{{.ExcludedCount}}</span>
   </p>
 
   {{range .Tables}}
@@ -30,8 +30,8 @@
         {{range .Rows}}
         <tr data-testid="row-sales">
           <td>{{.Key}}</td>
-          <td><span data-check="sales_summary.net_amount" data-check-axis="{{$axis}}" data-check-key="{{.Key}}">{{.NetAmount}}</span></td>
-          {{if .HasShare}}<td><span data-check="sales_summary.share_pct" data-check-axis="category" data-check-key="{{.Key}}">{{.SharePct}}</span>%</td>{{end}}
+          <td class="num"><span data-check="sales_summary.net_amount" data-check-axis="{{$axis}}" data-check-key="{{.Key}}">{{.NetAmount}}</span></td>
+          {{if .HasShare}}<td class="num"><span data-check="sales_summary.share_pct" data-check-axis="category" data-check-key="{{.Key}}">{{.SharePct}}</span>%</td>{{end}}
         </tr>
         {{end}}
       </tbody>

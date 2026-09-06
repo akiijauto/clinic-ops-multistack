@@ -7,13 +7,13 @@
         <h1>検査 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
-        <p><a class="btn secondary" href="/animals/{{ $patient->karte_no }}/accounting">会計</a></p>
+        <p><a class="button secondary" href="/animals/{{ $patient->karte_no }}/accounting">会計</a></p>
 
         <div class="card">
             <h2>新しい検査を記録する</h2>
@@ -38,7 +38,7 @@
                         @endforeach
                     </tbody>
                 </table>
-                <button class="btn" type="submit">保存</button>
+                <button class="button" type="submit">保存</button>
             </form>
         </div>
 
@@ -65,8 +65,7 @@
                                     data-check="lab_test_item.judgment"
                                     data-check-flag="{{ $judgment?->flag() ?? 'normal' }}"
                                     @class([
-                                        'flag-high' => $judgment?->judgement === 'high',
-                                        'flag-low' => $judgment?->judgement === 'low',
+                                        'out-of-range' => in_array($judgment?->judgement, ['high', 'low'], true),
                                     ])
                                 >{{ $judgment?->label() }}</td>
                             </tr>

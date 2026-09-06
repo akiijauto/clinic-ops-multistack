@@ -9,6 +9,9 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <%# 共通CSS（spec/ui.css をそのまま配る。中身は書き換えない。指揮役の指示）。 %>
+    <link rel="stylesheet" href="/ui.css">
+
     <%= yield :head %>
 
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>

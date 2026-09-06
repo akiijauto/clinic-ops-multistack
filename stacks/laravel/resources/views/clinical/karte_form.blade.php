@@ -10,7 +10,7 @@
             <p><small>{{ $notice }}</small></p>
         @endif
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
 
         <form method="post" action="/animals/{{ $patient->karte_no }}/karte">
@@ -37,14 +37,14 @@
                 </fieldset>
             @endforeach
 
-            <button class="btn" type="submit">保存</button>
+            <button class="button" type="submit">保存</button>
         </form>
 
         <form method="post" action="/animals/{{ $patient->karte_no }}/karte/cancel" style="display:inline">
             @csrf
-            <button class="btn secondary" type="submit">取消</button>
+            <button class="button secondary" type="submit">取消</button>
         </form>
 
-        <p><a class="btn secondary" href="/animals/{{ $patient->karte_no }}/karte">カルテへ戻る</a></p>
+        <p><a class="button secondary" href="/animals/{{ $patient->karte_no }}/karte">カルテへ戻る</a></p>
     </div>
 @endsection

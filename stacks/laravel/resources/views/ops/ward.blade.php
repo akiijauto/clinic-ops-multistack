@@ -20,12 +20,12 @@
                         <td>{{ $h->room }}</td>
                         <td>
                             @if ($h->patient)
-                                <a class="btn secondary" href="/animals/{{ $h->patient->karte_no }}/ward">入院記録</a>
+                                <a class="button secondary" href="/animals/{{ $h->patient->karte_no }}/ward">入院記録</a>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-hospitalization"><td colspan="5">入院中の患者はいません。</td></tr>
+                    <tr data-testid="empty-hospitalization"><td colspan="5" class="empty">入院中の患者はいません。</td></tr>
                 @endforelse
             </tbody>
         </table>

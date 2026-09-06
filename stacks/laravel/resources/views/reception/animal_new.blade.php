@@ -8,7 +8,7 @@
         <p>次のカルテNo: <strong>{{ $nextKarteNo }}</strong></p>
 
         @if (count($errors) > 0)
-            <div data-testid="error-banner">
+            <div data-testid="error-banner" class="error-banner">
                 <ul>
                     @foreach ($errors as $e)
                         <li>{{ $e }}</li>
@@ -56,7 +56,7 @@
                 <p><label>生年月日 <input type="date" name="patient_birth_date" value="{{ $old['patient_birth_date'] ?? '' }}"></label></p>
             </fieldset>
 
-            <button class="btn" type="submit">登録する</button>
+            <button class="button" type="submit">登録する</button>
         </form>
     </div>
 @endsection

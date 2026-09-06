@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
   restoreVisit(db, visit.id, null, reason);
 
   const body = `<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><title>診察の復元</title></head>
+<html lang="ja"><head><meta charset="utf-8"><title>診察の復元</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
 <div data-testid="screen-karte">
 ${successBanner('復元しました。')}

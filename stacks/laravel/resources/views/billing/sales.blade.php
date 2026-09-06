@@ -13,8 +13,8 @@
                 @foreach ($summary['by_category'] as $row)
                     <tr data-testid="row-sales-category">
                         <td>{{ $row['category'] }}</td>
-                        <td>{{ number_format($row['net_amount']) }}</td>
-                        <td>{{ $row['share_pct'] }}%</td>
+                        <td class="num">{{ number_format($row['net_amount']) }}</td>
+                        <td class="num">{{ $row['share_pct'] }}%</td>
                     </tr>
                 @endforeach
             </tbody>

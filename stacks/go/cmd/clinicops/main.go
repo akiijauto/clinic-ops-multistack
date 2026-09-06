@@ -74,7 +74,7 @@ func run() error {
 	}
 	log.Info("data loaded", "dir", dataDir)
 
-	srv := server.New(cfg, log, views, assets.Handler(), billingStore, clinicalStore, receptionHandlers, settingsHandlers)
+	srv := server.New(cfg, log, views, assets.Handler(), assets.UICSSHandler(), billingStore, clinicalStore, receptionHandlers, settingsHandlers)
 
 	httpSrv := &http.Server{
 		Addr:              cfg.Addr,

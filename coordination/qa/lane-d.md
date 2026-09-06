@@ -510,3 +510,24 @@
   `{"id":null,"patient_id":18,"kind":"heartworm","fiscal_year":2026,"m01":"",...}`
 - `python tests/run.py http://127.0.0.1:8415`（全19件）・`--only inventory`（全5件）
   とも全件通過を確認
+
+## D-22: 共通CSS（/ui.css）を配り、全画面から読ませた
+
+- `spec/ui.css` を1文字も変えず `app/static/ui.css` へコピーし、`/ui.css`（`/static/ui.css`
+  ではなく直下）で配る専用ルートを `main.py` に追加した（`FileResponse`）
+- 全画面が `base.html` を `{% extends %}` している構造だったため、`<link rel="stylesheet"
+  href="/ui.css">` を `base.html` の `<head>` に1行足すだけで34画面すべてに反映された
+  （`data-testid` を1箇所で直したときと同じ理由）
+- `ui.css` が要求するクラス名に実装側を合わせた:
+  - `_macros.html` の `success_banner`/`error_banner` を `banner-success`/`banner-error`
+    → `success-banner`/`error-banner` に修正（ui.cssのセレクタと不一致だった）
+  - `action_button` マクロと各テンプレートの `class="btn btn-action"`/`"btn btn-disabled"`
+    を `class="button"`/`class="button disabled"` に統一（独自の `btn-*` は ui.css に
+    定義が無く効いていなかった）
+  - 金額・数量のセルに `class="num"`（会計・会計履歴・売上集計・マスタの該当列）
+  - 基準の外にある検査値（`exam.html`）に `class="out-of-range"`（検算5「色だけで
+    伝えない」に対応。判定欄の文字列と併用）
+- 色・余白は一切自分で足していない（`ui.css` の中身は無改変）
+- 実測: `GET /ui.css` -> 200、`spec/ui.css` と完全一致（diff差分なし）。
+  `python tests/run.py http://127.0.0.1:8415 --only inventory`（全6件）・
+  フル（全20件）とも全件通過

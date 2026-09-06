@@ -10,7 +10,7 @@
 
   <p data-testid="sales-total">
     対象期間の税抜総合計:
-    <span data-check="sales_summary.net_amount" data-check-axis="total" data-check-key="total">
+    <span class="num" data-check="sales_summary.net_amount" data-check-axis="total" data-check-key="total">
       <%= @result[:total_net_amount] %>
     </span>
   </p>
@@ -25,13 +25,13 @@
       <% @result[:by_category].each do |row| %>
         <tr data-testid="row-sales">
           <td><%= row.key %></td>
-          <td><%= row.count %></td>
-          <td>
+          <td class="num"><%= row.count %></td>
+          <td class="num">
             <span data-check="sales_summary.net_amount" data-check-axis="category" data-check-key="<%= row.key %>">
               <%= row.net_amount %>
             </span>
           </td>
-          <td>
+          <td class="num">
             <span data-check="sales_summary.share_pct" data-check-axis="category" data-check-key="<%= row.key %>">
               <%= row.respond_to?(:share_pct) ? row.share_pct : "" %>
             </span>
@@ -48,8 +48,8 @@
       <% @result[:by_staff].each do |row| %>
         <tr data-testid="row-sales">
           <td><%= row.key.is_a?(Integer) ? (Staff.find_by(id: row.key)&.name || row.key) : row.key %></td>
-          <td><%= row.count %></td>
-          <td>
+          <td class="num"><%= row.count %></td>
+          <td class="num">
             <span data-check="sales_summary.net_amount" data-check-axis="staff" data-check-key="<%= row.key %>">
               <%= row.net_amount %>
             </span>
@@ -66,8 +66,8 @@
       <% @result[:by_date].each do |row| %>
         <tr data-testid="row-sales">
           <td><%= row.key %></td>
-          <td><%= row.count %></td>
-          <td>
+          <td class="num"><%= row.count %></td>
+          <td class="num">
             <span data-check="sales_summary.net_amount" data-check-axis="date" data-check-key="<%= row.key %>">
               <%= row.net_amount %>
             </span>

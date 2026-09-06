@@ -23,7 +23,7 @@
       <label>次回予定日 <input type="date" name="next_due_date" value="{{ edit_target.next_due_date.isoformat() if edit_target and edit_target.next_due_date else "" }}"></label>
       <label>担当医(Staff ID) <input type="text" name="staff_id" value="{{ edit_target.staff_id if edit_target and edit_target.staff_id is not none else "" }}"></label>
     </div>
-    <button type="submit" class="btn btn-action">保存</button>
+    <button type="submit" class="button">保存</button>
   </form>
 
   <h2>実施記録一覧（新しい順）</h2>

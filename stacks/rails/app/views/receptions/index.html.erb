@@ -25,7 +25,7 @@
 
   <p>
     <%# 分院の切り替え（状態B）。model.md「落としたもの」に対応。 %>
-    <a href="/folded/hospital_division" data-testid="btn-hospital-division" aria-disabled="true">分院の切り替え（この企画では作っていません）</a>
+    <a href="/folded/hospital_division" class="disabled" data-testid="btn-hospital-division" aria-disabled="true">分院の切り替え（この企画では作っていません）</a>
   </p>
 
   <% if @receptions.empty? %>
@@ -87,7 +87,7 @@
 
   <p>
     <%# 完了全削除／完了削除（状態C）。完了行を消すと当日件数が数えられなくなるため、あえて塞んである。 %>
-    <a href="/todo/reception_done_delete" data-testid="btn-delete-done" aria-disabled="true">完了削除（あえて動かしていません）</a>
+    <a href="/todo/reception_done_delete" class="disabled" data-testid="btn-delete-done" aria-disabled="true">完了削除（あえて動かしていません）</a>
   </p>
 
   <p><a href="/animals/new">新規登録</a></p>

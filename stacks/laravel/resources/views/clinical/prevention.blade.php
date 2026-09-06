@@ -7,10 +7,10 @@
         <h1>予防（{{ $kindName }}） — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <form method="post" action="/animals/{{ $patient->karte_no }}/prevention/{{ $kindId }}">
@@ -18,7 +18,7 @@
             <p><label>実施内容 <input name="content"></label></p>
             <p><label>実施日 <input type="date" name="performed_date"></label></p>
             <p><label>次回予定日（空可） <input type="date" name="next_due_date"></label></p>
-            <button class="btn" type="submit">保存</button>
+            <button class="button" type="submit">保存</button>
         </form>
 
         <table>
@@ -31,7 +31,7 @@
                         <td>{{ optional($r->next_due_date)->toDateString() }}</td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-prevention"><td colspan="3">実施記録はありません。</td></tr>
+                    <tr data-testid="empty-prevention"><td colspan="3" class="empty">実施記録はありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

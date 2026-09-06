@@ -7,11 +7,11 @@
         <h1>顧客 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($saved))
-            <div data-testid="success-banner">保存しました。</div>
+            <div data-testid="success-banner" class="success-banner">保存しました。</div>
         @endif
 
         @if ($patient->isDeleted())
-            <div data-testid="error-banner">この動物は削除済みです（{{ $patient->deleted_at }}）。</div>
+            <div data-testid="error-banner" class="error-banner">この動物は削除済みです（{{ $patient->deleted_at }}）。</div>
         @endif
 
         <div class="card">
@@ -35,18 +35,18 @@
                 <p><label>品種 <input name="breed" value="{{ $patient->breed }}"></label></p>
                 <p>性別: {{ ['male' => 'オス', 'female' => 'メス', 'unknown' => '不明'][$patient->sex] ?? $patient->sex }}</p>
                 <p>生年月日: {{ optional($patient->birth_date)->toDateString() }}</p>
-                <button class="btn" type="submit">保存</button>
+                <button class="button" type="submit">保存</button>
             </form>
         </div>
 
         <p>未収金: {{ $hasUnpaid ? 'あり' : 'なし' }}</p>
 
         <p>
-            <a class="btn secondary" href="/animals/{{ $patient->karte_no }}/karte">カルテ</a>
-            <a class="btn secondary" href="/animals/{{ $patient->karte_no }}/history">来院履歴</a>
-            <a class="btn secondary" href="/animals/{{ $patient->karte_no }}/accounting">会計</a>
-            <a class="btn secondary" href="/animals/new?owner={{ $owner->owner_no }}">この飼主に動物を追加</a>
-            <a class="btn secondary" href="/animals/{{ $patient->karte_no }}/delete">削除</a>
+            <a class="button secondary" href="/animals/{{ $patient->karte_no }}/karte">カルテ</a>
+            <a class="button secondary" href="/animals/{{ $patient->karte_no }}/history">来院履歴</a>
+            <a class="button secondary" href="/animals/{{ $patient->karte_no }}/accounting">会計</a>
+            <a class="button secondary" href="/animals/new?owner={{ $owner->owner_no }}">この飼主に動物を追加</a>
+            <a class="button secondary" href="/animals/{{ $patient->karte_no }}/delete">削除</a>
         </p>
 
         <div class="card">

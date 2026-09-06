@@ -16,17 +16,17 @@
 
   {% if rows %}
   <table>
-    <thead><tr><th>伝票No</th><th>会計日</th><th>状態</th><th>税抜合計</th><th>消費税額</th><th>税込合計</th><th>未算入</th></tr></thead>
+    <thead><tr><th>伝票No</th><th>会計日</th><th>状態</th><th class="num">税抜合計</th><th class="num">消費税額</th><th class="num">税込合計</th><th class="num">未算入</th></tr></thead>
     <tbody>
       {% for b in rows %}
       <tr {{ row("billing") }} {% if b.patient_id == current_patient_id %}class="current-patient"{% endif %}>
         <td><a href="/animals/{{ karte_no }}/accounting?slip={{ b.id }}">{{ b.slip_no or "（確定前）" }}</a></td>
         <td>{{ b.billed_on }}</td>
         <td>{{ b.status }}</td>
-        <td {{ value_check("billing.net_amount") }}>{{ b.net_amount }}</td>
-        <td {{ value_check("billing.tax_amount") }}>{{ b.tax_amount }}</td>
-        <td {{ value_check("billing.total_amount") }}>{{ b.total_amount }}</td>
-        <td {{ value_check("billing.excluded_count") }}>{{ b.excluded_count }}</td>
+        <td class="num" {{ value_check("billing.net_amount") }}>{{ b.net_amount }}</td>
+        <td class="num" {{ value_check("billing.tax_amount") }}>{{ b.tax_amount }}</td>
+        <td class="num" {{ value_check("billing.total_amount") }}>{{ b.total_amount }}</td>
+        <td class="num" {{ value_check("billing.excluded_count") }}>{{ b.excluded_count }}</td>
       </tr>
       {% endfor %}
     </tbody>

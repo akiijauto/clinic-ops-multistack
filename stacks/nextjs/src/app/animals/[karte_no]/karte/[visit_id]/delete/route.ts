@@ -16,7 +16,7 @@ type Params = { params: Promise<{ karte_no: string; visit_id: string }> };
  */
 function render(karteNo: string, visitId: string, visit: { visit_date: string; diagnosis: string; chief_complaint: string; symptom: string; deleted_at: string | null }, banner: string): string {
   const body = `<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><title>診察の削除</title></head>
+<html lang="ja"><head><meta charset="utf-8"><title>診察の削除</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
 <div data-testid="screen-karte">
 <div data-testid="screen-visit-delete">

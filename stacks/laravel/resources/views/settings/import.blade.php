@@ -7,10 +7,10 @@
         <h1>取込</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">
+            <div data-testid="success-banner" class="success-banner">
                 {{ $success }}
                 @if (isset($columns))
                     <p>列名: {{ implode(', ', $columns) }} / 行数: {{ $rowCount }}</p>
@@ -25,7 +25,7 @@
         <form method="post" action="/settings/import" enctype="multipart/form-data">
             @csrf
             <input type="file" name="file" accept=".csv">
-            <button class="btn" type="submit">読み取る</button>
+            <button class="button" type="submit">読み取る</button>
         </form>
 
         <h2>読み込み済みデータの件数</h2>

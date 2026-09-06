@@ -15,14 +15,14 @@
                     <tr data-testid="row-feature">
                         <td>{{ $item['title'] }}</td>
                         <td>{{ $item['message'] }}</td>
-                        <td><a class="btn secondary" href="/folded/{{ $key }}">折りたたみ表示で見る</a></td>
+                        <td><a class="button secondary" href="/folded/{{ $key }}">折りたたみ表示で見る</a></td>
                     </tr>
                 @endforeach
                 @foreach ($todo as $key => $item)
                     <tr data-testid="row-feature">
                         <td>{{ $item['title'] }}</td>
                         <td>{{ $item['message'] }}</td>
-                        <td><a class="btn secondary" href="/todo/{{ $key }}">ToDoで見る</a></td>
+                        <td><a class="button secondary" href="/todo/{{ $key }}">ToDoで見る</a></td>
                     </tr>
                 @endforeach
             </tbody>

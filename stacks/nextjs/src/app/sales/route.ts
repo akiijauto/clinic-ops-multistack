@@ -9,9 +9,9 @@ function rowsHtml(rows: SummaryRow[], keyLabel: string): string {
     .map(
       (r) => `<tr data-testid="row-sales">
         <td>${e(r.key)}</td>
-        <td>${r.billing_count}</td>
-        <td data-check="sales.net_amount">${r.net_amount}</td>
-        <td>${r.excluded_detail_count}</td>
+        <td class="num">${r.billing_count}</td>
+        <td class="num" data-check="sales.net_amount">${r.net_amount}</td>
+        <td class="num">${r.excluded_detail_count}</td>
       </tr>`,
     )
     .join('\n');
@@ -57,7 +57,7 @@ export async function GET(req: Request): Promise<Response> {
       <button type="submit">集計</button>
     </form>
     <dl>
-      <dt>合計金額（税抜）</dt><dd data-testid="sales-total" data-check="sales.total_net_amount">${summary.net_amount_total}</dd>
+      <dt>合計金額（税抜）</dt><dd class="money" data-testid="sales-total" data-check="sales.total_net_amount">${summary.net_amount_total}</dd>
       <dt>未算入の行数</dt><dd data-testid="sales-excluded-count">${summary.excluded_detail_count_total}（単価未設定の明細は合計に含めていません）</dd>
     </dl>
     ${order.map((k) => tables[k]).join('\n')}`;

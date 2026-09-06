@@ -23,8 +23,8 @@
         <td>{{ d.price_code }}</td>
         <td>{{ d.price_code }}</td>
         <td>{{ d.name }}</td>
-        <td>{% if d.unit_price is none %}<span class="hint">未設定</span>{% else %}{{ d.unit_price }}{% endif %}</td>
-        <td>{{ d.quantity }}</td>
+        <td class="num">{% if d.unit_price is none %}<span class="hint">未設定</span>{% else %}{{ d.unit_price }}{% endif %}</td>
+        <td class="num">{{ d.quantity }}</td>
         <td>{{ "課税" if d.is_taxable else "非課税" }}</td>
         <td>
           {% if billing.status != "confirmed" %}
@@ -48,10 +48,10 @@
   </table>
 
   <dl>
-    <dt>税抜合計</dt><dd {{ value_check("billing.net_amount") }}>{{ billing.net_amount }}</dd>
-    <dt>消費税額</dt><dd {{ value_check("billing.tax_amount") }}>{{ billing.tax_amount }}</dd>
-    <dt>税込合計</dt><dd {{ value_check("billing.total_amount") }}>{{ billing.total_amount }}</dd>
-    <dt>未算入の行数</dt><dd {{ value_check("billing.excluded_count") }}>{{ billing.excluded_count }}</dd>
+    <dt>税抜合計</dt><dd class="num" {{ value_check("billing.net_amount") }}>{{ billing.net_amount }}</dd>
+    <dt>消費税額</dt><dd class="num" {{ value_check("billing.tax_amount") }}>{{ billing.tax_amount }}</dd>
+    <dt>税込合計</dt><dd class="num" {{ value_check("billing.total_amount") }}>{{ billing.total_amount }}</dd>
+    <dt>未算入の行数</dt><dd class="num" {{ value_check("billing.excluded_count") }}>{{ billing.excluded_count }}</dd>
   </dl>
 
   {% if billing.status != "confirmed" %}

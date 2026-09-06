@@ -432,3 +432,31 @@ $ python tests/run.py http://127.0.0.1:8414 --only inventory
 $ python tests/run.py http://127.0.0.1:8414
 全 19 件 通過
 ```
+
+---
+
+## Q19. 共通CSS `/ui.css` の配布とHTML構造の統一（仮決め・記録）
+
+指揮役の指示（案B・見た目を5実装で揃える）に対応した。
+
+- `spec/ui.css` を1文字も変えず `stacks/rails/public/ui.css` にコピーし、`/ui.css` として配信
+  （Railsは `public/` 配下を静的配信するので、asset pipelineのダイジェスト名を避けられる）
+- `app/views/layouts/application.html.erb` の `<head>` に
+  `<link rel="stylesheet" href="/ui.css">` を追加（全画面がこのレイアウトを共有しているので
+  1箇所の変更で足りる。`layout: false` の印刷用フラグメント（`karte/print` 等）は
+  `<html>` を持たないため判定器の対象外——`_ui` チェックの実装がそこを見て確認した）
+- クラスを3種追加: `num`（会計・売上の金額/数量セル。`accounting/show,history` `sales/index`）・
+  `out-of-range`（検査の基準外値。`exams/show`。値セルと判定セルの両方に付けた）・
+  `disabled`（B/C状態の偽ボタン2件。`/folded/hospital_division` `/todo/reception_done_delete`。
+  既存の `aria-disabled="true"` は消していない）
+- `data-testid` / `data-check` は一切変更していない
+
+### 確認結果
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+全 6 件 通過（新しい「見た目」チェック含む）
+
+$ python tests/run.py http://127.0.0.1:8414
+全 20 件 通過
+```

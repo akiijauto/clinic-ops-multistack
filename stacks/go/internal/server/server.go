@@ -23,6 +23,7 @@ type Server struct {
 	log       *slog.Logger
 	views     *view.Set
 	static    http.Handler
+	uiCSS     http.Handler
 	billing   *billing.Store
 	clinical  *clinical.Store
 	reception *reception.Handlers
@@ -39,11 +40,13 @@ type Route struct {
 
 // New は Server を組み立てる。
 // static は /static/ 以下を返す http.Handler（内容ハッシュ付きURLに対応したもの）。
+// uiCSS は 5実装共通のスタイル（`spec/ui.css`）を **`/ui.css` のまま**配る
+// http.Handler（nilなら /ui.css は登録しない）。
 // billingStore・clinicalStore・receptionHandlers・settingsHandlers は nil でもよい
 // （対応する経路はその場合 404 を返す。テストで一部の依存を使わない組み立てを
 // 許すため — internal/server/server_test.go）。
-func New(cfg config.Config, log *slog.Logger, views *view.Set, static http.Handler, billingStore *billing.Store, clinicalStore *clinical.Store, receptionHandlers *reception.Handlers, settingsHandlers *settings.Handlers) *Server {
-	return &Server{cfg: cfg, log: log, views: views, static: static, billing: billingStore, clinical: clinicalStore, reception: receptionHandlers, settings: settingsHandlers}
+func New(cfg config.Config, log *slog.Logger, views *view.Set, static http.Handler, uiCSS http.Handler, billingStore *billing.Store, clinicalStore *clinical.Store, receptionHandlers *reception.Handlers, settingsHandlers *settings.Handlers) *Server {
+	return &Server{cfg: cfg, log: log, views: views, static: static, uiCSS: uiCSS, billing: billingStore, clinical: clinicalStore, reception: receptionHandlers, settings: settingsHandlers}
 }
 
 // Handler はミドルウェアを巻いた http.Handler を返す。
@@ -57,6 +60,9 @@ func (s *Server) Handler() http.Handler {
 
 	if s.static != nil {
 		s.handleRaw(mux, "GET /static/", s.static)
+	}
+	if s.uiCSS != nil {
+		s.handleRaw(mux, "GET /ui.css", s.uiCSS)
 	}
 
 	s.handle(mux, "GET /api/billings/{id}", s.handleGetBilling)

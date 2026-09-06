@@ -28,10 +28,10 @@
         <td>{{.Status}}</td>
         <td>{{.PatientName}}</td>
         <td>{{.OwnerName}}</td>
-        <td><span data-check="billing.net_amount">{{.NetAmount}}</span></td>
-        <td><span data-check="billing.tax_amount">{{.TaxAmount}}</span></td>
-        <td><span data-check="billing.total_amount">{{.TotalAmount}}</span></td>
-        <td><span data-check="billing.excluded_count">{{.ExcludedCount}}</span></td>
+        <td class="num"><span data-check="billing.net_amount">{{.NetAmount}}</span></td>
+        <td class="num"><span data-check="billing.tax_amount">{{.TaxAmount}}</span></td>
+        <td class="num"><span data-check="billing.total_amount">{{.TotalAmount}}</span></td>
+        <td class="num"><span data-check="billing.excluded_count">{{.ExcludedCount}}</span></td>
       </tr>
       {{end}}
     </tbody>

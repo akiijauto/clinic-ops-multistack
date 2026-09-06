@@ -30,12 +30,15 @@ function judgedTestView(karteNo: string, patient: Patient, test: LabTestWire): s
   const rows = test.items
     .map((it) => {
       const flagAttr = it.data_check_flag ? ` data-check-flag="${it.data_check_flag}"` : '';
+      // 検算5「基準の外にある値は判定欄と色の両方に出る」-- 色だけで伝えないよう、
+      // `.out-of-range`（ui.css）は判定欄の文字（H/L）と併用する。色だけの装飾にしない。
+      const rangeClass = it.out_of_range ? ' class="out-of-range"' : '';
       const shown = it.value_num ?? it.value_text ?? '';
       return `<tr data-testid="row-lab-item">
         <td>${e(it.item_code)}</td>
-        <td data-testid="lab-item-value" data-check="lab_test_item.value">${e(shown)}</td>
+        <td data-testid="lab-item-value" data-check="lab_test_item.value"${rangeClass}>${e(shown)}</td>
         <td>${it.reference_low ?? ''}〜${it.reference_high ?? ''}</td>
-        <td data-testid="lab-item-judgement" data-check="lab_test_item.judgment"${flagAttr}>${e(it.judgment)}</td>
+        <td data-testid="lab-item-judgement" data-check="lab_test_item.judgment"${flagAttr}${rangeClass}>${e(it.judgment)}</td>
       </tr>`;
     })
     .join('\n');
@@ -94,7 +97,7 @@ export function renderExamScreen(
   current: LabTestWire | undefined,
   banner?: { kind: 'success' | 'error'; message: string },
 ): Response {
-  const bannerHtml = banner ? `<p data-testid="${banner.kind}-banner" class="banner-${banner.kind}">${e(banner.message)}</p>` : '';
+  const bannerHtml = banner ? `<p data-testid="${banner.kind}-banner" class="${banner.kind}-banner">${e(banner.message)}</p>` : '';
   const body = `${header(patient)}
     ${bannerHtml}
     ${current ? judgedTestView(patient.karte_no, patient, current) : '<p>まだ検査結果がありません。下のフォームから記録してください。</p>'}

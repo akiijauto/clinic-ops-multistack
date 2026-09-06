@@ -7,15 +7,15 @@
         <h1>投薬（{{ $kindName }}） — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($error))
-            <div data-testid="error-banner">{{ $error }}</div>
+            <div data-testid="error-banner" class="error-banner">{{ $error }}</div>
         @endif
         @if (!empty($success))
-            <div data-testid="success-banner">{{ $success }}</div>
+            <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
         <form method="get" action="/animals/{{ $patient->karte_no }}/dosing/{{ $kindId }}">
             <label>年度 <input type="number" name="fiscal_year" value="{{ $fiscalYear }}"></label>
-            <button class="btn secondary" type="submit">表示</button>
+            <button class="button secondary" type="submit">表示</button>
         </form>
 
         <form method="post" action="/animals/{{ $patient->karte_no }}/dosing/{{ $kindId }}">
@@ -43,7 +43,7 @@
                     </tr>
                 </tbody>
             </table>
-            <button class="btn" type="submit">保存</button>
+            <button class="button" type="submit">保存</button>
         </form>
 
         <h2>過去の年度</h2>

@@ -20,7 +20,7 @@
     <p>{{ patient.name_kanji }}（{{ patient.name_kana }}）</p>
   </div>
 
-  <a href="/animals/{{ patient.karte_no }}/accounting" class="btn btn-action">会計</a>
+  <a href="/animals/{{ patient.karte_no }}/accounting" class="button">会計</a>
 
   <h2>検査結果を記録</h2>
   {% if latest_visit %}
@@ -44,7 +44,7 @@
         {% endfor %}
       </tbody>
     </table>
-    <button type="submit" class="btn btn-action">保存</button>
+    <button type="submit" class="button">保存</button>
   </form>
   {% else %}
   <p class="empty">この動物にはまだ診察記録が無いため、検査を保存できません。先に「新規診察」でカルテを作成してください。</p>
@@ -69,9 +69,11 @@
               {{ it.reference_low }} 〜 {{ it.reference_high }}
             {% else %}—{% endif %}
           </td>
-          <td>{{ master_item.unit if master_item else "" }}</td>
-          <td data-check="lab_test_item.value">{{ it.value_text if it.value_text is not none else (it.value_num if it.value_num is not none else "") }}</td>
-          <td data-check="lab_test_item.judgment" data-check-flag="{{ it.flag }}">{{ it.judgment }}</td>
+          <td class="num">{{ master_item.unit if master_item else "" }}</td>
+          {# 基準の外は class="out-of-range" も付ける。検算5:「色だけで伝えない」——
+             判定欄の文字（it.judgment）とあわせて2系統で伝える。 #}
+          <td class="num{% if it.flag in ('high', 'low') %} out-of-range{% endif %}" data-check="lab_test_item.value">{{ it.value_text if it.value_text is not none else (it.value_num if it.value_num is not none else "") }}</td>
+          <td class="{% if it.flag in ('high', 'low') %}out-of-range{% endif %}" data-check="lab_test_item.judgment" data-check-flag="{{ it.flag }}">{{ it.judgment }}</td>
         </tr>
         {% endfor %}
       </tbody>

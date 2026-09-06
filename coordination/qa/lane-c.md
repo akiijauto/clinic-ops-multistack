@@ -193,3 +193,35 @@ R-20の「200で空を返す」は型修正だけで満たせた。404は患者�
 
 実測: `/postal?code=999-0001`（一致あり）、`/postal?code=1000001`（一致あり、正規化後
 "100-0001"と一致）、`/postal`（code省略）のいずれも200。
+
+## L. 2026-09-06 — 共通CSS(/ui.css)を配布
+
+`spec/ui.css`をそのままコピーして`public/ui.css`として配った（diff で内容一致を確認済み）。
+`resources/views/layouts/app.blade.php`（全画面が使う唯一のレイアウト）から
+`<link rel="stylesheet" href="/ui.css">`で読むよう変更し、自前の`<style>`（1,886字）を削除した。
+`resources/views/clinical/karte_print.blade.php`（唯一レイアウトを使わない独立画面）にも
+同様に配線し、自前の`<style>`を削除した。
+
+HTML構造の対応:
+
+- `class="btn"` → `class="button"` へ全置換（72箇所。ui.cssは`.button`/`.button.secondary`/
+  `.button.disabled`を定義しており、旧`.btn`は何にも一致しなかった）
+- `<a class="btn is-disabled">`（B/C状態のボタン。今日の患者画面の3件）→
+  `class="button disabled"`（`ui.css`の`a.disabled`規則に一致。消していない）
+- `data-testid="error-banner"` / `"success-banner"`（16箇所）に`class="error-banner"` /
+  `class="success-banner"`を併記（`ui.css`はクラスで見た目を決めるため、`data-testid`だけでは
+  スタイルが当たらない）
+- `data-testid="empty-*"`の行（10箇所）の`<td>`に`class="empty"`を追加
+- 検査結果の判定欄（`clinical/exam.blade.php`）を`flag-high`/`flag-low`（`ui.css`に定義が無く
+  死んでいた）から`class="out-of-range"`（検算5。`ui.css`の`.out-of-range`規則）へ統一
+- `billing/accounting.blade.php`（単価・数量・金額）、`billing/accounting_history.blade.php`
+  （税抜・消費税・税込・未算入）、`billing/sales.blade.php`（金額・構成比）の数値セルに
+  `class="num"`を追加（右寄せ・桁揃え）
+- `<header class="gnav">`を`<nav>`要素へ変更（`ui.css`は`nav`要素セレクタでスタイルを当てる）
+
+**`spec/ui.css`の中身は1文字も変えていない**（`diff spec/ui.css stacks/laravel/public/ui.css`で確認）。
+色・余白は自分で足していない（既存の機能的なインラインstyle——`display:inline`のフォーム、
+入力欄の`width`、`<pre>`の`margin:0`——はレイアウト目的のため残した。装飾目的のものではない）。
+
+実測: `python tests/run.py http://127.0.0.1:8403` 全20件通過（新規追加された
+「見た目 共通CSS(/ui.css)を配っていて、全画面が読んでいる」含む）。

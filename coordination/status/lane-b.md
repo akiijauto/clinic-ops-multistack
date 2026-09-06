@@ -396,3 +396,38 @@ $ python tests/run.py http://127.0.0.1:8414
 一意に決められないための「確かめられない」であり、無いわけではない
 （`/folded/{key}` `/todo/{key}` は画面から実在するキーを拾って確認済み。papers系は
 data/にpaper自体が無いため確かめようがない）。指揮役の判断が必要なら申告する。
+
+---
+
+## 2026-09-06 — 共通CSS `/ui.css` の配布・HTML構造の統一
+
+指揮役の指示（案B）に対応。`spec/ui.css` を書き換えずに `/ui.css` として配り、全画面の
+`<head>`（`app/views/layouts/application.html.erb` 一箇所）から読むようにした。
+`class="num"`（会計・売上の金額/数量セル）・`class="out-of-range"`（検査の基準外値）・
+`class="disabled"`（B/C状態の偽ボタン2件）も付けた。詳細は `coordination/qa/lane-b.md` Q19。
+
+### 完了の自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414 --only inventory
+── inventory ──
+
+  OK  在庫 契約の画面ルートが全部ある（未実装はクローラーに見えない）  — 38/42 件ある（4 件は確かめられない: /folded/{key}, /papers/{paper_id}, /papers/{paper_id}/remove）
+  OK  在庫 契約のAPIルートが全部ある  — 33/36 件ある（3 件は確かめられない: /api/papers/{paper_id}, /api/todo/{key}, /api/masters/{key}）
+  OK  在庫 この検査自体が働いているか（確かめられない分が多すぎないか）  — 対象 78 件中、確かめられないのは 7 件
+  OK  在庫 契約が求める data-testid が画面に出ている  — 34 画面で目印を確認
+  OK  在庫 画面でもAPIでもないルートが応答する（CSV配信・死活・外部照会）  — 3/3 件が応答
+  OK  見た目 共通CSS(/ui.css)を配っていて、全画面が読んでいる  — 32 画面すべてが読んでいる
+
+全 6 件 通過
+```
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+（smoke/money/screen/rules/crawl/inventory 全20件）
+全 20 件 通過
+```
+
+**残っていること**: `num`/`out-of-range`/`disabled` は指揮役が例示した3箇所に絞って付けた
+（会計・売上・検査・B/C状態ボタン2件）。他の金額表示（例: `animals/show` の未収金は
+テーブルセルではなく地の文なので付けていない）は指示があれば対応する。

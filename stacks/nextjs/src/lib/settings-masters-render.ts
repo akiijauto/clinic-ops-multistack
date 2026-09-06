@@ -45,7 +45,7 @@ export function renderMasterBody(key: string): string {
   const headCells = ['コード', '名称', ...extra.map((c) => c.label)].map((h) => `<th>${escapeHtml(h)}</th>`).join('');
   const rows = items
     .map((it) => {
-      const extraCells = extra.map((c) => `<td>${cell(it[c.key], c.key)}</td>`).join('');
+      const extraCells = extra.map((c) => `<td${c.key === 'unit_price' ? ' class="num"' : ''}>${cell(it[c.key], c.key)}</td>`).join('');
       return `<tr data-testid="row-master"><td>${escapeHtml(it.code)}</td><td>${escapeHtml(it.label)}</td>${extraCells}</tr>`;
     })
     .join('\n');

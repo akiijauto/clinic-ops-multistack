@@ -7,7 +7,7 @@
         <h1>検索</h1>
         <form method="get" action="/search">
             <input type="text" name="q" value="{{ $q }}" placeholder="飼主名・カナ・カルテNo">
-            <button class="btn" type="submit">検索</button>
+            <button class="button" type="submit">検索</button>
         </form>
         <table>
             <thead><tr><th>カルテNo</th><th>患者名</th><th>飼主名</th></tr></thead>
@@ -19,7 +19,7 @@
                         <td>{{ $p->owner?->name_kanji }}</td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-search"><td colspan="3">該当する患者がいません。</td></tr>
+                    <tr data-testid="empty-search"><td colspan="3" class="empty">該当する患者がいません。</td></tr>
                 @endforelse
             </tbody>
         </table>

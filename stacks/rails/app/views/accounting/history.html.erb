@@ -28,10 +28,10 @@
             <td><%= b.status %></td>
             <td><%= b.patient.name_kanji %></td>
             <td><%= b.patient.karte_no == @patient.karte_no ? "" : b.patient.owner&.name_kanji %></td>
-            <td><span data-check="billing.net_amount"><%= calc.net_amount %></span></td>
-            <td><span data-check="billing.tax_amount"><%= calc.tax_amount %></span></td>
-            <td><span data-check="billing.total_amount"><%= calc.total %></span></td>
-            <td><span data-check="billing.excluded_count"><%= calc.excluded_detail_count %></span></td>
+            <td class="num"><span data-check="billing.net_amount"><%= calc.net_amount %></span></td>
+            <td class="num"><span data-check="billing.tax_amount"><%= calc.tax_amount %></span></td>
+            <td class="num"><span data-check="billing.total_amount"><%= calc.total %></span></td>
+            <td class="num"><span data-check="billing.excluded_count"><%= calc.excluded_detail_count %></span></td>
             <td><a href="/animals/<%= b.patient.karte_no %>/accounting?slip=<%= b.id %>">会計画面で開く</a></td>
           </tr>
         <% end %>

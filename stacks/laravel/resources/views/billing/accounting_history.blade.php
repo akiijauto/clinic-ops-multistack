@@ -8,9 +8,9 @@
 
         <p>
             範囲:
-            <a class="btn {{ $scope === 'patient' ? '' : 'secondary' }}" href="?scope=patient">動物</a>
-            <a class="btn {{ $scope === 'owner' ? '' : 'secondary' }}" href="?scope=owner">飼主</a>
-            <a class="btn {{ $scope === 'all' ? '' : 'secondary' }}" href="?scope=all">全体</a>
+            <a class="button {{ $scope === 'patient' ? '' : 'secondary' }}" href="?scope=patient">動物</a>
+            <a class="button {{ $scope === 'owner' ? '' : 'secondary' }}" href="?scope=owner">飼主</a>
+            <a class="button {{ $scope === 'all' ? '' : 'secondary' }}" href="?scope=all">全体</a>
         </p>
 
         <table>
@@ -29,18 +29,18 @@
                         <td>{{ $b->billed_on->toDateString() }}</td>
                         <td>{{ $b->status }}</td>
                         <td>{{ $b->patient?->name_kanji }}</td>
-                        <td data-check="billing.net_amount">{{ number_format($t->netAmount) }}</td>
-                        <td data-check="billing.tax_amount">{{ number_format($t->taxAmount) }}</td>
-                        <td data-check="billing.total_amount">{{ number_format($t->totalAmount) }}</td>
-                        <td data-check="billing.excluded_count">{{ $t->excludedDetailCount }}</td>
+                        <td class="num" data-check="billing.net_amount">{{ number_format($t->netAmount) }}</td>
+                        <td class="num" data-check="billing.tax_amount">{{ number_format($t->taxAmount) }}</td>
+                        <td class="num" data-check="billing.total_amount">{{ number_format($t->totalAmount) }}</td>
+                        <td class="num" data-check="billing.excluded_count">{{ $t->excludedDetailCount }}</td>
                         <td>
                             @if ($b->patient)
-                                <a class="btn secondary" href="/animals/{{ $b->patient->karte_no }}/accounting?slip={{ $b->id }}">開く</a>
+                                <a class="button secondary" href="/animals/{{ $b->patient->karte_no }}/accounting?slip={{ $b->id }}">開く</a>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-accounting-history"><td colspan="9">伝票はありません。</td></tr>
+                    <tr data-testid="empty-accounting-history"><td colspan="9" class="empty">伝票はありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

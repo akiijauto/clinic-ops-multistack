@@ -83,6 +83,25 @@ func (a *Assets) Path(name string) string {
 	return "/static/" + clean
 }
 
+// UICSSHandler は共通CSS（`spec/ui.css`）を **`/ui.css` のまま**配る
+// http.Handler（内容ハッシュ付きの `/static/...?v=...` は使わない）。
+//
+// 5実装が同じ `/ui.css` というURLを共有する契約（指揮役の指示）のため、
+// 内容ハッシュでURLを変える通常の静的配信の仕組みとは別枠にする。
+// 中身はビルド時に `web/static/ui.css` へコピーしたもの（1文字も変えていない）。
+func (a *Assets) UICSSHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, err := fs.ReadFile(a.fsys, "ui.css")
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		_, _ = w.Write(b)
+	})
+}
+
 // Handler は静的ファイルを返す http.Handler。
 // 印つきで求められたものだけ長く持たせる。印が無いものは毎回確かめさせる。
 func (a *Assets) Handler() http.Handler {

@@ -44,16 +44,7 @@ export function page(title: string, testid: string, body: string): Response {
 <head>
 <meta charset="utf-8">
 <title>${escapeHtml(title)} — clinic-ops (Next.js)</title>
-<style>
-  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-  body { margin: 0; padding: 1.5rem; }
-  nav { margin-bottom: 1rem; font-size: 0.9rem; }
-  table { border-collapse: collapse; }
-  th, td { border: 1px solid currentColor; padding: 0.25rem 0.5rem; text-align: left; }
-  .banner-success { color: #0a7a2f; }
-  .banner-error { color: #b3261e; }
-  fieldset { margin-bottom: 1rem; }
-</style>
+<link rel="stylesheet" href="/ui.css">
 </head>
 <body>
 <nav>${nav}</nav>

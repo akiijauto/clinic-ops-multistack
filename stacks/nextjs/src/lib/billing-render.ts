@@ -25,10 +25,10 @@ function detailRowHtml(b: BillingWire, d: BillingWire['details'][number]): strin
     <td>${d.row_no}</td>
     <td>${e(d.price_code)}</td>
     <td>${e(d.name)}</td>
-    <td>${d.quantity}</td>
-    <td>${d.unit_price === null ? '（未設定）' : fmt(d.unit_price)}</td>
+    <td class="num">${d.quantity}</td>
+    <td class="num">${d.unit_price === null ? '（未設定）' : fmt(d.unit_price)}</td>
     <td>${d.is_taxable ? '課税' : '非課税'}</td>
-    <td>${amount}</td>
+    <td class="num">${amount}</td>
     <td>
       ${
         locked
@@ -74,9 +74,9 @@ function pickerHtml(priceItems: PriceItem[]): string {
 // per `coordination/qa/rulings.md` #4: testid=存在, check=値).
 function totalsHtml(b: BillingWire): string {
   return `<dl>
-    <dt>税抜合計</dt><dd data-check="billing.net_amount" data-testid="billing-total">${b.taxable_subtotal + b.nontaxable_subtotal}</dd>
-    <dt>消費税額</dt><dd data-check="billing.tax_amount">${b.tax_amount}</dd>
-    <dt>税込合計</dt><dd data-check="billing.total_amount">${b.total}</dd>
+    <dt>税抜合計</dt><dd class="money" data-check="billing.net_amount" data-testid="billing-total">${b.taxable_subtotal + b.nontaxable_subtotal}</dd>
+    <dt>消費税額</dt><dd class="money" data-check="billing.tax_amount">${b.tax_amount}</dd>
+    <dt>税込合計</dt><dd class="money" data-check="billing.total_amount">${b.total}</dd>
     <dt>未算入の行数</dt><dd data-check="billing.excluded_count" data-testid="billing-excluded-count">${b.excluded_detail_count}</dd>
   </dl>`;
 }
@@ -143,10 +143,10 @@ export function billingRowHtml(karteNo: string, b: BillingWire, opts: { currentP
     <td>${b.slip_no ? e(b.slip_no) : '（未確定）'}</td>
     <td>${e(b.billed_on)}</td>
     <td>${b.status === 'confirmed' ? '確定' : '保留(draft)'}</td>
-    <td data-check="billing.net_amount">${b.taxable_subtotal + b.nontaxable_subtotal}</td>
-    <td data-check="billing.tax_amount">${b.tax_amount}</td>
-    <td data-check="billing.total_amount">${b.total}</td>
-    <td data-check="billing.excluded_count">${b.excluded_detail_count}</td>
+    <td class="num" data-check="billing.net_amount">${b.taxable_subtotal + b.nontaxable_subtotal}</td>
+    <td class="num" data-check="billing.tax_amount">${b.tax_amount}</td>
+    <td class="num" data-check="billing.total_amount">${b.total}</td>
+    <td class="num" data-check="billing.excluded_count">${b.excluded_detail_count}</td>
     <td><a href="/animals/${e(karteNo)}/accounting?slip=${b.id}">開く</a></td>
   </tr>`;
 }

@@ -13,10 +13,10 @@
   {% endif %}
 
   {% if patient.deleted_at %}
-  <p class="banner banner-error">この動物は削除済みです（{{ patient.deleted_at }}）。</p>
+  <p class="banner error-banner">この動物は削除済みです（{{ patient.deleted_at }}）。</p>
   {% endif %}
   {% if owner and owner.deleted_at %}
-  <p class="banner banner-error">この飼主は削除済みです（{{ owner.deleted_at }}）。</p>
+  <p class="banner error-banner">この飼主は削除済みです（{{ owner.deleted_at }}）。</p>
   {% endif %}
 
   <p>カルテNo: {{ patient.karte_no }} ／ 飼主番号: {{ owner.owner_no if owner else "-" }}</p>

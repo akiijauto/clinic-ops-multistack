@@ -7,7 +7,7 @@
         <h1>来院履歴 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
 
         @if (!empty($restored))
-            <div data-testid="success-banner">元に戻しました。</div>
+            <div data-testid="success-banner" class="success-banner">元に戻しました。</div>
         @endif
 
         <table>
@@ -26,13 +26,13 @@
                             @if ($v->isDeleted())
                                 <form method="post" action="/animals/{{ $patient->karte_no }}/karte/{{ $v->id }}/restore" style="display:inline">
                                     @csrf
-                                    <button class="btn secondary" type="submit">元に戻す</button>
+                                    <button class="button secondary" type="submit">元に戻す</button>
                                 </form>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr data-testid="empty-history"><td colspan="6">来院履歴はありません。</td></tr>
+                    <tr data-testid="empty-history"><td colspan="6" class="empty">来院履歴はありません。</td></tr>
                 @endforelse
             </tbody>
         </table>
