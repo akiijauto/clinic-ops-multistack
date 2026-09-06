@@ -8,11 +8,57 @@
 # （coordination/qa/lane-b.md に記録）。
 module Api
   class BillingsController < ApiController
+    def index
+      billings = Billing.includes(:billing_details)
+      billings = billings.where(billed_on: parse_date(params[:from])..) if params[:from].present?
+      billings = billings.where(billed_on: ..parse_date(params[:to])) if params[:to].present?
+      billings = billings.order(billed_on: :desc, id: :desc)
+
+      total = billings.count
+      page = billings.limit(params[:limit].presence || 50).offset(params[:offset].presence || 0)
+      render json: { items: page.map { |b| billing_json(b) }, total: total }
+    end
+
+    def update
+      billing = Billing.includes(:billing_details).find(params[:id])
+
+      ActiveRecord::Base.transaction do
+        billing.assign_attributes(update_params)
+
+        if params[:details]
+          billing.billing_details.destroy_all
+          params[:details].each do |d|
+            billing.billing_details.build(d.permit(:price_code, :name, :quantity, :unit_price, :is_taxable))
+          end
+        end
+
+        billing.save!
+      end
+
+      render json: billing_json(billing.reload)
+    end
+
     def show
       billing = Billing.includes(:billing_details).find(params[:id])
+      render json: billing_json(billing)
+    end
+
+    private
+
+    def parse_date(value)
+      Date.parse(value)
+    rescue ArgumentError
+      nil
+    end
+
+    def update_params
+      params.permit(:billed_on, :status, :staff_id, :cashier_staff_id, :paid_amount, :payment_method)
+    end
+
+    def billing_json(billing)
       calc = billing.calc
 
-      render json: {
+      {
         id: billing.id,
         patient_id: billing.patient_id,
         owner_id: billing.owner_id,
@@ -38,8 +84,6 @@ module Api
         total_amount: calc.total
       }
     end
-
-    private
 
     def detail_json(detail)
       {

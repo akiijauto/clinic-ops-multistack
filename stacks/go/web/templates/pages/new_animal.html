@@ -1,0 +1,48 @@
+{{define "title"}}新規登録{{end}}
+{{define "content"}}
+<div data-testid="screen-new-animal">
+  <h1>新規登録</h1>
+  {{if .SuccessKarteNo}}
+  <p data-testid="success-banner">登録しました。カルテNo <span data-check="patient.karte_no">{{.SuccessKarteNo}}</span></p>
+  {{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  <p>次のカルテNo（予定）: {{.NextKarteNo}}</p>
+
+  {{if .ExistingOwner}}
+  <p>既存の飼主に動物を追加します: {{.ExistingOwner.NameKanji}}（{{.ExistingOwner.OwnerNo}}）</p>
+  {{end}}
+
+  <form method="post" action="/animals/new{{if .ExistingOwnerNo}}?owner={{.ExistingOwnerNo}}{{end}}">
+    <fieldset {{if .ExistingOwner}}disabled{{end}}>
+      <legend>飼主</legend>
+      <label>フリガナ <input name="owner_name_kana" value="{{.Form.OwnerNameKana}}"></label>
+      <label>氏名 <input name="owner_name_kanji" value="{{.Form.OwnerNameKanji}}"></label>
+      <label>郵便番号 <input name="owner_postal_code" value="{{.Form.OwnerPostal}}"></label>
+      <label>住所1 <input name="owner_address1" value="{{.Form.OwnerAddress1}}"></label>
+      <label>住所2 <input name="owner_address2" value="{{.Form.OwnerAddress2}}"></label>
+      <label>電話 <input name="owner_phone" value="{{.Form.OwnerPhone}}"></label>
+      <label>携帯 <input name="owner_mobile" value="{{.Form.OwnerMobile}}"></label>
+    </fieldset>
+    <fieldset>
+      <legend>動物</legend>
+      <label>フリガナ <input name="patient_name_kana" value="{{.Form.PatientNameKana}}"></label>
+      <label>名前 <input name="patient_name_kanji" value="{{.Form.PatientNameKanji}}"></label>
+      <label>種別 <input name="species" value="{{.Form.Species}}"></label>
+      <label>品種 <input name="breed" value="{{.Form.Breed}}"></label>
+      <label>性別
+        <select name="sex">
+          <option value="male" {{if eq .Form.Sex "male"}}selected{{end}}>雄</option>
+          <option value="female" {{if eq .Form.Sex "female"}}selected{{end}}>雌</option>
+          <option value="unknown" {{if eq .Form.Sex "unknown"}}selected{{end}}>不明</option>
+        </select>
+      </label>
+      <label>生年月日 <input type="date" name="birth_date" value="{{.Form.BirthDate}}"></label>
+      <label>去勢・避妊日 <input type="date" name="neuter_date" value="{{.Form.NeuterDate}}"></label>
+    </fieldset>
+    <button type="submit">登録する</button>
+  </form>
+
+  <p><a href="/">トップへ戻る</a> ／ <a href="/today">本日の患者へ</a></p>
+</div>
+{{end}}

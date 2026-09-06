@@ -1,0 +1,37 @@
+<% content_for :title, "予約詳細" %>
+<div data-testid="screen-reservations">
+  <h1>予約 #<%= @reservation.id %></h1>
+
+  <% if @success %>
+    <p data-testid="success-banner">保存しました。</p>
+  <% end %>
+  <% if @error %>
+    <p data-testid="error-banner"><%= @error_message %></p>
+  <% end %>
+
+  <p>患者: <%= @reservation.patient.name_kanji %>／状態: <%= @reservation.status %></p>
+
+  <%= form_with url: "/reservations/#{@reservation.id}", method: :post, local: true do %>
+    <input type="hidden" name="patient_id" value="<%= @reservation.patient_id %>">
+    <input type="datetime-local" name="starts_at"
+           value="<%= @reservation.starts_at&.strftime('%Y-%m-%dT%H:%M') %>" required>
+    <input type="datetime-local" name="ends_at"
+           value="<%= @reservation.ends_at&.strftime('%Y-%m-%dT%H:%M') %>" required>
+    <select name="staff_id">
+      <% @staffs.each do |s| %>
+        <option value="<%= s.id %>" <%= "selected" if s.id == @reservation.staff_id %>><%= s.name %></option>
+      <% end %>
+    </select>
+    <input type="text" name="room" value="<%= @reservation.room %>" required>
+    <input type="text" name="purpose" value="<%= @reservation.purpose %>">
+    <button type="submit">変更を保存</button>
+  <% end %>
+
+  <% if @reservation.status == "booked" %>
+    <%= form_with url: "/reservations/#{@reservation.id}/cancel", method: :post, local: true do %>
+      <button type="submit">予約をキャンセル</button>
+    <% end %>
+  <% end %>
+
+  <p><a href="/reservations">予約一覧へ戻る</a></p>
+</div>

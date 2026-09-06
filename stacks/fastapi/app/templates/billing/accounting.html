@@ -1,0 +1,89 @@
+{# 会計。screens.md 14番。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, value_check, success_banner, error_banner %}
+
+{% block title %}会計 {{ karte_no }}{% endblock %}
+
+{% block content %}
+<section {{ screen("accounting") }}>
+  <h1>会計 — {{ karte_no }}</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <p>伝票番号: {{ billing.slip_no or "（確定前）" }} ／ 状態: {{ billing.status }} ／
+     会計日: {{ billing.billed_on }}</p>
+
+  <table>
+    <thead><tr><th>分類</th><th>コード</th><th>内容</th><th>単価</th><th>数量</th><th>課税</th><th>操作</th></tr></thead>
+    <tbody>
+      {% for d in billing.details %}
+      <tr {{ row("billing-detail") }}>
+        <td>{{ d.price_code }}</td>
+        <td>{{ d.price_code }}</td>
+        <td>{{ d.name }}</td>
+        <td>{% if d.unit_price is none %}<span class="hint">未設定</span>{% else %}{{ d.unit_price }}{% endif %}</td>
+        <td>{{ d.quantity }}</td>
+        <td>{{ "課税" if d.is_taxable else "非課税" }}</td>
+        <td>
+          {% if billing.status != "confirmed" %}
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="duplicate_detail">
+            <input type="hidden" name="slip" value="{{ billing.id }}">
+            <input type="hidden" name="detail_id" value="{{ d.id }}">
+            <button type="submit">複写</button>
+          </form>
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="delete_detail">
+            <input type="hidden" name="slip" value="{{ billing.id }}">
+            <input type="hidden" name="detail_id" value="{{ d.id }}">
+            <button type="submit">削除</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <dl>
+    <dt>税抜合計</dt><dd {{ value_check("billing.net_amount") }}>{{ billing.net_amount }}</dd>
+    <dt>消費税額</dt><dd {{ value_check("billing.tax_amount") }}>{{ billing.tax_amount }}</dd>
+    <dt>税込合計</dt><dd {{ value_check("billing.total_amount") }}>{{ billing.total_amount }}</dd>
+    <dt>未算入の行数</dt><dd {{ value_check("billing.excluded_count") }}>{{ billing.excluded_count }}</dd>
+  </dl>
+
+  {% if billing.status != "confirmed" %}
+  <form method="post">
+    <input type="hidden" name="action" value="add_detail">
+    <input type="hidden" name="slip" value="{{ billing.id }}">
+    <label>料金項目
+      <select name="price_code">
+        {% for item in price_items %}
+        <option value="{{ item.price_code }}">{{ item.category_major }} / {{ item.name }}
+          {% if item.unit_price is none %}（単価未設定）{% else %}（{{ item.unit_price }}円）{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>数量 <input type="number" name="quantity" value="1" min="0.01" step="0.01"></label>
+    <button type="submit">追加</button>
+  </form>
+
+  <form method="post">
+    <input type="hidden" name="action" value="clear_all">
+    <input type="hidden" name="slip" value="{{ billing.id }}">
+    <button type="submit">全削除</button>
+  </form>
+
+  <form method="post">
+    <input type="hidden" name="action" value="confirm">
+    <input type="hidden" name="slip" value="{{ billing.id }}">
+    <button type="submit">確定</button>
+  </form>
+  {% endif %}
+
+  <p><a href="/animals/{{ karte_no }}/accounting/history">履歴へ</a></p>
+</section>
+{% endblock %}

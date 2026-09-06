@@ -19,7 +19,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('patient_id')->constrained('patients');
             $table->foreignId('owner_id')->constrained('owners');
-            $table->string('slip_no')->unique();
+            // draft の伝票は確定するまで採番されない（空にする実装もありうるため）。
+            // SQLiteのUNIQUE索引はNULLどうしを別物として扱うので、null許容にしておけば
+            // 複数のdraft伝票が同時に存在してもユニーク制約に触れない
+            // （2026-09-06実測：空文字('')で埋めると2件目からUNIQUE違反で500になった）。
+            $table->string('slip_no')->nullable()->unique();
             $table->enum('status', ['draft', 'confirmed'])->default('draft');
             $table->date('billed_on');
             $table->foreignId('staff_id')->nullable()->constrained('staff');

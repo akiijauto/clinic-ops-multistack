@@ -1,15 +1,15 @@
 """ナビの残り（本日の患者・検索・DM・売上集計・スタッフ・設定・このシステムについて）。
 
-いまは検算8（死んだリンクが無い）を通すための**表示のみ**の実装。
-保存系（設定の編集・受付の並べ替え等）は次段階。それぞれ真のDBの値を読む
-（ダミーの固定文言を並べただけの画面にしない——検算3と同じ理由）。
+検算8（死んだリンクが無い）を通すための表示のみの実装から、設定の保存を追加した
+（2026-09-06 続き）。それぞれ真のDBの値を読む（ダミーの固定文言を並べただけの
+画面にしない——検算3と同じ理由）。
 """
 
 from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -109,7 +109,62 @@ def staff_screen(request: Request, db: Session = Depends(get_db)):
 def settings_screen(request: Request, db: Session = Depends(get_db)):
     clinic = db.query(models.Clinic).first()
     templates = request.app.state.templates
-    return templates.TemplateResponse(request, "front/settings.html", {"clinic": clinic})
+    return templates.TemplateResponse(request, "front/settings.html", {"clinic": clinic, "banner": None})
+
+
+@router.post("/settings", response_class=HTMLResponse)
+def settings_save(
+    request: Request,
+    db: Session = Depends(get_db),
+    name: str = Form(""),
+    postal_code: str = Form(""),
+    address1: str = Form(""),
+    address2: str = Form(""),
+    phone: str = Form(""),
+    fax: str = Form(""),
+    director_name: str = Form(""),
+    reservation_slot_minutes: int = Form(15),
+    tax_rate: float = Form(0.10),
+    closed_weekdays: list[str] = Form([]),
+):
+    """`Clinic` は常に1件のみ（`spec/screens.md` 22番）。新規作成はしない。
+
+    契約: 「保存の成否によらず200。」保存に失敗しても画面を200で再描画し、
+    打った値と一緒にエラー文言を出す（`spec/openapi.yaml` 冒頭の説明どおり）。
+    """
+    clinic = db.query(models.Clinic).first()
+    templates = request.app.state.templates
+
+    if clinic is None:
+        return templates.TemplateResponse(
+            request, "front/settings.html",
+            {"clinic": None, "banner": ("error", "病院情報が見つかりません。")},
+        )
+
+    try:
+        weekdays = sorted({int(d) for d in closed_weekdays if d != ""})
+    except ValueError:
+        return templates.TemplateResponse(
+            request, "front/settings.html",
+            {"clinic": clinic, "banner": ("error", "休診日の指定が不正です。")},
+        )
+
+    clinic.name = name
+    clinic.postal_code = postal_code
+    clinic.address1 = address1
+    clinic.address2 = address2
+    clinic.phone = phone
+    clinic.fax = fax
+    clinic.director_name = director_name
+    clinic.reservation_slot_minutes = reservation_slot_minutes
+    clinic.tax_rate = tax_rate
+    clinic.closed_weekdays = weekdays
+    db.commit()
+
+    return templates.TemplateResponse(
+        request, "front/settings.html",
+        {"clinic": clinic, "banner": ("success", "保存しました。")},
+    )
 
 
 @router.get("/about", response_class=HTMLResponse)

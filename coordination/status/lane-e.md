@@ -329,3 +329,91 @@ crawl検算を通すため、既存ロジックを配線する形で以下を新
 `npm test` も 24/24 のまま。起動コマンドは変更なし: `PORT=8405 npm run dev`。
 26画面のうち今日繋いだのは参照系の一部のみ。登録・編集フォーム（会計入力・予約登録・
 カルテ保存フォーム等）はまだ配線していない — 次にやるとしたらここ。
+
+## 2026-09-06 朝：型エラーを実測で発見・修正、5サブエージェントへ再開指示
+
+前夜の「全14件が緑」（`npm test`・`next dev`ベース）を鵜呑みにせず、`npm run build`
+（`tsc`込み）を実際に走らせたところ、**型エラーが複数残っていた**（`npm test`と
+`next dev`はどちらも型検査をしないため気づかれていなかった）。
+
+修正（レーンE本体・共有ファイル側）:
+- `src/lib/db.ts`: `rows()`/`row()` の引数型 `never[]` → 実際の`node:sqlite`
+  `SQLInputValue[]`（area1が`area1/query.ts`で報告済みだった不具合を正式に解消）
+- `src/lib/area1/query.ts`: 独自実装をやめ`db.ts`の`rows`/`row`をre-exportするだけに
+- `src/lib/model.ts`: `isWeekday()`/`toWeekdays()`追加（`closed_weekdays`のnumber[]→Weekday[]）
+- `src/app/_area4/repo.ts`: `Staff & {is_active:number}`が`never`に潰れる型エラーを
+  `Omit<Staff,'is_active'> & {...}`で修正
+
+再検証: `npm run typecheck`エラー0 → `npm run build`成功 → `PORT=8405 npm run dev` →
+`npm test`24/24 → `python tests/run.py http://127.0.0.1:8405` **全14件通過**（変わらず緑）。
+詳細は`coordination/qa/lane-e.md` F。
+
+### 配線状況を実測（`find src/app -name route.ts -o -name page.tsx`）
+
+**26ルートのみ配線済み**（openapi.yamlは81パス）。ロジック（`src/lib/*`）は
+かなり作り込まれているが、**画面・APIとして繋がっていないものが大半**。特に
+**領域3（会計・売上）は画面が1枚も配線されていない**（`billing.ts`/`sales.ts`は
+存在するが`page.tsx`/`route.ts`が無い）。
+
+| 領域 | 配線済み | 未配線の主なもの |
+| --- | --- | --- |
+| 1 | `/today` `/search`（参照専用スタブ） | 新規登録・顧客・削除確認・来院履歴・郵便番号、書き込み系API全般 |
+| 2 | `/animals/{karte_no}/karte`とその印刷 | 検査・投薬・予防・書類の画面、保存系API |
+| 3 | `/api/billings/{id}` `/api/sales/summary`のみ | **会計・会計履歴・DM・売上集計の画面が0枚** |
+| 4 | `/reservations` `/ward` `/staff`（一覧のみ） | `/todo/{key}`（ディレクトリはあるがroute.tsが無い）・予約詳細・ケア記録追加 |
+| 5 | `/settings`系・`/about` | ほぼ揃っている（確認依頼のみ送付） |
+
+5サブエージェントへ、上記ギャップと「`npm run build`を必ず通すこと」を明記して
+再開を指示した（セッション制限は日付変更で解除されているはず）。完了報告を待つ。
+
+## 2026-09-06 統括の横並び再測への対応：検算4の戻りを修正
+
+`coordination/review/2026-09-06_統括_横並び再測.md`で報告された「カルテ10002の体温が
+画面と印刷で別の値」を修正した。
+
+### 原因
+
+**値の計算場所は最初から1つ**（`visitBlock()`）だったが、**どの診察を対象にするかの
+スコープが画面と印刷で違っていた**。
+
+- `/animals/{karte_no}/karte`（画面）: `?visit_id=`（省略時は最新）で選んだ**1診察分**の
+  経過記録だけを表示
+- `/animals/{karte_no}/karte/print`（印刷）: **その患者の全診察**を連結して表示
+
+10002は診察が2回（`visit_id=26`: 2026-01-03・体温38.7、`visit_id=190`: 2025-10-05・
+体温39.1×3件）あり、画面は最新（26）の`[38.7]`だけ、印刷は全診察の
+`[38.7, 39.1, 39.1, 39.1]`を出していたため、値の集合が一致しなかった
+（1件だけ食い違ったのではなく、比較対象の個数自体が違っていた）。
+
+### 対処
+
+「どの診察が“いま開いている回”か」の決め方を`src/lib/karte.ts`の
+`resolveCurrentVisit()`に1つにまとめ、画面・印刷の両ルートがそこを通るようにした。
+印刷は「全診察を連結」をやめ、**画面が開いているのと同じ1診察だけ**を印刷する形に変更
+（`/karte/{visit_id}/print`は既存どおり、任意の1診察を指定して印刷する別経路として残した）。
+
+変更ファイル: `src/lib/karte.ts`（`resolveCurrentVisit()`追加）／
+`src/lib/karte-render.ts`（`renderKartePrint`を`noVisitPrint`に置き換え、
+「全件印刷」ラベルを実態に合わせて「この回を印刷」に変更）／
+`src/app/animals/[karte_no]/karte/route.ts`（共通関数を使うよう変更）／
+`src/app/animals/[karte_no]/karte/print/route.ts`（全面書き換え。`?visit_id=`対応）
+
+### 再検証（サーバーは再起動していない。8405はそのまま）
+
+```
+$ npm run typecheck   → エラー0
+$ npm run build       → 成功
+$ curl .../animals/10002/karte        → data-check="progress_note.temperature_c">38.7
+$ curl .../animals/10002/karte/print  → data-check="progress_note.temperature_c">38.7
+$ python tests/run.py http://127.0.0.1:8405
+  → 全 14 件 通過（smoke/money/screen/rules/crawl。検算4含め全緑）
+```
+
+### ついでに気づいたこと（今回のスコープ外・情報共有のみ）
+
+`BASE_URL=http://127.0.0.1:8405 npm test` が `tests 36 / pass 33 / fail 3`。
+失敗3件は`test/area5-*.test.ts`で、`ERR_MODULE_NOT_FOUND`（import先が無い）。
+**共通テスト（`tests/run.py`）は無関係で全緑**なので緊急性は無いが、area5の
+サブエージェントへ次回の作業時に直すよう伝える。
+
+以上で今回の指示（戻りの修正→`tests/run.py`全件OK確認→状況更新）は完了。待機する。

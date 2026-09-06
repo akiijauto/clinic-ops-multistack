@@ -1,0 +1,36 @@
+{{define "title"}}スタッフ{{end}}
+{{define "content"}}
+<div data-testid="screen-staff">
+  <h1>スタッフ（担当選択）</h1>
+  <p>パスワードの入力は求めません。これは認証ではありません。</p>
+
+  {{if not .Rows}}
+  <p data-testid="empty-staff">選べる担当がいません。</p>
+  {{else}}
+  <table>
+    <thead><tr><th></th><th>氏名</th><th>役割</th></tr></thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-staff" data-staff-id="{{.ID}}"{{if .Selected}} data-selected="1"{{end}}>
+        <td>
+          <form method="post" action="/staff">
+            <input type="hidden" name="staff_id" value="{{.ID}}">
+            <button type="submit">{{if .Selected}}選択中{{else}}選ぶ{{end}}</button>
+          </form>
+        </td>
+        <td>{{.Name}}</td>
+        <td>{{.Role}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <form method="post" action="/staff">
+    <input type="hidden" name="action" value="clear">
+    <button type="submit">担当を外す</button>
+  </form>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

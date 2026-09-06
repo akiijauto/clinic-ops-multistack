@@ -1,0 +1,68 @@
+{{define "title"}}入院 {{.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-ward">
+  <h1>入院</h1>
+  {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  {{if not .Hospitalizations}}
+  <p data-testid="empty-care-record">まだ入院記録がありません。</p>
+  {{end}}
+
+  {{range .Hospitalizations}}
+  <section data-testid="row-hospitalization" data-hospitalization-id="{{.ID}}">
+    <h2>{{.AdmittedOn}} 〜 {{if .DischargedOn}}{{.DischargedOn}}{{else}}（在室中）{{end}}　処置室: {{.Room}}</h2>
+
+    {{if not .Records}}
+    <p data-testid="empty-care-record">ケア記録はまだありません。</p>
+    {{else}}
+    <table>
+      <thead><tr><th>日時</th><th>種別</th><th>内容</th><th>実施者</th></tr></thead>
+      <tbody>
+        {{range .Records}}
+        <tr data-testid="row-care-record">
+          <td>{{.RecordedAt}}</td>
+          <td>{{.Category}}</td>
+          <td>{{.Content}}</td>
+          <td><span data-check="care_record.performed_by">{{.StaffName}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{end}}
+
+    {{if .InProgress}}
+    <form method="post" action="/animals/{{$.KarteNo}}/ward">
+      <input type="hidden" name="action" value="care_record">
+      <input type="hidden" name="hospitalization_id" value="{{.ID}}">
+      <label>種別
+        <select name="category">
+          <option value="medication">投薬</option>
+          <option value="feeding">給餌</option>
+          <option value="measurement">計測</option>
+        </select>
+      </label>
+      <label>内容 <input name="content"></label>
+      <label>実施者ID（必須） <input name="performed_by_staff_id" required></label>
+      <button type="submit">記録を追加</button>
+    </form>
+    <form method="post" action="/animals/{{$.KarteNo}}/ward">
+      <input type="hidden" name="action" value="discharge">
+      <input type="hidden" name="hospitalization_id" value="{{.ID}}">
+      <label>退院日 <input type="date" name="discharged_on"></label>
+      <button type="submit">退院する</button>
+    </form>
+    {{end}}
+  </section>
+  {{end}}
+
+  <form method="post" action="/animals/{{.KarteNo}}/ward">
+    <input type="hidden" name="action" value="admit">
+    <label>入院日 <input type="date" name="admitted_on"></label>
+    <label>処置室 <input name="room"></label>
+    <button type="submit">入院を登録する</button>
+  </form>
+
+  <p><a href="/ward">本日の入院患者一覧へ</a> ／ <a href="/animals/{{.KarteNo}}">顧客画面へ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

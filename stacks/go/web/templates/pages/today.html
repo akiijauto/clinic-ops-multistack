@@ -1,0 +1,59 @@
+{{define "title"}}本日の患者{{end}}
+{{define "content"}}
+<div data-testid="screen-today">
+  <h1>本日の患者</h1>
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  <nav>
+    <ul>
+      {{range .Kinds}}
+      <li><a href="/today?kind={{.Code}}{{if $.HideDone}}&hide=1{{end}}"{{if .Active}} aria-current="page"{{end}}>{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </nav>
+
+  <p>
+    <a href="/today?kind={{.SelectedKind}}{{if not .HideDone}}&hide=1{{end}}">
+      {{if .HideDone}}完了も表示する{{else}}完了を隠す{{end}}
+    </a>
+    ／ 完了 <span data-check="today.done_count">{{.DoneCount}}</span> 件
+    ／ 本日の診察件数 <span data-check="visit_count.today">{{.VisitCountToday}}</span> 件
+  </p>
+
+  {{if .Rows}}
+  <table>
+    <thead>
+      <tr><th>順</th><th>カルテNo</th><th>動物</th><th>飼主</th><th>受付時刻</th><th>主訴</th><th>診療目的</th><th>状態</th><th>担当</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-reception" data-reception-id="{{.ID}}">
+        <td>{{.DisplayNo}}</td>
+        <td><a href="/animals/{{.KarteNo}}">{{.KarteNo}}</a></td>
+        <td>{{.PatientName}}（{{.Species}} {{.Breed}}）</td>
+        <td>{{.OwnerName}}</td>
+        <td>{{.ReceivedAt}}</td>
+        <td>{{.OwnerPurpose}}</td>
+        <td>{{.MedicalPurpose}}</td>
+        <td>{{.Status}}</td>
+        <td>{{.StaffName}}</td>
+        <td>
+          <form method="post" action="/today?id={{.ID}}&dir=up&kind={{$.SelectedKind}}">
+            <button type="submit">↑</button>
+          </form>
+          <form method="post" action="/today?id={{.ID}}&dir=down&kind={{$.SelectedKind}}">
+            <button type="submit">↓</button>
+          </form>
+          <a href="/animals/{{.KarteNo}}/karte">カルテ</a>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p data-testid="empty-reception">本日の受付はありません。</p>
+  {{end}}
+
+  <p><a href="/">トップへ戻る</a> ／ <a href="/animals/new">新規登録</a></p>
+</div>
+{{end}}

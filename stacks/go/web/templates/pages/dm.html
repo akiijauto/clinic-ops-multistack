@@ -1,0 +1,48 @@
+{{define "title"}}DM{{end}}
+{{define "content"}}
+<div data-testid="screen-dm">
+  <h1>DM</h1>
+
+  <form method="get" action="/dm">
+    <label>種別
+      <input type="text" name="type" value="{{.Kind}}" placeholder="prevention_kinds のコード">
+    </label>
+    <label>対象欄
+      <select name="field">
+        <option value="next_due_date"{{if eq .Field "next_due_date"}} selected{{end}}>次回予定日</option>
+        <option value="performed_date"{{if eq .Field "performed_date"}} selected{{end}}>実施日</option>
+      </select>
+    </label>
+    <label>開始日 <input type="date" name="from" value="{{.From}}"></label>
+    <label>終了日 <input type="date" name="to" value="{{.To}}"></label>
+    <button type="submit">検索</button>
+  </form>
+
+  <p data-testid="dm-total">件数: <span>{{.Total}}</span></p>
+  <p><a href="/dm.csv?type={{.Kind}}&field={{.Field}}&from={{.From}}&to={{.To}}">CSVへ書き出し</a></p>
+
+  {{if not .Rows}}
+  <p data-testid="empty-dm">条件に合う対象がありません。</p>
+  {{else}}
+  <table>
+    <thead>
+      <tr><th>カルテNo</th><th>飼主</th><th>動物</th><th>種別</th><th>次回予定日</th><th>実施日</th></tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-dm" data-karte-no="{{.KarteNo}}">
+        <td>{{.KarteNo}}</td>
+        <td>{{.OwnerNameKanji}}</td>
+        <td>{{.PatientNameKanji}}</td>
+        <td>{{.KindName}}</td>
+        <td>{{if .NextDueDate}}{{.NextDueDate}}{{end}}</td>
+        <td>{{.PerformedDate}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

@@ -1,0 +1,31 @@
+{{define "title"}}入院（{{.Date}}）{{end}}
+{{define "content"}}
+<div data-testid="screen-ward-day">
+  <h1>入院（本日の入院患者）</h1>
+  <form method="get" action="/ward/day">
+    <label>日付 <input type="date" name="date" value="{{.Date}}"></label>
+    <button type="submit">この日を見る</button>
+  </form>
+
+  {{if not .Rows}}
+  <p data-testid="empty-hospitalization">この日に在室している患者はいません。</p>
+  {{else}}
+  <table>
+    <thead><tr><th>カルテNo</th><th>動物</th><th>入院日</th><th>退院日</th><th>処置室</th></tr></thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-hospitalization" data-hospitalization-id="{{.ID}}">
+        <td><a href="/animals/{{.KarteNo}}/ward">{{.KarteNo}}</a></td>
+        <td>{{.PatientName}}</td>
+        <td>{{.AdmittedOn}}</td>
+        <td>{{if .DischargedOn}}{{.DischargedOn}}{{else}}（在室中）{{end}}</td>
+        <td>{{.Room}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

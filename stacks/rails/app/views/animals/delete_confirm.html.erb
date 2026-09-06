@@ -1,0 +1,20 @@
+<div data-testid="screen-delete-confirm">
+  <h1>削除の確認</h1>
+
+  <% if @deleted %>
+    <p data-testid="success-banner">削除しました（<%= @patient.name_kanji %> / <%= @owner.name_kanji %>）。行は残っており、集計からは消えません。</p>
+  <% else %>
+    <p>次の動物・飼主を削除します。<strong>物理削除ではありません</strong>——一覧から隠れるだけで、行と実績（件数・金額）は残ります。</p>
+    <ul>
+      <li>カルテNo: <%= @patient.karte_no %></li>
+      <li>動物名: <%= @patient.name_kanji %>（<%= @patient.name_kana %>）</li>
+      <li>飼主名: <%= @owner.name_kanji %>（<%= @owner.name_kana %>）</li>
+    </ul>
+
+    <%= form_with url: "/animals/#{@patient.karte_no}/delete", method: :post, local: true do %>
+      <button type="submit">削除する</button>
+    <% end %>
+  <% end %>
+
+  <p><%= link_to "顧客画面へ戻る", "/animals/#{@patient.karte_no}" %></p>
+</div>

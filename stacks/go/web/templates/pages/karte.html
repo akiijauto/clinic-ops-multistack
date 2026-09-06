@@ -1,6 +1,85 @@
 {{define "title"}}カルテ {{.Patient.KarteNo}}{{end}}
 {{define "content"}}
 <div data-testid="screen-karte">
+  {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  <form method="post" action="/animals/{{.Patient.KarteNo}}/karte">
+    <input type="hidden" name="visit_id" value="{{.Form.VisitID}}">
+    <fieldset>
+      <legend>診察（表面）</legend>
+      <label>来院日 <input type="date" name="visit_date" value="{{.Form.VisitDate}}"></label>
+      <label>時刻 <input type="time" name="visit_time" value="{{.Form.VisitTime}}"></label>
+      <label>体重(kg) <input name="body_weight_kg" value="{{.Form.BodyWeightKg}}"></label>
+      <label>主訴 <input name="chief_complaint" value="{{.Form.ChiefComplaint}}"></label>
+      <label>症状 <input name="symptom" value="{{.Form.Symptom}}"></label>
+      <label>診断 <input name="diagnosis" value="{{.Form.Diagnosis}}"></label>
+      <label>治療 <input name="treatment" value="{{.Form.Treatment}}"></label>
+    </fieldset>
+    <fieldset>
+      <legend>経過記録（裏面）</legend>
+      {{range .Form.Notes}}
+      <div class="note-row">
+        <label>日付 <input type="date" name="note_entry_date" value="{{.EntryDate}}"></label>
+        <label>体温 <input name="note_temperature_c" value="{{.TemperatureC}}"></label>
+        <label>脈拍 <input name="note_pulse" value="{{.Pulse}}"></label>
+        <label>呼吸 <input name="note_respiration" value="{{.Respiration}}"></label>
+        <label>体重 <input name="note_body_weight_kg" value="{{.BodyWeightKg}}"></label>
+        <label>経過 <input name="note_symptom_course" value="{{.SymptomCourse}}"></label>
+        <label>処置 <input name="note_treatment_rx" value="{{.TreatmentRx}}"></label>
+        <label>メモ <input name="note_note" value="{{.Note}}"></label>
+      </div>
+      {{end}}
+      <div class="note-row">
+        <label>日付 <input type="date" name="note_entry_date" value=""></label>
+        <label>体温 <input name="note_temperature_c" value=""></label>
+        <label>脈拍 <input name="note_pulse" value=""></label>
+        <label>呼吸 <input name="note_respiration" value=""></label>
+        <label>体重 <input name="note_body_weight_kg" value=""></label>
+        <label>経過 <input name="note_symptom_course" value=""></label>
+        <label>処置 <input name="note_treatment_rx" value=""></label>
+        <label>メモ <input name="note_note" value=""></label>
+      </div>
+    </fieldset>
+    <button type="submit">保存</button>
+  </form>
+
+  <nav data-testid="karte-actions">
+    <a href="/animals/{{.Patient.KarteNo}}/karte/new">新しい診察を起こす</a>
+    {{if .Form.PreviousExists}}
+    <a href="/animals/{{.Patient.KarteNo}}/karte/copy_prev">前回コピー</a>
+    {{else}}
+    <span aria-disabled="true">前回コピー（直前の診察がありません）</span>
+    {{end}}
+    <form method="post" action="/animals/{{.Patient.KarteNo}}/karte/cancel" style="display:inline">
+      <button type="submit">取消</button>
+    </form>
+    <a href="/animals/{{.Patient.KarteNo}}/karte/print">カルテ印刷（全件）</a>
+  </nav>
+
   {{template "karte_body" .}}
+
+  <section data-testid="visit-actions">
+    <h2>診察の切替・削除</h2>
+    <table>
+      <tbody>
+        {{range .Visits}}
+        <tr data-testid="row-visit-action" data-visit-id="{{.ID}}">
+          <td>{{.VisitDate}} {{.VisitTime}}</td>
+          <td><a href="/animals/{{$.Patient.KarteNo}}/karte?visit_id={{.ID}}">この回を開く</a></td>
+          <td><a href="/animals/{{$.Patient.KarteNo}}/karte/{{.ID}}/print">印刷</a></td>
+          <td>
+            <form method="post" action="/animals/{{$.Patient.KarteNo}}/karte/{{.ID}}/delete">
+              <button type="submit">削除</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </section>
+
+  <p><a href="/animals/{{.Patient.KarteNo}}/history">来院履歴（削除済みの復元はこちらから）</a></p>
+  <p><a href="/animals/{{.Patient.KarteNo}}">顧客画面へ戻る</a> ／ <a href="/">トップへ戻る</a></p>
 </div>
 {{end}}

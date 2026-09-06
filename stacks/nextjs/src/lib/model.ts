@@ -24,6 +24,15 @@ export type ReservationStatus = 'booked' | 'cancelled';
 /** 0 = Monday … 6 = Sunday (spec/model.md 1). */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+export function isWeekday(n: number): n is Weekday {
+  return Number.isInteger(n) && n >= 0 && n <= 6;
+}
+
+/** Narrows a plain number array (e.g. parsed from JSON or a form) to `Weekday[]`, dropping anything out of range. */
+export function toWeekdays(values: number[]): Weekday[] {
+  return values.filter(isWeekday);
+}
+
 /** Rows that are marked rather than removed (spec/model.md「消さずに印を付ける」). */
 export type SoftDeletable = { deleted_at: IsoDateTime | null };
 

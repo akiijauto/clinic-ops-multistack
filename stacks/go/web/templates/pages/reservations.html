@@ -2,9 +2,17 @@
 {{define "content"}}
 <div data-testid="screen-reservations">
   <h1>予約</h1>
+  {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  <p><a href="/reservations/new">新規予約</a></p>
+
+  {{if not .Rows}}
+  <p data-testid="empty-reservation">予約はありません。</p>
+  {{else}}
   <table>
     <thead>
-      <tr><th>開始</th><th>終了</th><th>担当</th><th>処置室</th><th>状態</th></tr>
+      <tr><th>開始</th><th>終了</th><th>担当</th><th>処置室</th><th>状態</th><th></th></tr>
     </thead>
     <tbody>
       {{range .Rows}}
@@ -14,10 +22,31 @@
         <td>{{.StaffID}}</td>
         <td>{{.Room}}</td>
         <td>{{.Status}}</td>
+        <td>
+          <a href="/reservations/{{.ID}}">変更</a>
+          {{if eq .Status "booked"}}
+          <form method="post" action="/reservations/{{.ID}}/cancel" style="display:inline">
+            <button type="submit">取消</button>
+          </form>
+          {{end}}
+        </td>
       </tr>
       {{end}}
     </tbody>
   </table>
+  {{end}}
+
+  <h2>新規予約フォーム</h2>
+  <form method="post" action="/reservations">
+    <label>動物ID <input name="patient_id"></label>
+    <label>開始 <input type="datetime-local" name="starts_at"></label>
+    <label>終了 <input type="datetime-local" name="ends_at"></label>
+    <label>担当ID <input name="staff_id"></label>
+    <label>処置室 <input name="room"></label>
+    <label>目的 <input name="purpose"></label>
+    <button type="submit">登録する</button>
+  </form>
+
   <p><a href="/">トップへ戻る</a></p>
 </div>
 {{end}}

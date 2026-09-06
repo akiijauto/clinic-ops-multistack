@@ -1,14 +1,83 @@
 <% content_for :title, "顧客" %>
 <div data-testid="screen-animal-detail">
   <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
-  <p>飼主: <%= @owner.name_kanji %>（<%= @owner.owner_no %>）／ 電話: <%= @owner.phone %></p>
-  <p>種別: <%= @patient.species %> <%= @patient.breed %> ／ 性別: <%= @patient.sex %></p>
+
+  <% if flash[:error] %>
+    <p data-testid="error-banner"><%= flash[:error] %></p>
+  <% end %>
+  <% if flash[:success] %>
+    <p data-testid="success-banner"><%= flash[:success] %></p>
+  <% end %>
+
+  <p>
+    未収金:
+    <% if @unpaid[:count].zero? %>
+      なし
+    <% else %>
+      あり（<%= @unpaid[:count] %>件・合計<%= number_with_delimiter(@unpaid[:total]) %>円）
+    <% end %>
+  </p>
+
+  <%= form_with url: "/animals/#{@patient.karte_no}", method: :patch, local: true do %>
+    <fieldset>
+      <legend>飼主（<%= @owner.owner_no %>）</legend>
+      <p><label>氏名（漢字） <%= text_field_tag "owner_attrs[name_kanji]", @owner.name_kanji %></label></p>
+      <p><label>氏名（カナ） <%= text_field_tag "owner_attrs[name_kana]", @owner.name_kana %></label></p>
+      <p><label>郵便番号 <%= text_field_tag "owner_attrs[postal_code]", @owner.postal_code %></label></p>
+      <p><label>住所1 <%= text_field_tag "owner_attrs[address1]", @owner.address1 %></label></p>
+      <p><label>住所2 <%= text_field_tag "owner_attrs[address2]", @owner.address2 %></label></p>
+      <p><label>電話 <%= text_field_tag "owner_attrs[phone]", @owner.phone %></label></p>
+      <p><label>携帯 <%= text_field_tag "owner_attrs[mobile]", @owner.mobile %></label></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>動物（<%= @patient.karte_no %>）</legend>
+      <p><label>氏名（漢字） <%= text_field_tag "patient_attrs[name_kanji]", @patient.name_kanji %></label></p>
+      <p><label>氏名（カナ） <%= text_field_tag "patient_attrs[name_kana]", @patient.name_kana %></label></p>
+      <p>
+        <label>種別
+          <%= select_tag "patient_attrs[species]",
+                options_for_select([["犬", "dog"], ["猫", "cat"], ["うさぎ", "rabbit"], ["鳥", "bird"], ["その他", "other"]], @patient.species) %>
+        </label>
+      </p>
+      <p>
+        <label>品種 <%= text_field_tag "patient_attrs[breed]", @patient.breed, list: "breed-candidates" %></label>
+        <datalist id="breed-candidates">
+          <% @breed_candidates.each_value do |list| %>
+            <% list.each { |b| %><option value="<%= b %>"></option><% } %>
+          <% end %>
+        </datalist>
+      </p>
+      <p>
+        <label>性別
+          <%= select_tag "patient_attrs[sex]", options_for_select([["オス", "male"], ["メス", "female"], ["不明", "unknown"]], @patient.sex) %>
+        </label>
+      </p>
+      <p><label>生年月日 <%= date_field_tag "patient_attrs[birth_date]", @patient.birth_date %></label></p>
+      <p><label>去勢・避妊日 <%= date_field_tag "patient_attrs[neuter_date]", @patient.neuter_date %></label></p>
+    </fieldset>
+
+    <p><%= submit_tag "保存" %></p>
+  <% end %>
+
+  <fieldset>
+    <legend>番号変更</legend>
+    <%= form_with url: "/animals/#{@patient.karte_no}/renumber", method: :post, local: true do %>
+      <p><label>新しいカルテNo <%= text_field_tag :new_karte_no %></label></p>
+      <p><label>新しい飼主No <%= text_field_tag :new_owner_no %></label></p>
+      <p><%= submit_tag "番号を変更" %>（既に使われている番号は拒否されます）</p>
+    <% end %>
+  </fieldset>
 
   <ul>
-    <li><a href="/animals/<%= @patient.karte_no %>/karte">カルテ</a></li>
-    <li><a href="/animals/<%= @patient.karte_no %>/history">来院履歴</a></li>
-    <li><a href="/animals/<%= @patient.karte_no %>/exam">検査</a></li>
-    <li><a href="/animals/<%= @patient.karte_no %>/ward">入院</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/karte" data-testid="btn-open-karte">カルテ</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/history" data-testid="btn-open-history">来院履歴</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/exam" data-testid="btn-open-exam">検査</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/ward" data-testid="btn-open-ward">入院</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>?print=card" target="_blank" data-testid="btn-issue-card">診察券発行</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>?print=document" target="_blank" data-testid="btn-print-document">文書印刷</a></li>
+    <li><a href="/animals/<%= @patient.karte_no %>/delete" data-testid="btn-delete-animal">削除</a></li>
   </ul>
-  <p><a href="/">トップへ戻る</a></p>
+
+  <p><a href="/today">本日の患者へ戻る</a></p>
 </div>

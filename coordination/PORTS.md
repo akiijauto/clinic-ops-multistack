@@ -5,7 +5,7 @@
 | レーン | スタック | ポート | 共通テストの叩き方 |
 | --- | --- | ---: | --- |
 | A | Go | **8401** | `python tests/run.py http://127.0.0.1:8401` |
-| B | Rails | **8402** | `python tests/run.py http://127.0.0.1:8402` |
+| B | Rails | **8414** | `python tests/run.py http://127.0.0.1:8414` | |
 | C | Laravel | **8403** | `python tests/run.py http://127.0.0.1:8403` |
 | D | FastAPI | **8415** | `python tests/run.py http://127.0.0.1:8415` |
 | E | Next.js | **8405** | `python tests/run.py http://127.0.0.1:8405` |
@@ -62,3 +62,22 @@ Get-CimInstance Win32_Process |
 
 **勝手に変えないこと。** 指揮役へ言う。
 指揮役はここを直してから、全レーンへ通知する。
+
+## 2026-09-06 実測（記録が実態とずれていた）
+
+**この表は正のはずだったが、Rails が 8402 ではなく 8414 で動いていた。**
+`Get-NetTCPConnection -OwningProcess <pid>` で掴んでいるポートを直接見て確認した。
+
+| レーン | スタック | 実測ポート |
+| --- | --- | ---: |
+| A | Go | 8401 |
+| B | Rails | **8414**（表は8402と書いてあった） |
+| C | Laravel | 8403 |
+| D | FastAPI | 8415 |
+| E | Next.js | 8405 |
+
+**教訓**: 「正本」と書いたファイルも、実態と突き合わせなければ正ではない。
+測る側（`compare.py`）が読む値なので、ずれると**動いているのに停止と判定される**。
+
+なお Go は `go` が cmd.exe の PATH に無く起動できなかった。
+`C:\Program Files\Go\bin\go.exe` を明示して起動している。

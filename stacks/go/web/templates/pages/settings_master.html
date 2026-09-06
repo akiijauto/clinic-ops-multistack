@@ -1,0 +1,30 @@
+{{define "title"}}マスタ{{end}}
+{{define "content"}}
+<div data-testid="screen-settings-master">
+  <h1>マスタ</h1>
+  <p>固定データを参照するだけの画面。編集フォーム・保存ボタンは無い
+     （<code>spec/README.md</code>「マスタ管理の画面：一覧と参照は作る。編集は作らない」）。</p>
+
+  <nav>
+    {{$current := .Key}}
+    {{range .Categories}}
+    <a href="/settings/master/{{.}}"{{if eq . $current}} aria-current="page"{{end}}>{{.}}</a>
+  {{end}}
+  </nav>
+
+  <table>
+    <thead><tr><th>コード</th><th>名称</th><th>補足</th></tr></thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-master" data-master-code="{{.Code}}">
+        <td>{{.Code}}</td>
+        <td>{{.Label}}</td>
+        <td>{{.Detail}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <p><a href="/settings">設定へ戻る</a> ・ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

@@ -2,24 +2,25 @@ import { getDb, rows, row } from '@/lib/db';
 import { findConflict, isValidSpan, type ReservationSlot } from '@/lib/reservation';
 import { ApiError } from '@/lib/errors';
 import { jstDayBoundsAsJstIso } from '@/lib/jst';
-import type { CareRecord, Hospitalization, Reservation, Staff } from '@/lib/model';
+import { getPatientByKarteNo, getPatientById as getPatientByIdArea1 } from '@/lib/area1/data';
+import type { CareRecord, Hospitalization, Patient, Reservation, Staff } from '@/lib/model';
 
 /** DB row shapes match `schema.sql` column names 1:1 (no aliasing needed). */
 
 // ---------------------------------------------------------------------------
-// Patients (read-only lookup; area1 owns Patient itself)
+// Patients -- area1 owns `Patient`; these are thin re-exports so area4 routes
+// don't reach into `patient` with their own SQL.
 // ---------------------------------------------------------------------------
 
-export type PatientRef = { id: number; karte_no: string; name_kanji: string; owner_id: number };
-
-export function findPatientByKarteNo(karteNo: string): PatientRef | undefined {
-  return row<PatientRef>(
-    getDb().prepare('SELECT id, karte_no, name_kanji, owner_id FROM patient WHERE karte_no = ?'),
-    karteNo,
-  );
+export function findPatientByKarteNo(karteNo: string): Patient | undefined {
+  return getPatientByKarteNo(getDb(), karteNo);
 }
 
-function requirePatient(karteNo: string): PatientRef {
+export function findPatientById(id: number): Patient | undefined {
+  return getPatientByIdArea1(getDb(), id);
+}
+
+function requirePatient(karteNo: string): Patient {
   const p = findPatientByKarteNo(karteNo);
   if (!p) throw new ApiError('not_found');
   return p;
@@ -32,12 +33,12 @@ function requirePatient(karteNo: string): PatientRef {
 export function listStaff(isActive?: boolean): Staff[] {
   const sql = 'SELECT id, staff_code, name, role, is_active FROM staff' + (isActive === undefined ? '' : ' WHERE is_active = ?') + ' ORDER BY staff_code';
   const stmt = getDb().prepare(sql);
-  const list = isActive === undefined ? rows<Staff & { is_active: number }>(stmt) : rows<Staff & { is_active: number }>(stmt, isActive ? 1 : 0);
+  const list = isActive === undefined ? rows<Omit<Staff, 'is_active'> & { is_active: number }>(stmt) : rows<Omit<Staff, 'is_active'> & { is_active: number }>(stmt, isActive ? 1 : 0);
   return list.map((s) => ({ ...s, is_active: !!s.is_active }));
 }
 
 export function findStaffById(id: number): Staff | undefined {
-  const s = row<Staff & { is_active: number }>(getDb().prepare('SELECT id, staff_code, name, role, is_active FROM staff WHERE id = ?'), id);
+  const s = row<Omit<Staff, 'is_active'> & { is_active: number }>(getDb().prepare('SELECT id, staff_code, name, role, is_active FROM staff WHERE id = ?'), id);
   return s ? { ...s, is_active: !!s.is_active } : undefined;
 }
 
@@ -228,13 +229,15 @@ export function listReservations(filter: ReservationFilter): { items: Reservatio
     params.push(filter.status);
   }
   const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-  const total = row<{ n: number }>(getDb().prepare(`SELECT COUNT(*) AS n FROM reservation ${whereSql}`), ...(params as never[]))?.n ?? 0;
+  const total = row<{ n: number }>(getDb().prepare(`SELECT COUNT(*) AS n FROM reservation ${whereSql}`), ...params)?.n ?? 0;
 
   const limit = filter.limit ?? 100;
   const offset = filter.offset ?? 0;
   const items = rows<ReservationRow>(
     getDb().prepare(`SELECT id, patient_id, starts_at, ends_at, staff_id, room, purpose, note, status FROM reservation ${whereSql} ORDER BY starts_at LIMIT ? OFFSET ?`),
-    ...([...params, limit, offset] as never[]),
+    ...params,
+    limit,
+    offset,
   );
   return { items, total };
 }
@@ -341,9 +344,3 @@ export function cancelReservation(id: number): Reservation {
   getDb().prepare("UPDATE reservation SET status = 'cancelled' WHERE id = ?").run(id);
   return requireReservation(id);
 }
-
-function findPatientById(id: number): PatientRef | undefined {
-  return row<PatientRef>(getDb().prepare('SELECT id, karte_no, name_kanji, owner_id FROM patient WHERE id = ?'), id);
-}
-
-export { findPatientById };

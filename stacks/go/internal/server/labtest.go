@@ -3,6 +3,8 @@ package server
 import (
 	"net/http"
 	"strconv"
+
+	"clinicops/internal/clinical"
 )
 
 // labTestItemJSON は検査項目1件の応答。
@@ -56,9 +58,15 @@ func (s *Server) handleGetLabTest(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	patient, _ := s.clinical.PatientByID(test.PatientID)
+	writeJSON(w, http.StatusOK, s.buildLabTestJSON(test))
+}
 
-	items := s.clinical.LabTestItems(id)
+// buildLabTestJSON は LabTest とその項目（判定・基準値つき）をJSON表現へ組み立てる。
+// `GET /api/lab-tests/{id}` と `POST /api/patients/{karte_no}/lab-tests` の両方が使う
+// （同じ計算を2箇所に書かない）。
+func (s *Server) buildLabTestJSON(test clinical.LabTest) labTestJSON {
+	patient, _ := s.clinical.PatientByID(test.PatientID)
+	items := s.clinical.LabTestItems(test.ID)
 	out := make([]labTestItemJSON, len(items))
 	for i, it := range items {
 		j := s.clinical.Evaluate(it, patient.Species, patient.Sex)
@@ -85,8 +93,7 @@ func (s *Server) handleGetLabTest(w http.ResponseWriter, r *http.Request) {
 			Flag:          j.Flag,
 		}
 	}
-
-	writeJSON(w, http.StatusOK, labTestJSON{
+	return labTestJSON{
 		ID:           test.ID,
 		PatientID:    test.PatientID,
 		VisitID:      test.VisitID,
@@ -95,5 +102,5 @@ func (s *Server) handleGetLabTest(w http.ResponseWriter, r *http.Request) {
 		TestedAtTime: test.TestedAtTime,
 		StaffID:      test.StaffID,
 		Items:        out,
-	})
+	}
 }

@@ -19,21 +19,14 @@
  * 検算1 deliberately does not check it (see acceptance.md's note under
  * 検算1 about why tax is excluded from the 3-way comparison).
  */
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { getDb, rows, row } from './db';
 import { computeBillingTotals, largestRemainderPercent, type DetailForTotals } from './money';
-import { moduleDir } from './paths.ts';
-
-type PriceItem = { price_code: string; category_major: string };
+import { loadPriceItems } from './price-items.ts';
 
 let categoryCache: Map<string, string> | undefined;
 function categoryByPriceCode(): Map<string, string> {
   if (!categoryCache) {
-    const items = JSON.parse(
-      readFileSync(resolve(moduleDir(import.meta.dirname, import.meta.url), '../../../../data/price_items.json'), 'utf8'),
-    ) as PriceItem[];
-    categoryCache = new Map(items.map((p) => [p.price_code, p.category_major]));
+    categoryCache = new Map(loadPriceItems().map((p) => [p.price_code, p.category_major]));
   }
   return categoryCache;
 }
@@ -99,8 +92,8 @@ export function computeSalesSummary(from: string, to: string): SalesSummaryResul
 
   const billings = rows<{ id: number; staff_id: number | null; billed_on: string }>(
     db.prepare("SELECT id, staff_id, billed_on FROM billing WHERE status = 'confirmed' AND billed_on >= ? AND billed_on <= ?"),
-    from as never,
-    to as never,
+    from,
+    to,
   );
   const billingById = new Map(billings.map((b) => [b.id, b]));
 
@@ -110,7 +103,7 @@ export function computeSalesSummary(from: string, to: string): SalesSummaryResul
         db.prepare(
           `SELECT billing_id, price_code, quantity, unit_price, is_taxable FROM billing_detail WHERE billing_id IN (${billings.map(() => '?').join(',')})`,
         ),
-        ...(billings.map((b) => b.id) as never[]),
+        ...billings.map((b) => b.id),
       );
 
   const priced: Priced[] = allDetails.map((d) => {

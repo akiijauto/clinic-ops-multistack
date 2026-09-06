@@ -30,6 +30,8 @@ func floorYen(v float64) int {
 //  2. 明細小計（quantity×unit_price）は丸めずに合計する。
 //  3. 税抜合計・非課税小計・消費税額は、表示する最後の1回だけ切り捨てる。
 func (s *Store) BillingAmounts(id int) (Amounts, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if _, ok := s.billings[id]; !ok {
 		return Amounts{}, false
 	}
@@ -90,6 +92,8 @@ type Summary struct {
 //
 // 対象は Billing.status = "confirmed" のみ（spec/acceptance.md 検算1）。
 func (s *Store) SalesSummary(from, to string) Summary {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	catTotals := map[string]float64{}
 	staffTotals := map[string]float64{}
 	dateTotals := map[string]float64{}

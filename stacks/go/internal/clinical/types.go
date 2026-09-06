@@ -123,6 +123,61 @@ type Hospitalization struct {
 	CareRecords  []CareRecord `json:"care_records"`
 }
 
+// Dosing は投薬（`data/seed.json` の `dosings`）。年度×月のマス目に、
+// 実施した月へ印を付けるだけの記録（spec/model.md 9章。担当医・メモは持たない）。
+type Dosing struct {
+	ID         int    `json:"id"`
+	PatientID  int    `json:"patient_id"`
+	Kind       string `json:"kind"`
+	FiscalYear int    `json:"fiscal_year"`
+	M01        string `json:"m01"`
+	M02        string `json:"m02"`
+	M03        string `json:"m03"`
+	M04        string `json:"m04"`
+	M05        string `json:"m05"`
+	M06        string `json:"m06"`
+	M07        string `json:"m07"`
+	M08        string `json:"m08"`
+	M09        string `json:"m09"`
+	M10        string `json:"m10"`
+	M11        string `json:"m11"`
+	M12        string `json:"m12"`
+}
+
+// Prevention は予防の実施記録（`data/seed.json` の `preventions`）。
+// spec/model.md 8章・spec/openapi.yaml の Prevention スキーマに合わせ、
+// 担当医・メモは持たない（screens.md の記述より model.md / openapi.yaml を正とする）。
+type Prevention struct {
+	ID            int     `json:"id"`
+	PatientID     int     `json:"patient_id"`
+	Kind          string  `json:"kind"`
+	Content       string  `json:"content"`
+	PerformedDate string  `json:"performed_date"`
+	NextDueDate   *string `json:"next_due_date"`
+}
+
+// Paper は書類（spec/openapi.yaml の Paper スキーマ）。
+// model.md は紙カルテPDFの取込（KartePdf）を「落としたもの」としているため、
+// ここでは実ファイルを持たない軽量な文書メモとして扱う（title を書類名として使う）。
+type Paper struct {
+	ID        int     `json:"id"`
+	PatientID int     `json:"patient_id"`
+	Title     string  `json:"title"`
+	Note      *string `json:"note"`
+	CreatedAt string  `json:"created_at"`
+	DeletedAt *string `json:"deleted_at"`
+}
+
+// PreventionKind は予防（および投薬）の種別マスタ1行（`data/masters.json` の
+// `prevention_kinds`）。マスタにIDが無いため、配列の並び順から1始まりで
+// 採番する（spec/openapi.yaml の DosingKindId / PreventionKindId が指す
+// 「マスタの行id」に対応させる）。
+type PreventionKind struct {
+	ID   int
+	Code string
+	Name string
+}
+
 // seedFile は `data/seed.json` のうち、この計算に要る部分だけを読む。
 type seedFile struct {
 	Patients         []Patient         `json:"patients"`
@@ -132,4 +187,14 @@ type seedFile struct {
 	LabTestItems     []LabTestItem     `json:"lab_test_items"`
 	Reservations     []Reservation     `json:"reservations"`
 	Hospitalizations []Hospitalization `json:"hospitalizations"`
+	Dosings          []Dosing          `json:"dosings"`
+	Preventions      []Prevention      `json:"preventions"`
+}
+
+// mastersFile は `data/masters.json` のうち、この画面が要る部分だけを読む。
+type mastersFile struct {
+	PreventionKinds []struct {
+		Code string `json:"code"`
+		Name string `json:"name"`
+	} `json:"prevention_kinds"`
 }

@@ -4,16 +4,25 @@ namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hospitalization;
+use App\Support\BusinessClock;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
-/** 入院（本日の入院患者一覧）。契約は spec/openapi.yaml `/ward`。 */
+/** 入院（本日／指定日の入院患者一覧）。契約は spec/openapi.yaml `/ward` `/ward/day`。 */
 class WardController extends Controller
 {
     public function index(Request $request): View
     {
-        $date = $request->query('date') ?: now()->toDateString();
+        return $this->render($request->query('date') ?: BusinessClock::todayString());
+    }
 
+    public function day(Request $request): View
+    {
+        return $this->render($request->query('date', BusinessClock::todayString()));
+    }
+
+    private function render(string $date): View
+    {
         $hospitalizations = Hospitalization::with('patient')
             ->where('admitted_on', '<=', $date)
             ->where(function ($q) use ($date) {

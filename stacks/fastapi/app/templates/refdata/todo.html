@@ -1,0 +1,15 @@
+{# ToDo（個別の理由表示）。screens.md 20番。C状態のボタンを押すとここへ来る。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen %}
+
+{% block title %}{{ note.title }}について{% endblock %}
+
+{% block content %}
+<section {{ screen("todo") }}>
+  <h1>{{ note.title }}</h1>
+  <p>このボタンは、あえて動かさないと決めています。</p>
+  <p>{{ note.message }}</p>
+  {% if note.where %}<p class="hint">場所: {{ note.where }}</p>{% endif %}
+  <p><a href="/today">本日の患者へ戻る</a></p>
+</section>
+{% endblock %}

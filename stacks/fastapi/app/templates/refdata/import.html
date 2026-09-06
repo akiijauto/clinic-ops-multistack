@@ -1,0 +1,36 @@
+{# 取込。screens.md 24番。読むだけ。新規取込は列名・件数を読むだけで保存しない。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, success_banner, error_banner %}
+
+{% block title %}取込{% endblock %}
+
+{% block content %}
+<section {{ screen("settings-import") }}>
+  <h1>取込</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
+  <h2>読み込み済みの初期データ</h2>
+  <dl>
+    {% for name, n in counts.items() %}
+    <dt>{{ name }}</dt><dd>{{ n }} 件</dd>
+    {% endfor %}
+  </dl>
+
+  <h2>CSVを読む（列名と件数だけ。保存はしません）</h2>
+  <form method="post" action="/settings/import" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".csv" required>
+    <button type="submit">読む</button>
+  </form>
+
+  {% if survey %}
+  <div class="survey-result">
+    <p>ファイル名: {{ survey.filename }}</p>
+    <p>列: {{ survey.columns|join(", ") }}</p>
+    <p>件数: {{ survey.row_count }}</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

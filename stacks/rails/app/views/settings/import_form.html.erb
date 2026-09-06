@@ -1,0 +1,32 @@
+<% content_for :title, "取込" %>
+<div data-testid="screen-settings-import">
+  <h1>取込</h1>
+
+  <% if @success %>
+    <p data-testid="success-banner">
+      列名: <%= @headers.join("、") %> ／ 件数: <%= @row_count %>件
+      （ファイルの中身は保存していません）
+    </p>
+  <% elsif @error %>
+    <p data-testid="error-banner">ファイルを読み取れませんでした。</p>
+  <% end %>
+
+  <h2>読み込み済みの初期データ</h2>
+  <p>読み込み日時: <%= @loaded_at ? l(@loaded_at, format: :long) : "未読み込み" %></p>
+  <table>
+    <thead><tr><th>種類</th><th>件数</th></tr></thead>
+    <tbody>
+      <% @counts.each do |row| %>
+        <tr><td><%= row[:label] %></td><td><%= row[:count] %></td></tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <h2>CSV取込（列名と件数だけを読みます。保存はしません）</h2>
+  <%= form_with url: "/settings/import", method: :post, local: true, multipart: true do |f| %>
+    <p><%= f.file_field :file %></p>
+    <p><%= f.submit "読み取る" %></p>
+  <% end %>
+
+  <p><a href="/settings">設定へ戻る</a></p>
+</div>

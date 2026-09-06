@@ -1,0 +1,81 @@
+<% content_for :title, "売上集計" %>
+<div data-testid="screen-sales">
+  <h1>売上集計</h1>
+
+  <form method="get" action="/sales">
+    <label>開始日 <input type="date" name="from" value="<%= @from %>"></label>
+    <label>終了日 <input type="date" name="to" value="<%= @to %>"></label>
+    <button type="submit">集計</button>
+  </form>
+
+  <p data-testid="sales-total">
+    対象期間の税抜総合計:
+    <span data-check="sales_summary.net_amount" data-check-axis="total" data-check-key="total">
+      <%= @result[:total_net_amount] %>
+    </span>
+  </p>
+  <p data-testid="sales-excluded-count">
+    未算入の行数（単価未設定の明細を除いた件数）: <%= @result[:excluded_detail_count_total] %>
+  </p>
+
+  <h2>分類別</h2>
+  <table>
+    <thead><tr><th>分類</th><th>件数</th><th>金額（税抜）</th><th>構成比</th></tr></thead>
+    <tbody>
+      <% @result[:by_category].each do |row| %>
+        <tr data-testid="row-sales">
+          <td><%= row.key %></td>
+          <td><%= row.count %></td>
+          <td>
+            <span data-check="sales_summary.net_amount" data-check-axis="category" data-check-key="<%= row.key %>">
+              <%= row.net_amount %>
+            </span>
+          </td>
+          <td>
+            <span data-check="sales_summary.share_pct" data-check-axis="category" data-check-key="<%= row.key %>">
+              <%= row.respond_to?(:share_pct) ? row.share_pct : "" %>
+            </span>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <h2>担当別</h2>
+  <table>
+    <thead><tr><th>担当</th><th>件数</th><th>金額（税抜）</th></tr></thead>
+    <tbody>
+      <% @result[:by_staff].each do |row| %>
+        <tr data-testid="row-sales">
+          <td><%= row.key.is_a?(Integer) ? (Staff.find_by(id: row.key)&.name || row.key) : row.key %></td>
+          <td><%= row.count %></td>
+          <td>
+            <span data-check="sales_summary.net_amount" data-check-axis="staff" data-check-key="<%= row.key %>">
+              <%= row.net_amount %>
+            </span>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <h2>日別</h2>
+  <table>
+    <thead><tr><th>日付</th><th>件数</th><th>金額（税抜）</th></tr></thead>
+    <tbody>
+      <% @result[:by_date].each do |row| %>
+        <tr data-testid="row-sales">
+          <td><%= row.key %></td>
+          <td><%= row.count %></td>
+          <td>
+            <span data-check="sales_summary.net_amount" data-check-axis="date" data-check-key="<%= row.key %>">
+              <%= row.net_amount %>
+            </span>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>

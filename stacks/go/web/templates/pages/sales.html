@@ -1,0 +1,45 @@
+{{define "title"}}売上集計{{end}}
+{{define "content"}}
+<div data-testid="screen-sales">
+  <h1>売上集計</h1>
+
+  <form method="get" action="/sales">
+    <label>開始日 <input type="date" name="from" value="{{.From}}"></label>
+    <label>終了日 <input type="date" name="to" value="{{.To}}"></label>
+    <button type="submit">絞り込む</button>
+  </form>
+
+  <p>
+    総合計
+    <span data-check="sales_summary.net_amount" data-check-axis="total">{{.TotalAmount}}</span>
+    円 ／ 未算入行数 <span data-check="billing.excluded_count">{{.ExcludedCount}}</span>
+  </p>
+
+  {{range .Tables}}
+  {{$axis := .Axis}}
+  <section data-testid="sales-table-{{.Axis}}">
+    <h2>{{if eq .Axis "category"}}分類別{{else if eq .Axis "staff"}}担当別{{else}}日別{{end}}</h2>
+    {{if not .Rows}}
+    <p data-testid="empty-sales-{{.Axis}}">対象期間の実績がありません。</p>
+    {{else}}
+    <table>
+      <thead>
+        <tr><th>{{if eq .Axis "category"}}分類{{else if eq .Axis "staff"}}担当{{else}}日付{{end}}</th><th>金額</th>{{if eq .Axis "category"}}<th>構成比</th>{{end}}</tr>
+      </thead>
+      <tbody>
+        {{range .Rows}}
+        <tr data-testid="row-sales">
+          <td>{{.Key}}</td>
+          <td><span data-check="sales_summary.net_amount" data-check-axis="{{$axis}}" data-check-key="{{.Key}}">{{.NetAmount}}</span></td>
+          {{if .HasShare}}<td><span data-check="sales_summary.share_pct" data-check-axis="category" data-check-key="{{.Key}}">{{.SharePct}}</span>%</td>{{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{end}}
+  </section>
+  {{end}}
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

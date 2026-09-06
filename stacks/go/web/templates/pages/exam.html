@@ -1,0 +1,54 @@
+{{define "title"}}検査 {{.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-exam">
+  <h1>検査</h1>
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+  <p>{{.PatientName}}（{{.KarteNo}}）</p>
+
+  <nav data-testid="exam-list">
+    <a href="/animals/{{.KarteNo}}/exam">新規検査</a>
+    {{range .Tests}}
+    <a href="/animals/{{$.KarteNo}}/exam?lab_test_id={{.ID}}"{{if .IsCurrent}} aria-current="page"{{end}}>{{.TestedOn}} {{.Category}}</a>
+    {{end}}
+  </nav>
+
+  <form method="post" action="/animals/{{.KarteNo}}/exam">
+    <fieldset {{if .CurrentID}}disabled{{end}}>
+      <legend>検査日・カテゴリ</legend>
+      <label>検査日 <input type="date" name="tested_on" value="{{.TestedOn}}"></label>
+      <label>カテゴリ <input name="category" value="{{.Category}}"></label>
+    </fieldset>
+
+    <table>
+      <caption>検査項目</caption>
+      <thead><tr><th>項目</th><th>単位</th><th>基準値</th><th>結果値</th><th>判定</th></tr></thead>
+      <tbody>
+        {{range .Items}}
+        <tr data-testid="row-lab-test-item">
+          <td>
+            {{.Name}}
+            <input type="hidden" name="item_code" value="{{.ItemCode}}">
+          </td>
+          <td>{{.Unit}}</td>
+          <td>{{if .Low}}{{.Low}} 〜 {{.High}}{{else}}（基準値なし）{{end}}</td>
+          <td>
+            <span data-check="lab_test_item.value">{{.Value}}</span>
+            {{if not $.CurrentID}}<input name="value" value="{{.Value}}">{{end}}
+          </td>
+          <td data-check-flag="{{.Flag}}">
+            <span data-check="lab_test_item.judgment">{{.Judgment}}</span>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+
+    {{if not .CurrentID}}
+    <button type="submit">保存</button>
+    {{end}}
+  </form>
+
+  <p><a href="/animals/{{.KarteNo}}/accounting">会計へ</a></p>
+  <p><a href="/animals/{{.KarteNo}}/karte">カルテへ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

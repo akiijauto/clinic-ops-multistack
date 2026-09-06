@@ -26,7 +26,7 @@ func newTestHandler(t *testing.T) http.Handler {
 		t.Fatalf("テンプレートの解析に失敗: %v", err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(config.Config{}, log, views, assets.Handler(), nil, nil).Handler()
+	return New(config.Config{}, log, views, assets.Handler(), nil, nil, nil, nil).Handler()
 }
 
 func TestHealth(t *testing.T) {
@@ -65,7 +65,7 @@ func TestHealthRejectsPost(t *testing.T) {
 // TestRoutesAreRecorded は、登録した経路が一覧にも載ることを確かめる。
 // 死んだリンクの機械的な確認がこの一覧に依るため。
 func TestRoutesAreRecorded(t *testing.T) {
-	s := New(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, nil, nil, nil)
+	s := New(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, nil, nil, nil, nil, nil)
 	s.Handler()
 
 	found := false

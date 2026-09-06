@@ -1,0 +1,49 @@
+<% content_for :title, "DM" %>
+<div data-testid="screen-dm">
+  <h1>DM管理</h1>
+
+  <form method="get" action="/dm">
+    <label>実施内容
+      <select name="type">
+        <option value="">(すべて)</option>
+        <% @kinds.each do |k| %>
+          <option value="<%= k[:kind_id] %>" <%= "selected" if params[:type].to_s == k[:kind_id].to_s %>><%= k[:name] %></option>
+        <% end %>
+      </select>
+    </label>
+    <label>基準日
+      <select name="field">
+        <option value="next_due_date" <%= "selected" if @field == "next_due_date" %>>次回予定日</option>
+        <option value="performed_date" <%= "selected" if @field == "performed_date" %>>実施日</option>
+      </select>
+    </label>
+    <label>開始日 <input type="date" name="from" value="<%= params[:from] %>"></label>
+    <label>終了日 <input type="date" name="to" value="<%= params[:to] %>"></label>
+    <button type="submit">検索</button>
+  </form>
+
+  <p>件数: <%= @rows.size %></p>
+
+  <% if @rows.empty? %>
+    <p data-testid="empty-dm">対象がありません。</p>
+  <% else %>
+    <table>
+      <thead><tr><th>カルテNo</th><th>飼主</th><th>動物</th><th>種別</th><th>次回予定日</th><th>実施日</th></tr></thead>
+      <tbody>
+        <% @rows.each do |r| %>
+          <tr data-testid="row-dm">
+            <td><a href="/animals/<%= r.patient.karte_no %>"><%= r.patient.karte_no %></a></td>
+            <td><%= r.patient.owner.name_kanji %></td>
+            <td><%= r.patient.name_kanji %></td>
+            <td><%= r.kind %></td>
+            <td><%= r.next_due_date %></td>
+            <td><%= r.performed_date %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <p><a href="/dm.csv?<%= request.query_string %>">CSVへ書き出す</a></p>
+  <p><a href="/">トップへ戻る</a></p>
+</div>

@@ -160,3 +160,38 @@
   **その子プロセス（`--multiprocessing-fork` を含むコマンドライン）も一緒に**
   止めること。片方だけ止めると「掴んだまま死んだように見えるソケット」の正体は
   だいたいこれ
+
+## D-10: `/todo/{key}` `/folded/{key}` の key 語彙を仮決めした
+
+- **状況**: `spec/openapi.yaml` の `TodoKey`/`MasterKey` は「語彙は screens.md/acceptance.md
+  を正とする（enumに固定しない）」としているが、`screens.md`/`acceptance.md` 本文には
+  具体的なキー名が書かれていない
+- **仮決め**:
+  - todo（C状態・3件）: `temp_save`（一時保存）／`complete_delete_all`（完了全削除）／
+    `complete_delete_one`（完了削除）
+  - folded（B状態・14件）: `model.md`「落としたもの」表の各行に1つずつキーを振った
+    （`hospital_division` `clinic_feature` `staff_position` `karte_draft` `audit_log`
+    `karte_pdf` `lab_item_master` `billing_category_master` `price_item_4layer`
+    `insurance_claim` `clinic_points` `clinic_last_slip_no` `clinic_agency_code`
+    `clinic_logo`）。実体は `app/feature_notes.py`
+- **件数の根拠**: 表を数え直したところ**14件**だった（前回の記録で「10件」と書いたのは
+  数え間違い。`model.md` 204〜221行目を実際に数えて訂正した）
+- **止まるか**: 止まらない。共通テストが特定のkeyを名指しで要求していなければ
+  この仮決めのままで良いはず
+
+## D-11: `KartePdf`（落としたもの）と screens.md 13番「書類」の食い違いを見つけた
+
+- **事実**: `model.md`「落としたもの」表に `KartePdf`（紙カルテの取込）が
+  「ファイルの取り扱いが主題になってしまう」という理由で載っている
+- **事実**: `spec/screens.md` の領域2・13番「書類（紙カルテPDF）」は、PDFの取込・取消・
+  「元から無い」印を付ける、という**実際に動く機能**として書かれている
+  （`openapi.yaml` にも `/animals/{karte_no}/papers` 等の実ルートがある）
+- **疑い**: 「落としたもの」に KartePdf を挙げたのは、契約の別の版・別の書き手による
+  記述で、書類画面の設計時には反映されなかった可能性がある
+- **仮決め**: 書類画面（screen 13）は**実装する**（`openapi.yaml` に実ルートがあるため）。
+  「折りたたみ表示」の一覧には、`model.md` の表をそのまま**文字どおり**載せている
+  （KartePdfの行もそのまま出る）ので、**画面上は「作らない」と言いながら実際には
+  作っている状態**になっている。これは screen 7 の「満たすべきこと」
+  （画面に「できます」と書いて出来ていない状態を作らない、の逆）に抵触しうる
+- **止まるか**: 止まらない（書類画面は他の契約記述に従って実装を進める）。
+  **`model.md` の表からこの行を外すか、書類画面の実装を取りやめるか、指揮役の判断を仰ぎたい**

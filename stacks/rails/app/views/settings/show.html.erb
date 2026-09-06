@@ -1,8 +1,41 @@
 <% content_for :title, "設定" %>
 <div data-testid="screen-settings">
   <h1>病院設定</h1>
-  <p>病院名: <%= @clinic.name %></p>
-  <p>消費税率: <%= @clinic.tax_rate %></p>
-  <p>予約枠: <%= @clinic.reservation_slot_minutes %>分</p>
+
+  <% if @success %>
+    <p data-testid="success-banner">保存しました。</p>
+  <% elsif @error %>
+    <p data-testid="error-banner">保存に失敗しました。入力内容を確認してください。</p>
+  <% end %>
+
+  <%= form_with model: @clinic, url: "/settings", method: :post, local: true do |f| %>
+    <p><%= f.label :name, "病院名" %><br><%= f.text_field :name %></p>
+    <p><%= f.label :postal_code, "郵便番号" %><br><%= f.text_field :postal_code %></p>
+    <p><%= f.label :address1, "住所1" %><br><%= f.text_field :address1 %></p>
+    <p><%= f.label :address2, "住所2" %><br><%= f.text_field :address2 %></p>
+    <p><%= f.label :phone, "電話" %><br><%= f.text_field :phone %></p>
+    <p><%= f.label :fax, "FAX" %><br><%= f.text_field :fax %></p>
+    <p><%= f.label :director_name, "開設者名" %><br><%= f.text_field :director_name %></p>
+    <p><%= f.label :reservation_slot_minutes, "予約枠の刻み（分）" %><br>
+      <%= f.number_field :reservation_slot_minutes, min: 1 %></p>
+    <p><%= f.label :tax_rate, "消費税率" %><br>
+      <%= f.number_field :tax_rate, step: "0.0001", min: 0, max: 1 %></p>
+
+    <p>休診日</p>
+    <% %w[月 火 水 木 金 土 日].each_with_index do |label, i| %>
+      <label>
+        <input type="checkbox" name="clinic[closed_weekdays][]" value="<%= i %>"
+               <%= "checked" if @clinic.closed_weekdays.include?(i) %>>
+        <%= label %>
+      </label>
+    <% end %>
+
+    <p><%= f.submit "保存" %></p>
+  <% end %>
+
+  <p><a href="/settings/features">機能設定</a></p>
+  <p><a href="/settings/import">取込</a></p>
+  <p><a href="/settings/master">マスタ</a></p>
+  <p><a href="/about">このシステムについて</a></p>
   <p><a href="/">トップへ戻る</a></p>
 </div>

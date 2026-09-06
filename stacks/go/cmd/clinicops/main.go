@@ -18,7 +18,9 @@ import (
 	"clinicops/internal/billing"
 	"clinicops/internal/clinical"
 	"clinicops/internal/config"
+	"clinicops/internal/reception"
 	"clinicops/internal/server"
+	"clinicops/internal/settings"
 	"clinicops/internal/view"
 	"clinicops/web"
 )
@@ -62,9 +64,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	receptionHandlers, err := reception.New(dataDir, views)
+	if err != nil {
+		return err
+	}
+	settingsHandlers, err := settings.New(dataDir, views)
+	if err != nil {
+		return err
+	}
 	log.Info("data loaded", "dir", dataDir)
 
-	srv := server.New(cfg, log, views, assets.Handler(), billingStore, clinicalStore)
+	srv := server.New(cfg, log, views, assets.Handler(), billingStore, clinicalStore, receptionHandlers, settingsHandlers)
 
 	httpSrv := &http.Server{
 		Addr:              cfg.Addr,

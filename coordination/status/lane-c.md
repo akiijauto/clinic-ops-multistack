@@ -280,3 +280,119 @@ Laravelの `url()` は絶対URL（`http://127.0.0.1:8403/xxx`）を返すため�
 
 指揮役の指示待ち。共通テストは全件緑。5領域の作り込み、または画面数の食い違い
 （24/25/26の実測）など、次の段階の指示を待つ。
+
+---
+
+## 2026-09-06 — 画面を積み増し中（新規登録・顧客・削除・来院履歴・折りたたみ表示・ToDo・会計・会計履歴）
+
+`lanec-area1`（サブエージェント）が領域を越えて広く実装したあと、セッション上限で停止した。
+そこまでの到達点（共通テスト14件・全レーン緑）を土台に、レーンC自身が続きを進めている。
+
+### 見つけて直したもの（統合点の修正）
+
+1. **`visit_count.today` が Reception 件数を数えていた。** `spec/screens.md`画面1・8は
+   「Visitの件数。Receptionの完了件数とは別の数値」と明記しており誤り。`App\Support\BusinessClock`
+   を新設し、トップ・本日の患者の両方を `Visit` 件数へ統一。あわせて `data-check="visit_count.today"`
+   がトップ画面から**欠落していた**ことも直した
+2. **「本日」を実際の壁時計（`now()`）で判定していた。** `data/make_data.py` は
+   `ANCHOR_DATE=2026-09-01` を基準にしており `datetime.now()` を使っていない
+   （`data/README.md`）。壁時計のままだと、アンカー日以外にこのアプリを開いた瞬間
+   本日の患者が0件に見える（2026-09-06実測）。`BusinessClock::today()` で吸収した
+3. **CSRF検証が未設定だった。** フォームPOSTを一つも作っていなかったため気づいていなかったが、
+   Laravel既定の `web` ミドルウェアはCSRFを検証する。この企画は認証を扱わず
+   （`coordination/DECISIONS.md`）、共通テストはCSRFトークンを持たない外部クライアントなので、
+   `bootstrap/app.php` で全ルートのCSRF検証を無効化した
+4. **`billings.slip_no` の UNIQUE制約が draft 伝票の複数生成で衝突した。** 未確定は空文字
+   `''` で埋めていたため2件目から `UNIQUE constraint failed` で500になった
+   （2026-09-06実測、検算8のクロールで発覚）。列を nullable に変え、未確定は `null` にした
+   （SQLiteのUNIQUE索引はNULLどうしを別物として扱うため衝突しない）
+
+### 作った画面
+
+| 画面 | 場所 |
+| --- | --- |
+| 新規登録・顧客・削除確認 | `app/Http/Controllers/Reception/PatientController.php` |
+| 来院履歴 | `app/Http/Controllers/Reception/HistoryController.php`（**仮決め**：AuditLogが無いため、
+  変更前後の値ではなくVisit一覧＋復元のみの簡略版。qa/lane-c.md参照） |
+| 折りたたみ表示 | `app/Http/Controllers/Reception/FoldedController.php` |
+| ToDo | `app/Http/Controllers/Ops/TodoController.php` |
+| 診察の削除・復元（カルテ画面内） | `app/Http/Controllers/Clinical/KarteController.php` に追加 |
+| 会計 | `app/Http/Controllers/Billing/AccountingController.php` |
+| 会計履歴 | `app/Http/Controllers/Billing/AccountingHistoryController.php` |
+
+### 確かめたこと
+
+`python tests/run.py http://127.0.0.1:8403` → 全14件通過（回帰なし）。
+
+### 次にやること
+
+残り画面: 検査・投薬・予防・書類（領域2）、入院の患者別画面・ward/day（領域4）、
+機能設定・取込・マスタ（領域5）。引き続きレーンC自身が進める。
+
+---
+
+## 2026-09-06 — 領域2（診療）を完成、領域3（会計・売上）は既存4枚に追加した2枚で完成
+
+指揮役の再開指示（8403で稼働中、再起動不要）を受け、続きを実装。共通テストは都度14件緑を確認。
+
+### 作った画面
+
+| 画面 | 場所 |
+| --- | --- |
+| 検査 | `app/Http/Controllers/Clinical/ExamController.php`（既存の `LabJudgment` を再利用） |
+| 投薬 | `app/Http/Controllers/Clinical/DosingController.php` |
+| 予防 | `app/Http/Controllers/Clinical/PreventionController.php`（**仮決め**：基本周期がmasters.jsonに無いため次回予定日の自動計算はしない） |
+| 書類 | `app/Http/Controllers/Clinical/PaperController.php`（**仮決め**：PDF実体は扱わず題名・メモのみ。`papers.removed_at` を新設し「一覧から消えるが行は残る」を実装） |
+| 会計・会計履歴 | 前回までに完成済み |
+
+### マイグレーション追加
+
+`2026_09_06_000001_add_removed_at_to_papers_table.php`（`papers.removed_at`、nullable）。
+既存データは壊さない加算マイグレーション。稼働中サーバに対しては `migrate`（fresh ではない）を実行した。
+
+### 確かめたこと
+
+`python tests/run.py http://127.0.0.1:8403` → 全14件通過（回帰なし、各段階で確認）。
+
+### 次にやること
+
+残り: 領域4（入院の患者別画面・ward/day）、領域5（機能設定・取込・マスタ）。続けて進める。
+
+---
+
+## 2026-09-06 — 全26画面の実装が完了。共通テスト14件、全件緑
+
+領域5（設定・機能設定・取込・マスタ）と、DM画面の絞り込み・CSV書き出しを実装し、
+`spec/screens.md` の26画面すべてにルートが存在する状態にした。サーバは指揮役起動のプロセス
+（8403）を再起動せずそのまま使用（PHPは1リクエスト1実行なのでコード変更の反映に再起動不要）。
+
+### 今回作った画面
+
+| 画面 | 場所 |
+| --- | --- |
+| 入院（この動物） | `app/Http/Controllers/Ops/AnimalWardController.php`（`/animals/{karte_no}/ward`。実施者必須・退院済みへの追記拒否を実装） |
+| 入院（指定日） | `WardController` に `/ward/day` を追加、`BusinessClock` に統一 |
+| 予約 新規／詳細／変更／取消 | `ReservationsController` を全面書き直し。`ReservationOverlap` で重複を拒否 |
+| 設定（保存） | `SettingsController::update`（Clinicは常に1件、休診日の複数選択を保存） |
+| 機能設定 | `FeaturesController`（`config/feature_notes.php` を折りたたみ表示と共有） |
+| 取込 | `ImportController`（**仮決め**：screens.mdの「件数確認」とopenapi.yamlの「CSV列名+件数を読むだけ」が食い違うため両方載せた。qa/lane-c.md G参照） |
+| マスタ | `MasterController`（`price_item`/`lab_item`/`reception_kind`/`prevention_kind`/`department`/`phrase`の6種、参照専用） |
+| DM（絞り込み・CSV） | `DmController` を書き直し。`type`/`field`/`from`/`to`、削除済みPatient/Ownerの除外、画面とCSVで同じ絞り込みを共有 |
+
+### 確かめたこと
+
+`python tests/run.py http://127.0.0.1:8403` → **全14件通過**（ここまでの全段階で回帰なし）。
+`route:list` は67ルート（画面26＋API・補助込み）。エラーログは0件。
+
+### 積み残し・仮決め（すべて qa/lane-c.md に集約済み）
+
+- 来院履歴・診察削除理由は AuditLog 不在のため簡略版（E1・E2）
+- 予防の次回予定日自動計算は基本周期が masters.json に無いため未実装
+- 書類はPDF実体を扱わず題名・メモのみ（openapi.yamlのPaperスキーマに合わせた）
+- DM の `span` パラメータは用途不明のため未使用
+- 会計のPOST操作を複数ルートに分割（契約は200+testidsのみを画面ルートの契約としているため実害なしと判断）
+
+### 次にやること
+
+**指揮役の指示待ち。** 共通テストは全件緑。指示があれば個別の画面の作り込み・
+横並び再測での指摘対応を継続する。25分後の自動確認は入れず、次の指示まで待機する。

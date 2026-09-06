@@ -1,0 +1,98 @@
+<% content_for :title, "会計" %>
+<% confirmed = @billing.confirmed? %>
+<div data-testid="screen-accounting">
+  <h1>会計 - <%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+
+  <% if @op.present? %>
+    <% if @billing.errors.any? %>
+      <p data-testid="error-banner"><%= @billing.errors.full_messages.join("、") %></p>
+    <% else %>
+      <p data-testid="success-banner">保存しました。</p>
+    <% end %>
+  <% end %>
+
+  <p>
+    伝票番号: <%= @billing.slip_no.presence || "(確定前)" %> /
+    状態: <%= @billing.status %> /
+    会計日: <%= @billing.billed_on %> /
+    飼主: <%= @patient.owner.name_kanji %>
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>分類</th><th>コード</th><th>内容</th><th>単価</th><th>数量</th><th>課税区分</th><th>金額</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% @billing.billing_details.reject(&:marked_for_destruction?).each do |d| %>
+        <tr data-testid="row-billing-detail">
+          <td><%= FixedData::PriceItems.category_major_for(d.price_code) %></td>
+          <td><%= d.price_code %></td>
+          <td><%= d.name %></td>
+          <td><%= d.unit_price.nil? ? "未設定" : d.unit_price %></td>
+          <td><%= d.quantity %></td>
+          <td><%= d.is_taxable ? "課税" : "非課税" %></td>
+          <td><%= d.unit_price.nil? ? "未算入" : d.amount.to_i %></td>
+          <td>
+            <% if !confirmed && d.persisted? %>
+              <form method="post" action="/animals/<%= @patient.karte_no %>/accounting" style="display:inline">
+                <%= hidden_field_tag :slip, @billing.id %>
+                <%= hidden_field_tag :op, "copy_detail" %>
+                <%= hidden_field_tag :detail_id, d.id %>
+                <button type="submit">複写</button>
+              </form>
+              <form method="post" action="/animals/<%= @patient.karte_no %>/accounting" style="display:inline">
+                <%= hidden_field_tag :slip, @billing.id %>
+                <%= hidden_field_tag :op, "delete_detail" %>
+                <%= hidden_field_tag :detail_id, d.id %>
+                <button type="submit">削除</button>
+              </form>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <p data-testid="billing-total">
+    税抜合計: <span data-check="billing.net_amount"><%= @billing.calc.net_amount %></span> /
+    消費税額: <span data-check="billing.tax_amount"><%= @billing.calc.tax_amount %></span> /
+    税込合計: <span data-check="billing.total_amount"><%= @billing.calc.total %></span>
+  </p>
+  <p data-testid="billing-excluded-count">
+    未算入の行数: <span data-check="billing.excluded_count"><%= @billing.calc.excluded_detail_count %></span>
+  </p>
+
+  <% unless confirmed %>
+    <h2>料金項目を追加</h2>
+    <% @price_categories.each do |category, items| %>
+      <details>
+        <summary><%= category %></summary>
+        <% items.each do |item| %>
+          <form method="post" action="/animals/<%= @patient.karte_no %>/accounting" style="display:inline">
+            <%= hidden_field_tag :slip, @billing.id %>
+            <%= hidden_field_tag :op, "add_detail" %>
+            <%= hidden_field_tag :price_code, item[:price_code] %>
+            <%= item[:name] %>（<%= item[:unit_price].nil? ? "単価未設定" : "#{item[:unit_price]}円" %>）
+            <input type="number" name="quantity" value="1" min="1" step="1">
+            <button type="submit">追加</button>
+          </form>
+        <% end %>
+      </details>
+    <% end %>
+
+    <form method="post" action="/animals/<%= @patient.karte_no %>/accounting">
+      <%= hidden_field_tag :slip, @billing.id %>
+      <%= hidden_field_tag :op, "delete_all" %>
+      <button type="submit">全削除</button>
+    </form>
+
+    <form method="post" action="/animals/<%= @patient.karte_no %>/accounting">
+      <%= hidden_field_tag :slip, @billing.id %>
+      <%= hidden_field_tag :op, "confirm" %>
+      <button type="submit" <%= "disabled" if @billing.billing_details.reject(&:marked_for_destruction?).empty? %>>確定</button>
+    </form>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>/accounting/history">会計履歴へ</a></p>
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

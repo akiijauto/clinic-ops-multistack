@@ -56,7 +56,10 @@ export function dbFileUpdatedAtJst(): string | null {
   const path = process.env.CLINIC_DB ?? resolve(moduleDir(import.meta.dirname, import.meta.url), '../../data/clinic.db');
   if (path === ':memory:') return null;
   try {
-    return toJstIso(statSync(path).mtime);
+    // The path comes from an env var / a runtime resolve(), so Turbopack
+    // can't narrow it statically and otherwise traces the whole project
+    // as a build dependency of this one stat() call.
+    return toJstIso(statSync(/* turbopackIgnore: true */ path).mtime);
   } catch {
     return null;
   }

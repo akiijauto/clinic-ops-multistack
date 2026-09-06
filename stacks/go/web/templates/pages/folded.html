@@ -1,0 +1,24 @@
+{{define "title"}}折りたたみ表示{{end}}
+{{define "content"}}
+<div data-testid="screen-folded">
+  <h1>この企画では扱わないもの</h1>
+  <p>灰色のボタンのうち、この企画のスコープそのものに無いもの（B）を1画面にまとめている。
+     業務上あえて動かさないもの（C）は、それぞれの画面の「ToDo」から個別に確認できる。</p>
+
+  {{if not .Items}}<p data-testid="empty-folded">対象はありません。</p>{{end}}
+
+  <dl>
+    {{range .Items}}
+    <div data-testid="row-folded" id="{{.Key}}" {{if eq .Key $.FocusedKey}}data-focused="1"{{end}}>
+      <dt>{{.Title}}</dt>
+      <dd>
+        <p>{{.Reason}}</p>
+        <p>見える場所: {{.WhereSeen}}</p>
+      </dd>
+    </div>
+    {{end}}
+  </dl>
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

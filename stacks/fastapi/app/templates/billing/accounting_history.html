@@ -1,0 +1,38 @@
+{# 会計履歴。screens.md 15番。動物／飼主／全体の3範囲。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty, value_check %}
+
+{% block title %}会計履歴 {{ karte_no }}{% endblock %}
+
+{% block content %}
+<section {{ screen("accounting-history") }}>
+  <h1>会計履歴 — {{ karte_no }}</h1>
+
+  <nav>
+    <a href="/animals/{{ karte_no }}/accounting/history?scope=patient" {% if scope=="patient" %}aria-current="true"{% endif %}>動物</a>
+    <a href="/animals/{{ karte_no }}/accounting/history?scope=owner" {% if scope=="owner" %}aria-current="true"{% endif %}>飼主</a>
+    <a href="/animals/{{ karte_no }}/accounting/history?scope=all" {% if scope=="all" %}aria-current="true"{% endif %}>全体</a>
+  </nav>
+
+  {% if rows %}
+  <table>
+    <thead><tr><th>伝票No</th><th>会計日</th><th>状態</th><th>税抜合計</th><th>消費税額</th><th>税込合計</th><th>未算入</th></tr></thead>
+    <tbody>
+      {% for b in rows %}
+      <tr {{ row("billing") }} {% if b.patient_id == current_patient_id %}class="current-patient"{% endif %}>
+        <td><a href="/animals/{{ karte_no }}/accounting?slip={{ b.id }}">{{ b.slip_no or "（確定前）" }}</a></td>
+        <td>{{ b.billed_on }}</td>
+        <td>{{ b.status }}</td>
+        <td {{ value_check("billing.net_amount") }}>{{ b.net_amount }}</td>
+        <td {{ value_check("billing.tax_amount") }}>{{ b.tax_amount }}</td>
+        <td {{ value_check("billing.total_amount") }}>{{ b.total_amount }}</td>
+        <td {{ value_check("billing.excluded_count") }}>{{ b.excluded_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p {{ empty("accounting-history") }}>該当する伝票がありません。</p>
+  {% endif %}
+</section>
+{% endblock %}

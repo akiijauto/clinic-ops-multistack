@@ -1,0 +1,23 @@
+{# 折りたたみ表示。screens.md 7番。model.md「落としたもの」表と1対1。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row %}
+
+{% block title %}この企画では作っていない機能{% endblock %}
+
+{% block content %}
+<section {{ screen("folded") }}>
+  <h1>この企画では作っていない機能</h1>
+  <p>以下は、この企画（学習・研究用）では意図して作らなかった機能です。
+     題材の実システムから機能を戻す操作ではありません。</p>
+  <ul>
+    {% for n in notes %}
+    <li {{ row("feature") }} id="feature-{{ n.key }}"
+        {% if highlight_key == n.key %}class="highlighted"{% endif %}>
+      <strong>{{ n.title }}</strong> — {{ n.message }}
+      {% if n.where %}<span class="hint">（{{ n.where }}）</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p>件数: {{ notes|length }}</p>
+</section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{{define "title"}}取込{{end}}
+{{define "content"}}
+<div data-testid="screen-settings-import">
+  <h1>取込</h1>
+  <p>この契約の初期データは <code>data/</code> から読み込むだけで、この画面からの新規取込は提供しない
+     （読み込み済みの件数の確認と、CSVの列名・件数を試し読みする機能だけを持つ）。</p>
+
+  {{if .Error}}<p data-testid="error-banner">{{.Error}}</p>{{end}}
+
+  <h2>読み込み済みの初期データ</h2>
+  <p>読み込み日時: {{.LoadedAt}}</p>
+  <table>
+    <thead><tr><th>種類</th><th>件数</th></tr></thead>
+    <tbody>
+      {{range .Summaries}}
+      <tr><td>{{.Kind}}</td><td>{{.Count}}</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <h2>CSVの列名・件数を試し読み</h2>
+  <p>ファイルの中身は保存しない。列名と行数だけを返す。</p>
+  <form method="post" action="/settings/import" enctype="multipart/form-data">
+    <p><input type="file" name="file" accept=".csv" required></p>
+    <p><button type="submit">読む</button></p>
+  </form>
+
+  {{if .Survey}}
+  <div data-testid="success-banner">
+    <p>{{.Survey.Filename}}: {{len .Survey.Columns}}列 / {{.Survey.Rows}}行</p>
+    <ul>
+      {{range .Survey.Columns}}<li>{{.}}</li>{{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  <p><a href="/settings">設定へ戻る</a> ・ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

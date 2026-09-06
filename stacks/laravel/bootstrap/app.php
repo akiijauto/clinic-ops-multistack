@@ -13,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // この企画は認証を扱わない（coordination/DECISIONS.md 第4節）。
+        // 共通テスト（tests/）はCSRFトークンを持たない外部クライアントとして
+        // HTMLフォームへ直接POSTするため、CSRF検証を全ルートで無効化する
+        // （さもないと全フォーム送信が419になる。ユーザーのログインセッションを
+        // 想定していないので、実害となるCSRF脅威モデル自体が無い）。
+        $middleware->validateCsrfTokens(except: ['*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

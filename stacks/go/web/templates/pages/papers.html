@@ -1,0 +1,48 @@
+{{define "title"}}書類 {{.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-papers">
+  <h1>書類（紙カルテPDF）</h1>
+  {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  {{if .NoPaper}}
+  <p data-testid="no-paper-flag">この子の紙カルテは元から無い、と登録されています。</p>
+  {{else if not .Rows}}
+  <p data-testid="empty-papers">まだ取り込んだ書類がありません。</p>
+  {{end}}
+
+  {{if .Rows}}
+  <table>
+    <thead><tr><th>ファイル名</th><th>取込日</th><th>メモ</th><th></th></tr></thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-paper" data-paper-id="{{.ID}}">
+        <td>{{.Title}}</td>
+        <td>{{.CreatedAt}}</td>
+        <td>{{.Note}}</td>
+        <td>
+          <form method="post" action="/papers/{{.ID}}/remove">
+            <button type="submit">取消</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <form method="post" action="/animals/{{.KarteNo}}/papers">
+    <label>ファイル名（.pdf のみ） <input name="title"></label>
+    <label>メモ <input name="note"></label>
+    <button type="submit">取り込む</button>
+  </form>
+
+  <form method="post" action="/papers/no-paper">
+    <input type="hidden" name="karte_no" value="{{.KarteNo}}">
+    <input type="hidden" name="value" value="{{if .NoPaper}}0{{else}}1{{end}}">
+    <button type="submit">{{if .NoPaper}}「元から無い」を外す{{else}}「元から無い」を付ける{{end}}</button>
+  </form>
+
+  <p><a href="/animals/{{.KarteNo}}/karte">カルテへ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

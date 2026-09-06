@@ -151,3 +151,46 @@
   実害は無いが、同じ規則に揃えた）
 - 実測: 修正前は `/api/sales/summary` `/api/billings/{id}` `/api/ward` 等、DB/マスタに
   触るAPIルートが**すべて500**だった。修正後は全部200
+
+## F【壊れていた】`tsc --noEmit` は赤だったが、共通テスト14件は緑だった（2026-09-06）
+
+**「緑だが実は壊れている」の実例。** `npm test`（`node --test`、型剥がしのみ）も
+`next dev`（Turbopack開発モード、型エラーで止まらない）も型検査をしないため、
+`npm run build`（`next build`は`tsc`を通す）を実際に走らせるまで誰も気づかなかった。
+
+実測（気づいた時点）:
+```
+$ npm run typecheck
+src/lib/db.ts の rows()/row() が ...params: never[] のまま
+  → area1が回避策(area1/query.ts の one()/many())を作って報告済みだった
+  → が、karte.ts / clinical/lab.ts 等が同じ回避策越しに呼んでいたぶんは型検査を
+    素通りしていた別のバグ（StatementSyncの実シグネチャと不一致）を隠していた
+src/lib/settings-clinic.ts / src/app/settings/route.ts の closed_weekdays が
+  number[] のまま Weekday[] へ代入されていた
+src/app/_area4/repo.ts の Staff & { is_active: number } が
+  （is_active: boolean と number の交差で）never に潰れていた
+```
+
+**対処**（統合層の担当としてレーンE本体が直接修正。所有ファイルの変更）:
+- `src/lib/db.ts`: `rows()`/`row()` の引数型を `never[]` → 実際の
+  `node:sqlite` の `SQLInputValue[]` に修正（area1が報告していた不具合、正式に修正）
+- `src/lib/area1/query.ts`: 独自実装をやめ、`db.ts` の `rows`/`row` を
+  `one`/`many` の名前で re-export するだけに変更（重複ロジックの解消）
+- `src/lib/model.ts`: `isWeekday()` / `toWeekdays()` を追加。`closed_weekdays`
+  の読み書き2箇所（`settings-clinic.ts`）と表示1箇所（`settings/route.ts`）で使用
+- `src/app/_area4/repo.ts`: `Staff & {...}` を `Omit<Staff,'is_active'> & {...}` に修正
+
+**再検証**（すべて実測）:
+```
+$ npm run typecheck   → エラー0
+$ npm run build       → 成功（警告1件のみ。settings-import.tsの動的fs参照、機能に影響なし）
+$ PORT=8405 npm run dev
+$ BASE_URL=http://127.0.0.1:8405 npm test
+  → tests 24 / pass 24 / fail 0 / skipped 0
+$ python tests/run.py http://127.0.0.1:8405
+  → 全 14 件 通過（smoke/money/screen/rules/crawl）
+```
+
+**教訓**: `next dev`（Turbopack）は型エラーで応答を止めない。`npm test`も型検査をしない。
+**「緑」を確認する手段に`npm run build`（=`tsc`込み）を必ず含めること。**
+`node --test`の緑だけでは「型が壊れていない」ことは確認できない。

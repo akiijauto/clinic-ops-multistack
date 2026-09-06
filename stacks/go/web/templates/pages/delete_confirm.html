@@ -1,0 +1,21 @@
+{{define "title"}}削除の確認 {{.Patient.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-delete-confirm">
+  <h1>削除の確認</h1>
+  {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  <p>{{.Owner.NameKanji}} 様　{{.Patient.NameKanji}}（{{.Patient.KarteNo}}）</p>
+
+  {{if .AlreadyDeleted}}
+  <p>この動物はすでに削除済みです。データは残っており、一覧からのみ隠れています。</p>
+  {{else}}
+  <p>削除しても記録は残ります。一覧から隠れるだけで、実績としての件数（診察件数など）は減りません。</p>
+  <form method="post" action="/animals/{{.Patient.KarteNo}}/delete">
+    <button type="submit">削除する</button>
+  </form>
+  {{end}}
+
+  <p><a href="/animals/{{.Patient.KarteNo}}">顧客画面へ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

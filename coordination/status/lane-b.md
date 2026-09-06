@@ -182,3 +182,72 @@ git ls-files stacks/rails | grep master.key -> 0件
 
 仮決めしたことは `coordination/qa/lane-b.md` に書いた。**3件ある。**
 あわせて `config/credentials.yml.enc` の扱い（公開ゲート向け）も同ファイルに記録した。
+
+## 2026-09-06 — 5領域へサブエージェントを分けて本実装フェーズへ
+
+前回セッション（サマリ済み）で共通テスト全14件が緑になったのは「検算8を通す最小限」の
+実装だったため、ここから26画面の本格実装に入る。
+
+**先に自分でやったこと（統合点）**:
+- `config/routes.rb` を全26画面＋全APIエンドポイント分に拡張（既存のaction名・URL形は
+  変えず、足りない分だけ追加）
+- `Api::VisitsController` を新規実装（既存パターンに合わせ、openapi.yamlの命名と
+  tests/checks.pyの実命名を両方返す形を踏襲）
+- `app/controllers/api_controller.rb` を拡充：`ApiErrors`モジュール（openapi.yamlの
+  エラー文言を一字一句集約）を新設し、`render_api_error(:code, details:)` で
+  `RecordNotFound`/`RecordInvalid`/`ParameterMissing`/JSON構文エラー/予約重複(409)を
+  一元的に処理する仕組みにした
+- `app/controllers/application_controller.rb` に `current_staff`（session由来、
+  helper_method化）を追加
+- 拡張後も `python tests/run.py` フル実行で**全14件通過を再確認**（回帰なし）
+
+**ここから**: 5領域（受付・患者／診療／会計・売上／入院・予約・業務／設定）へ
+サブエージェントを1体ずつ、**領域ごとに別の指示文**で起動した。各自が
+`config/routes.rb` `db/migrate` `db/seeds.rb` `app/models` `app/services` `app/lib`
+と他領域のcontroller/viewには触れない前提で、担当画面のcontroller/viewだけを実装する。
+完了報告が揃い次第、私（レーンB本体）が統合・全体テストを行う。
+
+## 2026-09-06 — 横並び再測の戻り2件を修正。**共通テスト全14件が緑（実測・8414）**
+
+`coordination/review/2026-09-06_統括_横並び再測.md` の指摘2件に対応した。
+
+### 【1】検算2 消費税 2200（期待2750）
+
+**コードの不具合ではなくデータの汚染だった。** `Clinic.tax_rate` がDB上で
+`0.08` になっていた（seed.json の値は `0.10`）。2200/2750=0.8=0.08/0.10 と一致し、
+原因の見立て（税率の取り違え）が当たっていた。
+
+**原因**: 5領域のサブエージェントが同じ開発用SQLite（`storage/development.sqlite3`）を
+共有していたため、`設定`画面（領域5担当）のフォーム保存テストが `Clinic`（1件だけ存在する
+シングルトン）を実際に書き換え、他領域のテストに影響していた。コード自体に税率8%の
+決め打ちは無い（`grep`で確認済み）。
+
+**対処**: `Clinic.current.update!(tax_rate: 0.10)` で値を戻した。**恒久対策は今後の検討課題**
+——シングルトンのモデルを複数エージェントが同時に手で叩くテストをするなら、
+各自が試したあとで元に戻す運用か、テスト用DBを分けるかのどちらかが要る。
+
+### 【2】検算8 死にリンク3件
+
+サブエージェント4体がセッション上限で途中停止したため、リンク先の画面が
+作られないまま参照だけが先に入っていた。**指揮役として自分で完成させた**（本来は
+領域1・領域4の担当分）。
+
+- `/folded/hospital_division` → `FoldedController`（新規）が丸ごと無かった
+- `/todo/reception_done_delete` → `TodosController`（新規）が丸ごと無かった
+- `/animals/10049/delete` → `AnimalsController#delete_confirm` はあったが
+  `app/views/animals/delete_confirm.html.erb` が無く、フォーマット交渉が失敗して406
+
+### 確認結果
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+全 14 件 通過
+```
+
+crawl到達数が16→**30画面**に伸びた（サブエージェントが途中まで進めた分が効いている）。
+
+### 次にやること
+
+5体のサブエージェントは全員セッション上限で停止した（再開待ち）。
+各自の担当領域の残り画面（フォームの保存・削除・新規作成など、検算8を通す
+最小限を超える完全な作り込み）はまだ途中。指示があれば続きを進める。

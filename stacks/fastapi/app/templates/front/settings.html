@@ -1,23 +1,39 @@
-{# 設定（病院設定）。いまは表示のみ（編集フォームは次段階）。 #}
+{# 設定（病院設定）。Clinicは常に1件のみ（screens.md 22番）。 #}
 {% extends "base.html" %}
-{% from "_macros.html" import screen %}
+{% from "_macros.html" import screen, success_banner, error_banner %}
 
 {% block title %}設定{% endblock %}
 
 {% block content %}
 <section {{ screen("settings") }}>
   <h1>設定</h1>
+
+  {% if banner %}
+    {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
+  {% endif %}
+
   {% if clinic %}
-  <dl>
-    <dt>病院名</dt><dd>{{ clinic.name }}</dd>
-    <dt>住所</dt><dd>{{ clinic.postal_code }} {{ clinic.address1 }}{{ clinic.address2 }}</dd>
-    <dt>電話</dt><dd>{{ clinic.phone }}</dd>
-    <dt>FAX</dt><dd>{{ clinic.fax }}</dd>
-    <dt>開設者</dt><dd>{{ clinic.director_name }}</dd>
-    <dt>消費税率</dt><dd>{{ clinic.tax_rate }}</dd>
-    <dt>予約枠</dt><dd>{{ clinic.reservation_slot_minutes }} 分</dd>
-    <dt>休診日</dt><dd>{{ clinic.closed_weekdays }}</dd>
-  </dl>
+  <form method="post" action="/settings">
+    <label>病院名 <input type="text" name="name" value="{{ clinic.name }}"></label>
+    <label>郵便番号 <input type="text" name="postal_code" value="{{ clinic.postal_code }}"></label>
+    <label>住所1 <input type="text" name="address1" value="{{ clinic.address1 }}"></label>
+    <label>住所2 <input type="text" name="address2" value="{{ clinic.address2 }}"></label>
+    <label>電話 <input type="text" name="phone" value="{{ clinic.phone }}"></label>
+    <label>FAX <input type="text" name="fax" value="{{ clinic.fax }}"></label>
+    <label>開設者 <input type="text" name="director_name" value="{{ clinic.director_name }}"></label>
+    <label>予約枠(分) <input type="number" name="reservation_slot_minutes" value="{{ clinic.reservation_slot_minutes }}"></label>
+    <label>消費税率 <input type="number" step="0.01" name="tax_rate" value="{{ clinic.tax_rate }}"></label>
+    <fieldset>
+      <legend>休診日</legend>
+      {% for i, label in [(0,"月"),(1,"火"),(2,"水"),(3,"木"),(4,"金"),(5,"土"),(6,"日")] %}
+      <label>
+        <input type="checkbox" name="closed_weekdays" value="{{ i }}" {% if i in clinic.closed_weekdays %}checked{% endif %}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">保存</button>
+  </form>
   {% else %}
   <p>病院情報が未登録です。</p>
   {% endif %}

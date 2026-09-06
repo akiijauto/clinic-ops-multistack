@@ -1,0 +1,35 @@
+<% content_for :title, "予約の新規登録" %>
+<div data-testid="screen-reservations">
+  <h1>予約の新規登録</h1>
+
+  <% if @success %>
+    <p data-testid="success-banner">予約を登録しました。</p>
+  <% end %>
+  <% if @error %>
+    <p data-testid="error-banner"><%= @error_message %></p>
+  <% end %>
+
+  <%= form_with url: "/reservations", method: :post, local: true do %>
+    <select name="patient_id" required>
+      <option value="">動物を選択</option>
+      <% @patients.each do |p| %>
+        <option value="<%= p.id %>" <%= "selected" if p.karte_no == @selected_karte_no %>>
+          <%= p.karte_no %> <%= p.name_kanji %>
+        </option>
+      <% end %>
+    </select>
+    <input type="datetime-local" name="starts_at" required>
+    <input type="datetime-local" name="ends_at" required>
+    <select name="staff_id">
+      <option value="">担当を選択</option>
+      <% @staffs.each do |s| %>
+        <option value="<%= s.id %>"><%= s.name %></option>
+      <% end %>
+    </select>
+    <input type="text" name="room" placeholder="処置室" required>
+    <input type="text" name="purpose" placeholder="目的">
+    <button type="submit">登録</button>
+  <% end %>
+
+  <p><a href="/reservations">予約一覧へ戻る</a></p>
+</div>

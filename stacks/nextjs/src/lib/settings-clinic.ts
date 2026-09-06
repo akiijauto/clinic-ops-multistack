@@ -7,17 +7,18 @@
  * inserts the very first row if the table is somehow empty.
  */
 import { getDb, row } from './db';
-import type { Clinic } from './model';
+import { toWeekdays, type Clinic } from './model';
 
 type ClinicRow = Omit<Clinic, 'closed_weekdays'> & { closed_weekdays: string };
 
 function toClinic(r: ClinicRow): Clinic {
-  let closed_weekdays: number[] = [];
+  let parsed: unknown = [];
   try {
-    closed_weekdays = JSON.parse(r.closed_weekdays);
+    parsed = JSON.parse(r.closed_weekdays);
   } catch {
-    closed_weekdays = [];
+    parsed = [];
   }
+  const closed_weekdays = toWeekdays(Array.isArray(parsed) ? (parsed as number[]) : []);
   return { ...r, closed_weekdays };
 }
 
@@ -51,9 +52,9 @@ export function parseClinicForm(form: FormData): ClinicFormResult {
     return { ok: false, message: '消費税率は0以上1以下の数値（例: 0.10）で入力してください。' };
   }
 
-  const closed_weekdays = Array.from(new Set(form.getAll('closed_weekdays').map((v) => Number(v))))
-    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
-    .sort((a, b) => a - b);
+  const closed_weekdays = toWeekdays(
+    Array.from(new Set(form.getAll('closed_weekdays').map((v) => Number(v)))),
+  ).sort((a, b) => a - b);
 
   return {
     ok: true,

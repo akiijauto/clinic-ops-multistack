@@ -1,0 +1,37 @@
+{{define "title"}}来院履歴 {{.Patient.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-history">
+  <h1>来院履歴</h1>
+  <p>{{.Patient.NameKanji}}（{{.Patient.KarteNo}}）／ 飼主 {{.Owner.NameKanji}}</p>
+
+  {{if .Rows}}
+  <table>
+    <thead><tr><th>日付</th><th>時刻</th><th>操作</th><th>主訴</th><th>診断</th><th></th></tr></thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-history" {{if .IsDeleted}}data-deleted="1"{{end}}>
+        <td>{{.Visit.VisitDate}}</td>
+        <td>{{.Visit.VisitTime}}</td>
+        <td>{{if .IsDeleted}}削除{{else}}登録{{end}}</td>
+        <td>{{.Visit.ChiefComplaint}}</td>
+        <td>{{.Visit.Diagnosis}}</td>
+        <td>
+          {{if .IsDeleted}}
+          <form method="post" action="/animals/{{$.Patient.KarteNo}}/karte/{{.Visit.ID}}/restore">
+            <button type="submit">元に戻す</button>
+          </form>
+          {{else}}
+          <a href="/animals/{{$.Patient.KarteNo}}/karte/{{.Visit.ID}}/print">印刷</a>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p data-testid="empty-history">来院履歴はありません。</p>
+  {{end}}
+
+  <p><a href="/animals/{{.Patient.KarteNo}}">顧客画面へ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

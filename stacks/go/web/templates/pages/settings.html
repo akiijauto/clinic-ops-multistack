@@ -1,0 +1,39 @@
+{{define "title"}}設定{{end}}
+{{define "content"}}
+<div data-testid="screen-settings">
+  <h1>設定（病院設定）</h1>
+
+  {{if .Success}}<p data-testid="success-banner">{{.Success}}</p>{{end}}
+  {{if .Error}}<p data-testid="error-banner">{{.Error}}</p>{{end}}
+
+  <form method="post" action="/settings">
+    <p><label>病院名 <input type="text" name="name" value="{{.Clinic.Name}}" required></label></p>
+    <p><label>郵便番号 <input type="text" name="postal_code" value="{{.Clinic.PostalCode}}"></label></p>
+    <p><label>住所1 <input type="text" name="address1" value="{{.Clinic.Address1}}"></label></p>
+    <p><label>住所2 <input type="text" name="address2" value="{{.Clinic.Address2}}"></label></p>
+    <p><label>電話 <input type="text" name="phone" value="{{.Clinic.Phone}}"></label></p>
+    <p><label>FAX <input type="text" name="fax" value="{{.Clinic.Fax}}"></label></p>
+    <p><label>開設者名 <input type="text" name="director_name" value="{{.Clinic.DirectorName}}"></label></p>
+    <p><label>予約枠の刻み（分） <input type="number" name="reservation_slot_minutes" value="{{.Clinic.ReservationSlotMinutes}}" min="1"></label></p>
+    <p><label>消費税率 <input type="text" name="tax_rate" value="{{.Clinic.TaxRate}}"></label></p>
+    <fieldset>
+      <legend>休診日</legend>
+      {{range .Weekdays}}
+      <label>
+        <input type="checkbox" name="closed_weekdays" value="{{.Value}}" {{if .Checked}}checked{{end}}>
+        {{.Label}}
+      </label>
+      {{end}}
+    </fieldset>
+    <p><button type="submit">保存</button></p>
+  </form>
+
+  <p>
+    <a href="/settings/features">機能設定</a> ・
+    <a href="/settings/import">取込</a> ・
+    <a href="/settings/master">マスタ</a> ・
+    <a href="/about">このシステムについて</a>
+  </p>
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

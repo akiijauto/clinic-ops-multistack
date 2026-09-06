@@ -1,22 +1,56 @@
-import { listReservations } from '../_area4/repo';
-import { page, htmlResponse, text } from '../_area4/render';
+import { createReservation, type ReservationFilter } from '../_area4/repo';
+import { renderList, renderForm, fromDatetimeLocal, type ReservationFormValues } from '../_area4/reservation-screen';
+import { page, htmlResponse, successBanner, errorBanner, parseForm } from '@/lib/area1/html';
+import { ApiError } from '@/lib/errors';
 
-// GET /reservations -- spec/screens.md「19. 予約（新規）」(一覧のみ。登録フォームは未実装).
-export async function GET(): Promise<Response> {
-  const { items, total } = listReservations({});
-  const rows = items
-    .map(
-      (r) => `<tr data-testid="row-reservation">
-        <td>${text(r.starts_at)}</td><td>${text(r.ends_at)}</td>
-        <td>${text(r.staff_id)}</td><td>${text(r.room)}</td><td>${text(r.status)}</td>
-      </tr>`,
-    )
-    .join('\n');
-  const body = `
-<p>件数: ${total}</p>
-<table>
-  <thead><tr><th>開始</th><th>終了</th><th>担当</th><th>処置室</th><th>状態</th></tr></thead>
-  <tbody>${rows || '<tr><td colspan="5">予約はまだありません。</td></tr>'}</tbody>
-</table>`;
-  return htmlResponse(page('予約', body));
+function filterFromQuery(url: URL): ReservationFilter {
+  const p = url.searchParams;
+  const filter: ReservationFilter = {};
+  if (p.get('from')) filter.from = p.get('from')!;
+  if (p.get('to')) filter.to = p.get('to')!;
+  if (p.get('staff_id')) filter.staff_id = Number(p.get('staff_id'));
+  if (p.get('room')) filter.room = p.get('room')!;
+  return filter;
+}
+
+// GET /reservations -- spec/screens.md「19. 予約（新規）」一覧側
+// (x-data-testids: screen-reservations/row-reservation/empty-reservation).
+export function GET(req: Request): Response {
+  const filter = filterFromQuery(new URL(req.url));
+  return htmlResponse(page({ title: '予約', screenKey: 'screen-reservations', body: renderList(filter) }));
+}
+
+// POST /reservations -- spec/openapi.yaml `screen_create_reservation`.
+// Always 200; success re-renders the list with a banner, a conflict or
+// validation failure re-renders the entered form so nothing is lost
+// (spec/openapi.yaml: "重複がある場合も error-banner に reservation_conflict の文言を出す").
+export async function POST(req: Request): Promise<Response> {
+  const form = await parseForm(req);
+  const values: ReservationFormValues = {
+    patient_id: form.patient_id,
+    starts_at: form.starts_at,
+    ends_at: form.ends_at,
+    staff_id: form.staff_id,
+    room: form.room,
+    purpose: form.purpose,
+    note: form.note,
+  };
+
+  try {
+    createReservation({
+      patient_id: form.patient_id ? Number(form.patient_id) : undefined,
+      starts_at: form.starts_at ? fromDatetimeLocal(form.starts_at) : undefined,
+      ends_at: form.ends_at ? fromDatetimeLocal(form.ends_at) : undefined,
+      staff_id: form.staff_id ? Number(form.staff_id) : undefined,
+      room: form.room,
+      purpose: form.purpose,
+      note: form.note,
+    });
+    const filter = filterFromQuery(new URL(req.url));
+    return htmlResponse(page({ title: '予約', screenKey: 'screen-reservations', body: renderList(filter, successBanner('予約を登録しました。')) }));
+  } catch (e) {
+    if (!(e instanceof ApiError)) throw e;
+    const body = renderForm({ mode: 'new', values, banner: errorBanner(e.message) });
+    return htmlResponse(page({ title: '予約（新規）', screenKey: 'screen-reservations', body }));
+  }
 }

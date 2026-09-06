@@ -11,19 +11,23 @@ import (
 	"clinicops/internal/billing"
 	"clinicops/internal/clinical"
 	"clinicops/internal/config"
+	"clinicops/internal/reception"
+	"clinicops/internal/settings"
 	"clinicops/internal/view"
 )
 
 // Server は依存をまとめて持つ。
 // ハンドラは Server のメソッドとして書き、グローバル変数を作らない。
 type Server struct {
-	cfg      config.Config
-	log      *slog.Logger
-	views    *view.Set
-	static   http.Handler
-	billing  *billing.Store
-	clinical *clinical.Store
-	routes   []Route
+	cfg       config.Config
+	log       *slog.Logger
+	views     *view.Set
+	static    http.Handler
+	billing   *billing.Store
+	clinical  *clinical.Store
+	reception *reception.Handlers
+	settings  *settings.Handlers
+	routes    []Route
 }
 
 // Route は登録済みの経路。死んだリンクの機械的な確認に使うため、
@@ -35,10 +39,11 @@ type Route struct {
 
 // New は Server を組み立てる。
 // static は /static/ 以下を返す http.Handler（内容ハッシュ付きURLに対応したもの）。
-// billingStore・clinicalStore は nil でもよい（対応する経路はその場合 404 を返す。
-// テストで一部の依存を使わない組み立てを許すため — internal/server/server_test.go）。
-func New(cfg config.Config, log *slog.Logger, views *view.Set, static http.Handler, billingStore *billing.Store, clinicalStore *clinical.Store) *Server {
-	return &Server{cfg: cfg, log: log, views: views, static: static, billing: billingStore, clinical: clinicalStore}
+// billingStore・clinicalStore・receptionHandlers・settingsHandlers は nil でもよい
+// （対応する経路はその場合 404 を返す。テストで一部の依存を使わない組み立てを
+// 許すため — internal/server/server_test.go）。
+func New(cfg config.Config, log *slog.Logger, views *view.Set, static http.Handler, billingStore *billing.Store, clinicalStore *clinical.Store, receptionHandlers *reception.Handlers, settingsHandlers *settings.Handlers) *Server {
+	return &Server{cfg: cfg, log: log, views: views, static: static, billing: billingStore, clinical: clinicalStore, reception: receptionHandlers, settings: settingsHandlers}
 }
 
 // Handler はミドルウェアを巻いた http.Handler を返す。
@@ -55,27 +60,140 @@ func (s *Server) Handler() http.Handler {
 	}
 
 	s.handle(mux, "GET /api/billings/{id}", s.handleGetBilling)
+	s.handle(mux, "PATCH /api/billings/{id}", s.handleAPIPatchBilling)
+	s.handle(mux, "GET /api/billings", s.handleAPIListBillings)
+	s.handle(mux, "GET /api/patients/{karte_no}/billings", s.handleAPIPatientBillings)
+	s.handle(mux, "POST /api/patients/{karte_no}/billings", s.handleAPIPatientBillings)
+	s.handle(mux, "GET /api/owners/{owner_no}/billings", s.handleAPIOwnerBillings)
 	s.handle(mux, "GET /api/sales/summary", s.handleSalesSummary)
 	s.handle(mux, "GET /api/lab-tests/{id}", s.handleGetLabTest)
 	s.handle(mux, "GET /api/reservations", s.handleListReservations)
+	s.handle(mux, "POST /api/reservations", s.handleCreateReservationAPI)
+	s.handle(mux, "GET /api/reservations/{id}", s.handleReservationAPI)
+	s.handle(mux, "PATCH /api/reservations/{id}", s.handleReservationAPI)
+	s.handle(mux, "POST /api/reservations/{id}/cancel", s.handleCancelReservationAPI)
 	s.handle(mux, "GET /api/hospitalizations/{id}/care-records", s.handleListCareRecords)
 	s.handle(mux, "GET /animals/{karte_no}/karte", s.handleKarte)
+	s.handle(mux, "POST /animals/{karte_no}/karte", s.handleKarteSave)
+	s.handle(mux, "GET /animals/{karte_no}/karte/new", s.handleKarteNew)
+	s.handle(mux, "GET /animals/{karte_no}/karte/copy_prev", s.handleKarteCopyPrev)
+	s.handle(mux, "POST /animals/{karte_no}/karte/cancel", s.handleKarteCancel)
 	s.handle(mux, "GET /animals/{karte_no}/karte/print", s.handleKartePrint)
+	s.handle(mux, "GET /animals/{karte_no}/karte/{visit_id}/print", s.handleVisitPrint)
+	s.handle(mux, "POST /animals/{karte_no}/karte/{visit_id}/delete", s.handleVisitDelete)
+	s.handle(mux, "POST /animals/{karte_no}/karte/{visit_id}/restore", s.handleVisitRestore)
+	s.handle(mux, "GET /animals/{karte_no}/exam", s.handleExam)
+	s.handle(mux, "POST /animals/{karte_no}/exam", s.handleExam)
+	s.handle(mux, "GET /animals/{karte_no}/dosing/{kind_id}", s.handleDosing)
+	s.handle(mux, "POST /animals/{karte_no}/dosing/{kind_id}", s.handleDosing)
+	s.handle(mux, "GET /animals/{karte_no}/prevention/{kind_id}", s.handlePrevention)
+	s.handle(mux, "POST /animals/{karte_no}/prevention/{kind_id}", s.handlePrevention)
+	s.handle(mux, "GET /animals/{karte_no}/papers", s.handlePapers)
+	s.handle(mux, "POST /animals/{karte_no}/papers", s.handlePapers)
+	s.handle(mux, "POST /papers/{paper_id}/remove", s.handlePaperRemove)
+	s.handle(mux, "POST /papers/no-paper", s.handleNoPaper)
+
+	s.handle(mux, "GET /api/patients/{karte_no}/visits", s.handleAPIListVisits)
+	s.handle(mux, "POST /api/patients/{karte_no}/visits", s.handleAPICreateVisit)
+	s.handle(mux, "GET /api/visits/{visit_id}", s.handleAPIVisit)
+	s.handle(mux, "PATCH /api/visits/{visit_id}", s.handleAPIVisit)
+	s.handle(mux, "POST /api/visits/{visit_id}/delete", s.handleAPIVisitDelete)
+	s.handle(mux, "POST /api/visits/{visit_id}/restore", s.handleAPIVisitRestore)
+	s.handle(mux, "GET /api/patients/{karte_no}/lab-tests", s.handleAPIListLabTests)
+	s.handle(mux, "POST /api/patients/{karte_no}/lab-tests", s.handleAPICreateLabTest)
+	s.handle(mux, "GET /api/patients/{karte_no}/dosing/{kind_id}", s.handleAPIDosing)
+	s.handle(mux, "PATCH /api/patients/{karte_no}/dosing/{kind_id}", s.handleAPIDosing)
+	s.handle(mux, "GET /api/patients/{karte_no}/prevention/{kind_id}", s.handleAPIPrevention)
+	s.handle(mux, "POST /api/patients/{karte_no}/prevention/{kind_id}", s.handleAPIPrevention)
+	s.handle(mux, "GET /api/patients/{karte_no}/papers", s.handleAPIPapers)
+	s.handle(mux, "POST /api/patients/{karte_no}/papers", s.handleAPIPapers)
+	s.handle(mux, "GET /api/papers/{paper_id}", s.handleAPIPaper)
+	s.handle(mux, "DELETE /api/papers/{paper_id}", s.handleAPIPaper)
+	s.handle(mux, "GET /api/ward", s.handleAPIWard)
+	s.handle(mux, "GET /api/patients/{karte_no}/hospitalizations", s.handleAPIPatientHospitalizations)
+	s.handle(mux, "POST /api/patients/{karte_no}/hospitalizations", s.handleAPIPatientHospitalizations)
+	s.handle(mux, "GET /api/hospitalizations/{id}", s.handleAPIHospitalization)
+	s.handle(mux, "PATCH /api/hospitalizations/{id}", s.handleAPIHospitalization)
+	s.handle(mux, "POST /api/hospitalizations/{id}/care-records", s.handleAPICreateCareRecord)
+	s.handle(mux, "GET /api/todo/{key}", s.handleAPITodo)
 
 	s.handle(mux, "GET /", s.handleTop)
 	s.handle(mux, "GET /reservations", s.handleReservationsScreen)
-	s.handle(mux, "GET /about", s.stubHandler("このシステムについて", "この企画の範囲・落としたものは spec/model.md を参照。"))
-	s.handle(mux, "GET /today", s.stubHandler("本日の患者", "受付一覧はこれから作り込む。"))
-	s.handle(mux, "GET /search", s.stubHandler("検索", "検索条件の入力欄はこれから作り込む。"))
-	s.handle(mux, "GET /staff", s.stubHandler("スタッフ", "担当選択はこれから作り込む。"))
-	s.handle(mux, "GET /settings", s.stubHandler("設定", "病院設定の保存はこれから作り込む。"))
-	s.handle(mux, "GET /settings/features", s.stubHandler("機能設定", "表示のみ（この企画では機能の出し分けを扱わない）。"))
-	s.handle(mux, "GET /settings/import", s.stubHandler("取込", "表示のみ（何を取り込めるかの説明に留める）。"))
-	s.handle(mux, "GET /sales", s.stubHandler("売上集計", "集計そのものは GET /api/sales/summary を参照。画面はこれから作り込む。"))
-	s.handle(mux, "GET /dm", s.stubHandler("DM", "DM一覧はこれから作り込む。"))
-	s.handle(mux, "GET /ward", s.stubHandler("入院", "入院の一覧・記録追加はこれから作り込む。"))
+	s.handle(mux, "POST /reservations", s.handleReservationsScreen)
+	s.handle(mux, "GET /reservations/new", s.handleReservationNew)
+	s.handle(mux, "GET /reservations/{id}", s.handleReservationDetail)
+	s.handle(mux, "POST /reservations/{id}", s.handleReservationDetail)
+	s.handle(mux, "POST /reservations/{id}/cancel", s.handleReservationCancel)
+	s.handle(mux, "GET /todo/{key}", s.handleTodo)
+	s.handle(mux, "GET /ward", s.handleWardToday)
+	s.handle(mux, "GET /ward/day", s.handleWardDay)
+	s.handle(mux, "GET /animals/{karte_no}/ward", s.handleAnimalWard)
+	s.handle(mux, "POST /animals/{karte_no}/ward", s.handleAnimalWard)
+	s.handle(mux, "GET /staff", s.handleStaff)
+	s.handle(mux, "POST /staff", s.handleStaff)
 
-	// 残りの領域ごとの経路は spec/screens.md の指示が来てから足す。
+	if s.reception != nil {
+		s.handle(mux, "GET /today", s.reception.Today)
+		s.handle(mux, "POST /today", s.reception.TodayMove)
+		s.handle(mux, "GET /animals/new", s.reception.NewPatientForm)
+		s.handle(mux, "POST /animals/new", s.reception.CreatePatient)
+		s.handle(mux, "GET /animals/{karte_no}", s.reception.Owner)
+		s.handle(mux, "POST /animals/{karte_no}", s.reception.OwnerSave)
+		s.handle(mux, "GET /search", s.reception.Search)
+		s.handle(mux, "GET /animals/{karte_no}/history", s.reception.History)
+		s.handle(mux, "GET /animals/{karte_no}/delete", s.reception.DeleteConfirm)
+		s.handle(mux, "POST /animals/{karte_no}/delete", s.reception.DeleteConfirm)
+		s.handle(mux, "GET /folded/{key}", s.reception.Folded)
+		s.handle(mux, "GET /api/patients", s.reception.APIListPatients)
+		s.handle(mux, "GET /api/patients/{karte_no}", s.reception.APIGetPatient)
+		s.handle(mux, "POST /api/patients/{karte_no}/delete", s.reception.APIDeletePatient)
+		s.handle(mux, "POST /api/patients/{karte_no}/restore", s.reception.APIRestorePatient)
+		s.handle(mux, "GET /api/owners/{owner_no}", s.reception.APIGetOwner)
+		s.handle(mux, "POST /api/owners/{owner_no}/delete", s.reception.APIDeleteOwner)
+		s.handle(mux, "GET /api/receptions", s.reception.APIListReceptions)
+		s.handle(mux, "POST /api/receptions", s.reception.APICreateReception)
+		s.handle(mux, "POST /api/patients/{karte_no}/receptions", s.reception.APICreatePatientReception)
+		s.handle(mux, "GET /api/receptions/{id}", s.reception.APIGetReception)
+		s.handle(mux, "PATCH /api/receptions/{id}", s.reception.APIUpdateReception)
+		s.handle(mux, "PATCH /api/patients/{karte_no}", s.reception.APIPatchPatient)
+		s.handle(mux, "PATCH /api/owners/{owner_no}", s.reception.APIPatchOwner)
+		s.handle(mux, "GET /api/staff", s.reception.APIListStaff)
+	} else {
+		s.handle(mux, "GET /today", s.stubHandler("本日の患者", "受付一覧はこれから作り込む。"))
+		s.handle(mux, "GET /search", s.stubHandler("検索", "検索条件の入力欄はこれから作り込む。"))
+	}
+
+	if s.settings != nil {
+		s.handle(mux, "GET /about", s.settings.About)
+		s.handle(mux, "GET /settings", s.settings.Settings)
+		s.handle(mux, "POST /settings", s.settings.Settings)
+		s.handle(mux, "GET /settings/features", s.settings.Features)
+		s.handle(mux, "GET /settings/import", s.settings.Import)
+		s.handle(mux, "GET /settings/master", s.settings.Master)
+		s.handle(mux, "GET /settings/master/{key}", s.settings.MasterDetail)
+		s.handle(mux, "GET /postal", s.settings.Postal)
+		s.handle(mux, "GET /api/features", s.settings.APIFeatures)
+		s.handle(mux, "GET /api/masters/{key}", s.settings.APIMaster)
+	} else {
+		s.handle(mux, "GET /about", s.stubHandler("このシステムについて", "この企画の範囲・落としたものは spec/model.md を参照。"))
+		s.handle(mux, "GET /settings", s.stubHandler("設定", "病院設定の保存はこれから作り込む。"))
+		s.handle(mux, "GET /settings/features", s.stubHandler("機能設定", "表示のみ（この企画では機能の出し分けを扱わない）。"))
+		s.handle(mux, "GET /settings/import", s.stubHandler("取込", "表示のみ（何を取り込めるかの説明に留める）。"))
+	}
+
+	if s.billing != nil {
+		s.handle(mux, "GET /animals/{karte_no}/accounting", s.handleAccounting)
+		s.handle(mux, "POST /animals/{karte_no}/accounting", s.handleAccounting)
+		s.handle(mux, "GET /animals/{karte_no}/accounting/history", s.handleAccountingHistory)
+		s.handle(mux, "GET /sales", s.handleSales)
+		s.handle(mux, "GET /dm", s.handleDM)
+		s.handle(mux, "GET /dm.csv", s.handleDMCSV)
+	} else {
+		s.handle(mux, "GET /sales", s.stubHandler("売上集計", "集計そのものは GET /api/sales/summary を参照。画面はこれから作り込む。"))
+		s.handle(mux, "GET /dm", s.stubHandler("DM", "DM一覧はこれから作り込む。"))
+	}
+
+	// 全26画面の配線が完了。
 
 	return chain(mux,
 		recoverPanic(s.log),

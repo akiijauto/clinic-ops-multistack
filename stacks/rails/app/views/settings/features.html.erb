@@ -1,0 +1,24 @@
+<% content_for :title, "機能設定" %>
+<div data-testid="screen-settings-features">
+  <h1>機能設定</h1>
+  <p>
+    この企画でスコープに入れなかった機能の一覧です。「折りたたみ表示」画面と同じ元データを
+    参照しています。読むだけで、ここから機能を戻す操作はできません。
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>機能</th><th>理由</th></tr>
+    </thead>
+    <tbody>
+      <% @items.each do |item| %>
+        <tr data-testid="row-feature">
+          <td><%= item[:title] %></td>
+          <td><%= item[:message] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <p><a href="/settings">設定へ戻る</a></p>
+</div>

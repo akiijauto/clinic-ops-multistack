@@ -1,7 +1,7 @@
 import { getClinic, parseClinicForm, saveClinic } from '@/lib/settings-clinic';
 import { escapeHtml, page } from '@/lib/render';
 import { ERROR_MESSAGE } from '@/lib/errors';
-import type { Clinic } from '@/lib/model';
+import { toWeekdays, type Clinic } from '@/lib/model';
 
 const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']; // 0=月 … 6=日 (spec/model.md)
 
@@ -10,7 +10,7 @@ function form(clinic: Omit<Clinic, 'id'> & { id?: number }): string {
   const weekdayInputs = WEEKDAY_LABELS.map(
     (label, i) =>
       `<label><input type="checkbox" name="closed_weekdays" value="${i}" ${
-        checked.has(i) ? 'checked' : ''
+        checked.has(i as 0 | 1 | 2 | 3 | 4 | 5 | 6) ? 'checked' : ''
       }> ${label}</label>`,
   ).join(' ');
 
@@ -74,7 +74,7 @@ export async function POST(req: Request): Promise<Response> {
         director_name: String(formData.get('director_name') ?? ''),
         reservation_slot_minutes: Number(formData.get('reservation_slot_minutes') ?? 0),
         tax_rate: Number(formData.get('tax_rate') ?? 0),
-        closed_weekdays: formData.getAll('closed_weekdays').map((v) => Number(v)),
+        closed_weekdays: toWeekdays(formData.getAll('closed_weekdays').map((v) => Number(v))),
       });
     return page('設定（病院設定）', 'screen-settings', body);
   }

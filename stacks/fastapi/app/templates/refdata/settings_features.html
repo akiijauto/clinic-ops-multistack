@@ -1,0 +1,26 @@
+{# 機能設定。screens.md 23番。折りたたみ表示と同じ元データ（folded分は内容を一致させる）。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row %}
+
+{% block title %}機能設定{% endblock %}
+
+{% block content %}
+<section {{ screen("settings-features") }}>
+  <h1>機能設定</h1>
+  <p>この企画では作っていない機能と、あえて動かさないと決めたボタンの一覧です。</p>
+
+  <h2>この企画では作っていない機能</h2>
+  <ul>
+    {% for n in folded %}
+    <li {{ row("feature") }}><a href="/folded/{{ n.key }}">{{ n.title }}</a> — {{ n.message }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>あえて動かさないボタン</h2>
+  <ul>
+    {% for n in todos %}
+    <li {{ row("feature") }}><a href="/todo/{{ n.key }}">{{ n.title }}</a> — {{ n.message }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

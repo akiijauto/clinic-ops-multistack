@@ -1,0 +1,45 @@
+{{define "title"}}投薬 {{.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-dosing">
+  <h1>投薬（{{.KindName}}）</h1>
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  {{if not .Rows}}
+  <p data-testid="empty-dosing">まだ記録がありません。</p>
+  {{else}}
+  <table>
+    <thead><tr><th>年度</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th></tr></thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-dosing" data-fiscal-year="{{.FiscalYear}}">
+        <td>{{.FiscalYear}}</td>
+        {{range .Months}}<td>{{if .}}✓{{end}}</td>{{end}}
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <form method="post" action="/animals/{{.KarteNo}}/dosing/{{.KindID}}">
+    <label>年度 <input type="number" name="fiscal_year" value="{{.NewYear}}"></label>
+    <fieldset>
+      <legend>実施した月にチェック</legend>
+      <label><input type="checkbox" name="m01" value="済"> 1月</label>
+      <label><input type="checkbox" name="m02" value="済"> 2月</label>
+      <label><input type="checkbox" name="m03" value="済"> 3月</label>
+      <label><input type="checkbox" name="m04" value="済"> 4月</label>
+      <label><input type="checkbox" name="m05" value="済"> 5月</label>
+      <label><input type="checkbox" name="m06" value="済"> 6月</label>
+      <label><input type="checkbox" name="m07" value="済"> 7月</label>
+      <label><input type="checkbox" name="m08" value="済"> 8月</label>
+      <label><input type="checkbox" name="m09" value="済"> 9月</label>
+      <label><input type="checkbox" name="m10" value="済"> 10月</label>
+      <label><input type="checkbox" name="m11" value="済"> 11月</label>
+      <label><input type="checkbox" name="m12" value="済"> 12月</label>
+    </fieldset>
+    <button type="submit">保存</button>
+  </form>
+
+  <p><a href="/animals/{{.KarteNo}}/karte">カルテへ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

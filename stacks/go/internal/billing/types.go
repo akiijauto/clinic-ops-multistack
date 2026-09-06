@@ -57,10 +57,55 @@ type BillingDetail struct {
 	IsTaxable bool    `json:"is_taxable"`
 }
 
+// Owner は飼主。会計・DM画面の表示（氏名・削除有無）にだけ要るので、
+// internal/reception が持つであろう完全な形とは別に、この範囲だけを
+// 自前で読む（internal/clinical が Patient を自前で持つのと同じ考え方）。
+type Owner struct {
+	ID        int     `json:"id"`
+	OwnerNo   string  `json:"owner_no"`
+	NameKanji string  `json:"name_kanji"`
+	DeletedAt *string `json:"deleted_at"`
+}
+
+// Patient は動物。会計・DM画面の表示にだけ要る範囲。
+type Patient struct {
+	ID        int     `json:"id"`
+	KarteNo   string  `json:"karte_no"`
+	OwnerID   int     `json:"owner_id"`
+	NameKanji string  `json:"name_kanji"`
+	DeletedAt *string `json:"deleted_at"`
+}
+
+// Prevention は予防の実施記録（`data/seed.json` の `preventions`）。
+// DM画面（次回予定日をもとにした案内対象の検索）が読む。
+type Prevention struct {
+	ID            int     `json:"id"`
+	PatientID     int     `json:"patient_id"`
+	Kind          string  `json:"kind"` // data/masters.json prevention_kinds の code
+	Content       string  `json:"content"`
+	PerformedDate string  `json:"performed_date"`
+	NextDueDate   *string `json:"next_due_date"` // 未設定がありうる（DM対象から外れる）
+}
+
+// PreventionKind は `data/masters.json` の `prevention_kinds` の1行。
+// 画面からは編集しない（spec/model.md「変わらないもの」）。
+type PreventionKind struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+// mastersFile は `data/masters.json` のうち、この計算に要る部分だけを読む。
+type mastersFile struct {
+	PreventionKinds []PreventionKind `json:"prevention_kinds"`
+}
+
 // seedFile は `data/seed.json` のうち、この計算に要る部分だけを読む。
-// 他のキー（患者・診察等）は他の領域が契約に沿って別途読み込む前提で、ここでは無視する。
+// 他のキー（診察等）は他の領域が契約に沿って別途読み込む前提で、ここでは無視する。
 type seedFile struct {
 	Clinic         Clinic          `json:"clinic"`
+	Owners         []Owner         `json:"owners"`
+	Patients       []Patient       `json:"patients"`
+	Preventions    []Prevention    `json:"preventions"`
 	Billings       []Billing       `json:"billings"`
 	BillingDetails []BillingDetail `json:"billing_details"`
 }

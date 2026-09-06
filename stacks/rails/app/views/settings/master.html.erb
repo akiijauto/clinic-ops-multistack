@@ -1,0 +1,30 @@
+<% content_for :title, "マスタ" %>
+<div data-testid="screen-settings-master">
+  <h1>マスタ</h1>
+
+  <nav>
+    <% { "price_item" => "料金", "lab_item" => "検査項目", "reception_kind" => "受付区分",
+         "prevention_kind" => "予防種別", "department" => "診療科", "phrase" => "定型文" }.each do |key, label| %>
+      <%= link_to label, "/settings/master/#{key}", class: (@key == key ? "current" : nil) %>
+    <% end %>
+  </nav>
+
+  <p>参照専用です。編集用の入力欄・保存ボタンはありません。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <% (@rows.first || {}).each_key { |k| %><th><%= k %></th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @rows.each do |row| %>
+        <tr data-testid="row-master">
+          <% row.each_value { |v| %><td><%= v.is_a?(Array) || v.is_a?(Hash) ? v.to_json : v %></td><% } %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <p><a href="/settings">設定へ戻る</a></p>
+</div>

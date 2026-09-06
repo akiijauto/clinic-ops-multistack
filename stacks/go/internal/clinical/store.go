@@ -6,10 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 )
 
-// Store は `data/` から読み込んだ内容をメモリ上に持つ（読み取り専用）。
+// Store は `data/` から読み込んだ内容をメモリ上に持つ。
+//
+// 領域2（診療）が担当する範囲では保存（書き込み）まで動かす必要がある
+// （spec/README.md「保存について」）。保存先（RDB等）は指揮役がまだ決めていないため、
+// ここではプロセス内メモリへ `mu` で守って書く形にしてある。永続化の道具を
+// 差し替えるときは、この構造体の中身だけを差し替えれば済むようにしてある
+// （呼び出し側のメソッドシグネチャは変えずに済む設計）。
 type Store struct {
+	mu sync.RWMutex
+
 	patientsByKarteNo map[string]Patient
 	patientsByID      map[int]Patient
 	visitsByPatientID map[int][]Visit // deleted_at ありも含む。表示側で除く
@@ -20,6 +29,25 @@ type Store struct {
 	labItemMaster     map[string]LabItemMaster
 	reservations      []Reservation
 	hospByID          map[int]Hospitalization
+
+	dosings         []Dosing
+	preventions     []Prevention
+	papers          []Paper
+	noPaperPatients map[int]bool
+
+	preventionKinds      []PreventionKind
+	preventionKindByID   map[int]PreventionKind
+	preventionKindByCode map[string]PreventionKind
+
+	nextVisitID        int
+	nextProgressNoteID int
+	nextLabTestID      int
+	nextLabTestItemID  int
+	nextDosingID       int
+	nextPreventionID   int
+	nextPaperID        int
+	nextReservationID  int
+	nextCareRecordID   int
 }
 
 // Load は dataDir から seed.json と lab_items.json を読み込む。
@@ -34,6 +62,10 @@ func Load(dataDir string) (*Store, error) {
 	if err := readJSON(filepath.Join(dataDir, "lab_items.json"), &masters); err != nil {
 		return nil, err
 	}
+	var mf mastersFile
+	if err := readJSON(filepath.Join(dataDir, "masters.json"), &mf); err != nil {
+		return nil, err
+	}
 
 	s := &Store{
 		patientsByKarteNo: make(map[string]Patient, len(seed.Patients)),
@@ -46,6 +78,19 @@ func Load(dataDir string) (*Store, error) {
 		labItemMaster:     make(map[string]LabItemMaster, len(masters)),
 		reservations:      seed.Reservations,
 		hospByID:          make(map[int]Hospitalization, len(seed.Hospitalizations)),
+		dosings:           append([]Dosing(nil), seed.Dosings...),
+		preventions:       append([]Prevention(nil), seed.Preventions...),
+		papers:            nil,
+		noPaperPatients:   make(map[int]bool),
+	}
+
+	s.preventionKindByID = make(map[int]PreventionKind, len(mf.PreventionKinds))
+	s.preventionKindByCode = make(map[string]PreventionKind, len(mf.PreventionKinds))
+	for i, k := range mf.PreventionKinds {
+		pk := PreventionKind{ID: i + 1, Code: k.Code, Name: k.Name}
+		s.preventionKinds = append(s.preventionKinds, pk)
+		s.preventionKindByID[pk.ID] = pk
+		s.preventionKindByCode[pk.Code] = pk
 	}
 	for _, p := range seed.Patients {
 		s.patientsByKarteNo[p.KarteNo] = p
@@ -85,7 +130,37 @@ func Load(dataDir string) (*Store, error) {
 	for _, h := range seed.Hospitalizations {
 		s.hospByID[h.ID] = h
 	}
+
+	s.nextVisitID = maxID(seed.Visits, func(v Visit) int { return v.ID }) + 1
+	s.nextProgressNoteID = maxID(seed.ProgressNotes, func(n ProgressNote) int { return n.ID }) + 1
+	s.nextLabTestID = maxID(seed.LabTests, func(t LabTest) int { return t.ID }) + 1
+	s.nextLabTestItemID = maxID(seed.LabTestItems, func(it LabTestItem) int { return it.ID }) + 1
+	s.nextDosingID = maxID(seed.Dosings, func(d Dosing) int { return d.ID }) + 1
+	s.nextPreventionID = maxID(seed.Preventions, func(p Prevention) int { return p.ID }) + 1
+	s.nextPaperID = 1
+	s.nextReservationID = maxID(seed.Reservations, func(r Reservation) int { return r.ID }) + 1
+	maxCare := 0
+	for _, h := range seed.Hospitalizations {
+		for _, c := range h.CareRecords {
+			if c.ID > maxCare {
+				maxCare = c.ID
+			}
+		}
+	}
+	s.nextCareRecordID = maxCare + 1
+
 	return s, nil
+}
+
+// maxID は集合の最大IDを返す（空なら0）。新規採番の起点を決めるためだけに使う。
+func maxID[T any](items []T, id func(T) int) int {
+	max := 0
+	for _, it := range items {
+		if v := id(it); v > max {
+			max = v
+		}
+	}
+	return max
 }
 
 func readJSON(path string, v any) error {
@@ -102,12 +177,16 @@ func readJSON(path string, v any) error {
 
 // PatientByKarteNo はカルテ番号で患者を引く。
 func (s *Store) PatientByKarteNo(karteNo string) (Patient, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	p, ok := s.patientsByKarteNo[karteNo]
 	return p, ok
 }
 
 // PatientByID はID で患者を引く。
 func (s *Store) PatientByID(id int) (Patient, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	p, ok := s.patientsByID[id]
 	return p, ok
 }
@@ -116,6 +195,8 @@ func (s *Store) PatientByID(id int) (Patient, bool) {
 // includeDeleted が false のときは deleted_at が入っているものを除く
 // （spec/screens.md「削除された Visit は診察一覧にもカルテ本体にも出ない」）。
 func (s *Store) Visits(patientID int, includeDeleted bool) []Visit {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	all := s.visitsByPatientID[patientID]
 	out := make([]Visit, 0, len(all))
 	for _, v := range all {
@@ -127,20 +208,34 @@ func (s *Store) Visits(patientID int, includeDeleted bool) []Visit {
 	return out
 }
 
+// VisitByID はIDで診察1件を引く（削除済みも引ける。JSON API向け）。
+func (s *Store) VisitByID(id int) (Visit, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	v, ok := s.visitsByID[id]
+	return v, ok
+}
+
 // ProgressNotes は指定した診察の経過記録を row_no 順で返す。
 func (s *Store) ProgressNotes(visitID int) []ProgressNote {
-	return s.notesByVisitID[visitID]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]ProgressNote(nil), s.notesByVisitID[visitID]...)
 }
 
 // LabTest はID で検査1件を引く。
 func (s *Store) LabTest(id int) (LabTest, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	t, ok := s.labTestsByID[id]
 	return t, ok
 }
 
 // LabTestItems は指定した検査の項目値を返す。
 func (s *Store) LabTestItems(labTestID int) []LabTestItem {
-	return s.labItemsByLabTest[labTestID]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]LabTestItem(nil), s.labItemsByLabTest[labTestID]...)
 }
 
 // RefRangeFor は検査項目・種別・性別から基準値を引く。
@@ -170,6 +265,18 @@ func (s *Store) RefRangeFor(itemCode, species, sex string) (RefRange, bool) {
 func (s *Store) LabItemMasterFor(itemCode string) (LabItemMaster, bool) {
 	m, ok := s.labItemMaster[itemCode]
 	return m, ok
+}
+
+// AllLabItemMasters は検査項目マスタの全件を item_code 順で返す
+// （新規検査フォームの項目一覧に使う。マスタは画面から編集しない —
+// spec/model.md「変わらないもの」）。
+func (s *Store) AllLabItemMasters() []LabItemMaster {
+	out := make([]LabItemMaster, 0, len(s.labItemMaster))
+	for _, m := range s.labItemMaster {
+		out = append(out, m)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ItemCode < out[j].ItemCode })
+	return out
 }
 
 // Reservations は予約の全件を返す（データ側の並び順のまま）。

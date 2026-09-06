@@ -1,0 +1,62 @@
+<% content_for :title, "新規登録" %>
+<div data-testid="screen-new-animal">
+  <h1><%= @owner ? "動物の追加登録" : "新規登録" %></h1>
+
+  <% if flash[:error] %>
+    <p data-testid="error-banner"><%= flash[:error] %></p>
+  <% end %>
+  <% if flash[:success] %>
+    <p data-testid="success-banner"><%= flash[:success] %></p>
+  <% end %>
+
+  <p>次に割り当てられる カルテNo: <strong><%= @next_karte_no %></strong></p>
+
+  <%= form_with url: "/animals/new", method: :post, local: true do |f| %>
+    <%= hidden_field_tag :owner, @owner&.owner_no %>
+
+    <% if @owner %>
+      <p>既存の飼主: <%= @owner.name_kanji %>（<%= @owner.owner_no %>）に動物を追加します。</p>
+    <% else %>
+      <fieldset>
+        <legend>飼主</legend>
+        <p><label>氏名（漢字） <%= text_field_tag "owner_attrs[name_kanji]", @patient&.owner&.name_kanji %></label></p>
+        <p><label>氏名（カナ） <%= text_field_tag "owner_attrs[name_kana]", @patient&.owner&.name_kana %></label></p>
+        <p><label>郵便番号 <%= text_field_tag "owner_attrs[postal_code]" %></label></p>
+        <p><label>住所1 <%= text_field_tag "owner_attrs[address1]" %></label></p>
+        <p><label>住所2 <%= text_field_tag "owner_attrs[address2]" %></label></p>
+        <p><label>電話 <%= text_field_tag "owner_attrs[phone]" %></label></p>
+        <p><label>携帯 <%= text_field_tag "owner_attrs[mobile]" %></label></p>
+      </fieldset>
+    <% end %>
+
+    <fieldset>
+      <legend>動物</legend>
+      <p><label>氏名（漢字） <%= text_field_tag "patient_attrs[name_kanji]", @patient&.name_kanji %></label></p>
+      <p><label>氏名（カナ） <%= text_field_tag "patient_attrs[name_kana]", @patient&.name_kana %></label></p>
+      <p>
+        <label>種別
+          <%= select_tag "patient_attrs[species]",
+                options_for_select([["犬", "dog"], ["猫", "cat"], ["うさぎ", "rabbit"], ["鳥", "bird"], ["その他", "other"]], @patient&.species) %>
+        </label>
+      </p>
+      <p>
+        <label>品種 <%= text_field_tag "patient_attrs[breed]", @patient&.breed, list: "breed-candidates" %></label>
+        <datalist id="breed-candidates">
+          <% @breed_candidates.each_value do |list| %>
+            <% list.each { |b| %><option value="<%= b %>"></option><% } %>
+          <% end %>
+        </datalist>
+      </p>
+      <p>
+        <label>性別
+          <%= select_tag "patient_attrs[sex]", options_for_select([["オス", "male"], ["メス", "female"], ["不明", "unknown"]], @patient&.sex) %>
+        </label>
+      </p>
+      <p><label>生年月日 <%= date_field_tag "patient_attrs[birth_date]", @patient&.birth_date %></label></p>
+    </fieldset>
+
+    <p><%= f.submit "登録" %></p>
+  <% end %>
+
+  <p><a href="/today">本日の患者へ戻る</a></p>
+</div>

@@ -1,0 +1,9 @@
+{{define "title"}}ToDo {{.Title}}{{end}}
+{{define "content"}}
+<div data-testid="screen-todo">
+  <h1>{{.Title}}</h1>
+  <p>場所: {{.Where}}</p>
+  <p>{{.Reason}}</p>
+  <p><a href="/today">本日の患者へ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

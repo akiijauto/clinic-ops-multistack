@@ -1,0 +1,55 @@
+{{define "title"}}検索{{end}}
+{{define "content"}}
+<div data-testid="screen-search">
+  <h1>検索</h1>
+  <form method="get" action="/search">
+    <label>キーワード <input name="q" value="{{.Query}}"></label>
+    <button type="submit">検索する</button>
+  </form>
+
+  {{if .HasSearched}}
+  <section data-testid="search-patients">
+    <h2>動物・飼主</h2>
+    {{if .PatientRows}}
+    <table>
+      <thead><tr><th>カルテNo</th><th>動物</th><th>飼主</th></tr></thead>
+      <tbody>
+        {{range .PatientRows}}
+        <tr data-testid="row-patient">
+          <td><a href="/animals/{{.Patient.KarteNo}}">{{.Patient.KarteNo}}</a></td>
+          <td>{{.Patient.NameKanji}}</td>
+          <td>{{.Owner.NameKanji}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p data-testid="empty-patient">該当する動物・飼主はありません。</p>
+    {{end}}
+  </section>
+
+  <section data-testid="search-visits">
+    <h2>診察の中身</h2>
+    {{if .VisitRows}}
+    <table>
+      <thead><tr><th>日付</th><th>動物</th><th>当たった欄</th><th>抜粋</th></tr></thead>
+      <tbody>
+        {{range .VisitRows}}
+        <tr data-testid="row-visit-hit">
+          <td>{{.Visit.VisitDate}}</td>
+          <td><a href="/animals/{{.Patient.KarteNo}}/karte">{{.Patient.NameKanji}}</a></td>
+          <td>{{.Field}}</td>
+          <td>{{.Excerpt}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p data-testid="empty-visit-hit">該当する診察はありません。</p>
+    {{end}}
+  </section>
+  {{end}}
+
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

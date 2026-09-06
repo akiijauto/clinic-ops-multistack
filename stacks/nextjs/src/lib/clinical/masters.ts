@@ -17,7 +17,7 @@ import { moduleDir } from '../paths.ts';
 
 const DATA_DIR = resolve(moduleDir(import.meta.dirname, import.meta.url), '../../../../../data');
 
-export type PreventionKind = { id: number; code: string; name: string };
+export type PreventionKind = { id: number; code: string; name: string; cycle_months: number | null };
 
 export type LabReferenceRange = { species: string; sex: string; low: number; high: number };
 export type LabItem = { item_code: string; name: string; unit: string; category: string; reference_ranges: LabReferenceRange[] };
@@ -28,9 +28,18 @@ let labItemsCache: Map<string, LabItem> | undefined;
 export function listPreventionKinds(): PreventionKind[] {
   if (!preventionKindsCache) {
     const raw = JSON.parse(readFileSync(resolve(DATA_DIR, 'masters.json'), 'utf8')) as {
-      prevention_kinds: { code: string; name: string }[];
+      // `cycle_months` isn't in the current data/masters.json (checked
+      // 2026-09-05/06) -- every entry has none today, so 予防 screen 12's
+      // auto-calc never fires yet. Read defensively in case it's added
+      // later, per screens.md 12「その種別の基本周期が設定されている場合に限り」.
+      prevention_kinds: { code: string; name: string; cycle_months?: number }[];
     };
-    preventionKindsCache = raw.prevention_kinds.map((k, i) => ({ id: i + 1, code: k.code, name: k.name }));
+    preventionKindsCache = raw.prevention_kinds.map((k, i) => ({
+      id: i + 1,
+      code: k.code,
+      name: k.name,
+      cycle_months: typeof k.cycle_months === 'number' ? k.cycle_months : null,
+    }));
   }
   return preventionKindsCache;
 }

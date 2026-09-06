@@ -5,6 +5,23 @@
 @section('content')
     <div class="card" data-testid="screen-dm">
         <h1>DM管理</h1>
+
+        <form method="get" action="/dm">
+            <label>区分
+                <select name="type">
+                    <option value="">すべて</option>
+                    @foreach ($kinds as $i => $k)
+                        <option value="{{ $i }}" @selected((string) $type === (string) $i)>{{ $k['name'] }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>期間から <input type="date" name="from" value="{{ $from }}"></label>
+            <label>まで <input type="date" name="to" value="{{ $to }}"></label>
+            <button class="btn secondary" type="submit">絞り込む</button>
+        </form>
+
+        <p>件数: {{ $rows->count() }} / <a class="btn secondary" href="/dm.csv?{{ http_build_query(request()->query()) }}">CSVへ書き出す</a></p>
+
         <table>
             <thead><tr><th>患者</th><th>飼主</th><th>区分</th><th>次回予定</th></tr></thead>
             <tbody>

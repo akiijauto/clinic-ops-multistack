@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { getDb, rows, row } from './db';
 import { computeBillingTotals, type DetailForTotals } from './money';
 import { ApiError } from './errors';
+import { getPatientByKarteNo, getOwnerByNo } from './area1/data';
 import type { Billing, BillingDetail } from './model';
 
 export type BillingDetailInput = {
@@ -65,17 +66,17 @@ function taxRate(): number {
   return clinic.tax_rate;
 }
 
+// Patient/Owner lookups go through area1's queries (it owns those tables --
+// `_area4/repo.ts` follows the same convention) rather than this module
+// running its own `SELECT * FROM patient` beside them.
 export function findPatientIdByKarteNo(karteNo: string): { id: number; owner_id: number } {
-  const p = row<{ id: number; owner_id: number }>(
-    getDb().prepare('SELECT id, owner_id FROM patient WHERE karte_no = ?'),
-    karteNo as never,
-  );
+  const p = getPatientByKarteNo(getDb(), karteNo);
   if (!p) throw new ApiError('not_found');
   return p;
 }
 
 export function findOwnerIdByOwnerNo(ownerNo: string): { id: number } {
-  const o = row<{ id: number }>(getDb().prepare('SELECT id FROM owner WHERE owner_no = ?'), ownerNo as never);
+  const o = getOwnerByNo(getDb(), ownerNo);
   if (!o) throw new ApiError('not_found');
   return o;
 }
@@ -85,7 +86,7 @@ function detailRows(billingId: number): BillingDetail[] {
     getDb().prepare(
       'SELECT id, billing_id, row_no, price_code, name, quantity, unit_price, is_taxable FROM billing_detail WHERE billing_id = ? ORDER BY row_no',
     ),
-    billingId as never,
+    billingId,
   ).map((d) => ({ ...d, is_taxable: !!d.is_taxable }));
 }
 
@@ -96,13 +97,13 @@ function toWire(b: Billing & { slip_no: string }): BillingWire {
 }
 
 export function getBilling(id: number): BillingWire {
-  const b = row<Billing & { slip_no: string }>(getDb().prepare('SELECT * FROM billing WHERE id = ?'), id as never);
+  const b = row<Billing & { slip_no: string }>(getDb().prepare('SELECT * FROM billing WHERE id = ?'), id);
   if (!b) throw new ApiError('not_found');
   return toWire(b);
 }
 
 function billingRow(id: number): (Billing & { slip_no: string }) | undefined {
-  return row<Billing & { slip_no: string }>(getDb().prepare('SELECT * FROM billing WHERE id = ?'), id as never);
+  return row<Billing & { slip_no: string }>(getDb().prepare('SELECT * FROM billing WHERE id = ?'), id);
 }
 
 export function listBillingsByPatient(karteNo: string, limit = 50, offset = 0): { items: BillingWire[]; total: number } {
@@ -133,11 +134,13 @@ function listBillings(where: string, params: (string | number)[], limit: number,
   const db = getDb();
   const total = row<{ n: number }>(
     db.prepare(`SELECT COUNT(*) AS n FROM billing WHERE ${where}`),
-    ...(params as never[]),
+    ...params,
   )!.n;
   const items = rows<Billing & { slip_no: string }>(
     db.prepare(`SELECT * FROM billing WHERE ${where} ORDER BY billed_on DESC, id DESC LIMIT ? OFFSET ?`),
-    ...([...params, limit, offset] as never[]),
+    ...params,
+    limit,
+    offset,
   ).map(toWire);
   return { items, total };
 }
@@ -175,20 +178,22 @@ export function createBilling(karteNo: string, input: BillingCreateInput): Billi
   db.exec('BEGIN');
   try {
     const placeholderSlip = DRAFT_SLIP_PREFIX + randomUUID();
-    db.prepare(
-      `INSERT INTO billing (patient_id, owner_id, slip_no, status, billed_on, staff_id, cashier_staff_id, paid_amount, payment_method)
-       VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)`,
-    ).run(
-      patient.id,
-      patient.owner_id,
-      placeholderSlip,
-      input.billed_on,
-      input.staff_id ?? null,
-      input.cashier_staff_id ?? null,
-      input.paid_amount ?? null,
-      input.payment_method ?? null,
-    );
-    const id = Number(db.prepare('SELECT last_insert_rowid() AS id').get()!.id);
+    const info = db
+      .prepare(
+        `INSERT INTO billing (patient_id, owner_id, slip_no, status, billed_on, staff_id, cashier_staff_id, paid_amount, payment_method)
+         VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        patient.id,
+        patient.owner_id,
+        placeholderSlip,
+        input.billed_on,
+        input.staff_id ?? null,
+        input.cashier_staff_id ?? null,
+        input.paid_amount ?? null,
+        input.payment_method ?? null,
+      );
+    const id = Number(info.lastInsertRowid);
     insertDetails(id, input.details);
     if (status === 'confirmed') {
       confirmInTransaction(id, input.billed_on);
@@ -294,7 +299,7 @@ function confirmInTransaction(id: number, billedOn: string): void {
   const day = billedOn.replaceAll('-', '');
   const countToday = row<{ n: number }>(
     db.prepare("SELECT COUNT(*) AS n FROM billing WHERE status = 'confirmed' AND billed_on = ?"),
-    billedOn as never,
+    billedOn,
   )!.n;
   const slipNo = `B-${day}-${String(countToday + 1).padStart(4, '0')}`;
   db.prepare("UPDATE billing SET status = 'confirmed', slip_no = ? WHERE id = ?").run(slipNo, id);
@@ -364,8 +369,8 @@ export function openOrCreateTodaysDraft(karteNo: string, todayJstDate: string): 
   const patient = findPatientIdByKarteNo(karteNo);
   const existing = row<{ id: number }>(
     getDb().prepare("SELECT id FROM billing WHERE patient_id = ? AND status = 'draft' AND billed_on = ? ORDER BY id DESC LIMIT 1"),
-    patient.id as never,
-    todayJstDate as never,
+    patient.id,
+    todayJstDate,
   );
   if (existing) return getBilling(existing.id);
   return createBilling(karteNo, { billed_on: todayJstDate, details: [] });

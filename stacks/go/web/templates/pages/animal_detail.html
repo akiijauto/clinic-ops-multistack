@@ -1,0 +1,100 @@
+{{define "title"}}顧客 {{.Patient.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-owner">
+  <h1>顧客</h1>
+  {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
+  {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
+
+  <nav>
+    <a href="?view=id_card">診察券発行</a> ／
+    <a href="?view=document">文書印刷</a> ／
+    <a href="?view=breeds">品種リスト</a>
+  </nav>
+
+  <form method="post" action="/animals/{{.Patient.KarteNo}}">
+    <input type="hidden" name="action" value="save">
+    <section data-testid="patient-section">
+      <h2>動物 <span data-check="patient.karte_no">{{.Patient.KarteNo}}</span>
+        {{if .Patient.DeletedAt}}（削除済み）{{end}}
+      </h2>
+      <label>フリガナ <input name="patient_name_kana" value="{{.Patient.NameKana}}"></label>
+      <label>名前 <input name="patient_name_kanji" value="{{.Patient.NameKanji}}"></label>
+      <label>種別 <input name="species" value="{{.Patient.Species}}"></label>
+      <label>品種 <input name="breed" value="{{.Patient.Breed}}"></label>
+      <label>性別
+        <select name="sex">
+          <option value="male" {{if eq .Patient.Sex "male"}}selected{{end}}>雄</option>
+          <option value="female" {{if eq .Patient.Sex "female"}}selected{{end}}>雌</option>
+          <option value="unknown" {{if eq .Patient.Sex "unknown"}}selected{{end}}>不明</option>
+        </select>
+      </label>
+    </section>
+    <section data-testid="owner-section">
+      <h2>飼主 {{.Owner.OwnerNo}}{{if .Owner.DeletedAt}}（削除済み）{{end}}</h2>
+      <label>フリガナ <input name="owner_name_kana" value="{{.Owner.NameKana}}"></label>
+      <label>氏名 <input name="owner_name_kanji" value="{{.Owner.NameKanji}}"></label>
+      <label>郵便番号 <input name="owner_postal_code" value="{{.Owner.PostalCode}}"></label>
+      <label>住所1 <input name="owner_address1" value="{{.Owner.Address1}}"></label>
+      <label>住所2 <input name="owner_address2" value="{{.Owner.Address2}}"></label>
+      <label>電話 <input name="owner_phone" value="{{.Owner.Phone}}"></label>
+      <label>携帯 <input name="owner_mobile" value="{{.Owner.Mobile}}"></label>
+    </section>
+    <button type="submit">保存</button>
+  </form>
+
+  <details>
+    <summary>診察券番号を変更する</summary>
+    <form method="post" action="/animals/{{.Patient.KarteNo}}">
+      <input type="hidden" name="action" value="renumber_patient">
+      <label>新しいカルテNo <input name="new_karte_no"></label>
+      <button type="submit">変更する</button>
+    </form>
+    <form method="post" action="/animals/{{.Patient.KarteNo}}">
+      <input type="hidden" name="action" value="renumber_owner">
+      <label>新しい飼主番号 <input name="new_owner_no"></label>
+      <button type="submit">変更する</button>
+    </form>
+  </details>
+
+  {{if eq .View "id_card"}}
+  <section data-testid="id-card">
+    <h2>診察券</h2>
+    <p>{{.Owner.NameKanji}} 様　{{.Patient.NameKanji}}（{{.Patient.KarteNo}}）</p>
+  </section>
+  {{end}}
+
+  {{if eq .View "document"}}
+  <section data-testid="document-print">
+    <h2>文書印刷</h2>
+    <p>{{.Patient.NameKanji}} の診療内容証明書（雛形）</p>
+  </section>
+  {{end}}
+
+  {{if eq .View "breeds"}}
+  <section data-testid="breed-hints">
+    <h2>品種リスト（{{.Patient.Species}}）</h2>
+    <ul>{{range .BreedHints}}<li>{{.}}</li>{{end}}</ul>
+  </section>
+  {{end}}
+
+  {{if .Siblings}}
+  <section data-testid="siblings">
+    <h2>同じ飼主の他の動物</h2>
+    <ul>
+      {{range .Siblings}}
+      {{if ne .KarteNo $.Patient.KarteNo}}
+      <li><a href="/animals/{{.KarteNo}}">{{.NameKanji}}（{{.KarteNo}}）</a></li>
+      {{end}}
+      {{end}}
+    </ul>
+  </section>
+  {{end}}
+
+  <p>
+    <a href="/animals/{{.Patient.KarteNo}}/history">来院履歴</a> ／
+    <a href="/animals/{{.Patient.KarteNo}}/karte">カルテ</a> ／
+    <a href="/animals/{{.Patient.KarteNo}}/delete">削除</a> ／
+    <a href="/">トップへ戻る</a>
+  </p>
+</div>
+{{end}}

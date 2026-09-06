@@ -18,7 +18,18 @@ from app import db as db_module
 from app import models  # noqa: F401  metadata に全テーブルを登録するために読み込む
 from app.config import get_settings
 from app.errors import register_error_handlers
-from app.routers import billing, front, health, karte, lab, reservations, sales, ward
+from app.routers import (
+    accounting,
+    billing,
+    front,
+    health,
+    karte,
+    lab,
+    refdata,
+    reservations,
+    sales,
+    ward,
+)
 from app.seed_loader import load_seed
 
 # 領域ごとのルーターは契約が凍ってからここへ足す。
@@ -67,6 +78,8 @@ def create_app() -> FastAPI:
     app.include_router(reservations.router)
     app.include_router(ward.router)
     app.include_router(front.router)
+    app.include_router(refdata.router)
+    app.include_router(accounting.router)
 
     return app
 

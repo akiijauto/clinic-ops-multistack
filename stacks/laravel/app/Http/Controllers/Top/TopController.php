@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Top;
 
 use App\Http\Controllers\Controller;
-use App\Models\Reception;
+use App\Models\Visit;
+use App\Support\BusinessClock;
 use Illuminate\Contracts\View\View;
 
 /**
@@ -14,7 +15,12 @@ class TopController extends Controller
 {
     public function index(): View
     {
-        $todayCount = Reception::whereDate('received_at', now()->toDateString())->count();
+        // 「対象日の診察件数」は Visit の件数（Reception の完了件数とは別の数値。
+        // spec/screens.md 画面1・画面8）。「本日」は種データのアンカー日
+        // （App\Support\BusinessClock）で判定する。
+        $todayCount = Visit::query()
+            ->whereDate('visit_date', BusinessClock::todayString())
+            ->count();
 
         return view('top.index', ['todayCount' => $todayCount]);
     }

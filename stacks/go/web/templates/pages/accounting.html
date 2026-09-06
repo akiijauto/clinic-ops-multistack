@@ -1,0 +1,88 @@
+{{define "title"}}会計 {{.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-accounting">
+  <h1>会計</h1>
+
+  {{if .ErrorMessage}}<p data-testid="error-banner" class="error-banner">{{.ErrorMessage}}</p>{{end}}
+  {{if .SuccessMessage}}<p data-testid="success-banner" class="success-banner">{{.SuccessMessage}}</p>{{end}}
+
+  <section data-testid="billing-header">
+    <dl>
+      <dt>カルテNo</dt><dd>{{.KarteNo}}</dd>
+      <dt>動物</dt><dd>{{.PatientNo}}</dd>
+      <dt>飼主</dt><dd>{{.OwnerName}}（{{.OwnerNo}}）</dd>
+      <dt>伝票番号</dt><dd>{{.SlipNo}}</dd>
+      <dt>状態</dt><dd>{{.Status}}</dd>
+      <dt>会計日</dt><dd>{{.BilledOn}}</dd>
+    </dl>
+  </section>
+
+  <table data-testid="billing-details">
+    <caption>明細</caption>
+    <thead>
+      <tr><th>コード</th><th>内容</th><th>単価</th><th>数量</th><th>課税</th><th>金額</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Details}}
+      <tr data-testid="row-billing-detail" data-detail-id="{{.ID}}">
+        <td>{{.PriceCode}}</td>
+        <td>{{.Name}}</td>
+        <td>{{if .UnitPrice}}{{.UnitPrice}}{{else}}（未設定）{{end}}</td>
+        <td>{{.Quantity}}</td>
+        <td>{{if .IsTaxable}}課税{{else}}非課税{{end}}</td>
+        <td>{{if .Amount}}{{.Amount}}{{else}}（未算入）{{end}}</td>
+        <td>
+          {{if eq $.Status "draft"}}
+          <form method="post" action="/animals/{{$.KarteNo}}/accounting">
+            <input type="hidden" name="billing_id" value="{{$.BillingID}}">
+            <input type="hidden" name="detail_id" value="{{.ID}}">
+            <button type="submit" name="action" value="duplicate_detail">複写</button>
+            <button type="submit" name="action" value="remove_detail">削除</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <section data-testid="billing-total">
+    <dl>
+      <dt>税抜合計</dt><dd><span data-check="billing.net_amount">{{.NetAmount}}</span></dd>
+      <dt>消費税額</dt><dd><span data-check="billing.tax_amount">{{.TaxAmount}}</span></dd>
+      <dt>税込合計</dt><dd><span data-check="billing.total_amount">{{.TotalAmount}}</span></dd>
+      <dt>未算入行数</dt><dd><span data-check="billing.excluded_count">{{.ExcludedCount}}</span></dd>
+    </dl>
+  </section>
+
+  {{if eq .Status "draft"}}
+  <section data-testid="billing-picker">
+    <h2>料金項目を追加</h2>
+    {{range .Categories}}
+    <fieldset>
+      <legend>{{.Category}}</legend>
+      {{range .Items}}
+      <form method="post" action="/animals/{{$.KarteNo}}/accounting" data-testid="row-price-item">
+        <input type="hidden" name="billing_id" value="{{$.BillingID}}">
+        <input type="hidden" name="price_code" value="{{.PriceCode}}">
+        <span>{{.Name}}</span>
+        <span>{{if .UnitPrice}}{{.UnitPrice}}{{else}}（単価未設定）{{end}}</span>
+        <input type="number" name="quantity" value="1" min="0.01" step="any">
+        <button type="submit" name="action" value="add_detail">追加</button>
+      </form>
+      {{end}}
+    </fieldset>
+    {{end}}
+  </section>
+
+  <form method="post" action="/animals/{{.KarteNo}}/accounting">
+    <input type="hidden" name="billing_id" value="{{.BillingID}}">
+    <button type="submit" name="action" value="clear_details">全削除</button>
+    <button type="submit" name="action" value="confirm">確定</button>
+  </form>
+  {{end}}
+
+  <p><a href="/animals/{{.KarteNo}}/accounting/history">会計履歴へ</a></p>
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

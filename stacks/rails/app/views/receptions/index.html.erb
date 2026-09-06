@@ -1,27 +1,95 @@
 <% content_for :title, "本日の患者" %>
 <div data-testid="screen-today">
-  <h1>本日の患者</h1>
+  <h1>本日の患者（受付一覧）</h1>
   <p>本日の診察件数: <span data-check="visit_count.today"><%= @today_count %></span></p>
+  <p>表示中の完了件数: <%= @done_count %></p>
+
+  <nav data-testid="reception-kind-tabs">
+    <a href="/today?<%= { hide: @hide_done ? "1" : nil }.compact.to_query %>"
+       data-testid="reception-kind-tab-all"<%= @kind.nil? ? ' aria-current="page"' : "" %>>すべて</a>
+    <% @kinds.each do |k| %>
+      <a href="/today?<%= { kind: k[:code], hide: @hide_done ? "1" : nil }.compact.to_query %>"
+         data-testid="reception-kind-tab-<%= k[:code] %>"<%= @kind == k[:code] ? ' aria-current="page"' : "" %>>
+        <%= k[:name] %>
+      </a>
+    <% end %>
+  </nav>
+
+  <p>
+    <% if @hide_done %>
+      <a href="/today?<%= { kind: @kind }.compact.to_query %>" data-testid="toggle-hide-done">完了行を表示する</a>
+    <% else %>
+      <a href="/today?<%= { kind: @kind, hide: "1" }.compact.to_query %>" data-testid="toggle-hide-done">完了行を隠す</a>
+    <% end %>
+  </p>
+
+  <p>
+    <%# 分院の切り替え（状態B）。model.md「落としたもの」に対応。 %>
+    <a href="/folded/hospital_division" data-testid="btn-hospital-division" aria-disabled="true">分院の切り替え（この企画では作っていません）</a>
+  </p>
 
   <% if @receptions.empty? %>
     <p data-testid="empty-reception">本日はまだ受付がありません。</p>
   <% else %>
     <table>
       <thead>
-        <tr><th>No</th><th>受付時刻</th><th>患者</th><th>状態</th></tr>
+        <tr>
+          <th>No</th><th>カルテNo</th><th>飼主名</th><th>品種</th><th>動物名</th>
+          <th>受付日時</th><th>オーナー目的</th><th>診療目的</th><th>状況</th><th>担当</th><th></th>
+        </tr>
       </thead>
       <tbody>
         <% @receptions.each do |r| %>
-          <tr data-testid="row-reception">
+          <% selected = @selected_id == r.id %>
+          <tr data-testid="row-reception"<%= selected ? ' aria-selected="true"' : "" %>>
             <td><%= r.display_no %></td>
-            <td><%= r.received_at&.strftime("%H:%M") %></td>
-            <td><a href="/animals/<%= r.patient.karte_no %>"><%= r.patient.name_kanji %></a></td>
-            <td><%= r.status %></td>
+            <td><%= r.patient.karte_no %></td>
+            <td><%= r.patient.owner.name_kanji %></td>
+            <td><%= r.patient.species %> <%= r.patient.breed %></td>
+            <td><%= r.patient.name_kanji %></td>
+            <td><%= r.received_at&.in_time_zone("Tokyo")&.strftime("%H:%M") %></td>
+            <td><%= r.owner_purpose %></td>
+            <td><%= r.medical_purpose %></td>
+            <td><%= @status_labels[r.status] || r.status %></td>
+            <td><%= r.staff&.name %></td>
+            <td>
+              <% if selected %>
+                <span data-testid="row-selected">選択中</span>
+              <% else %>
+                <a href="/today?<%= { kind: @kind, hide: @hide_done ? "1" : nil, selected: r.id }.compact.to_query %>"
+                   data-testid="select-reception">選ぶ</a>
+              <% end %>
+            </td>
           </tr>
         <% end %>
       </tbody>
     </table>
   <% end %>
 
+  <% selected_reception = @selected_id && @receptions.find { |r| r.id == @selected_id } %>
+  <h2>選択行の操作</h2>
+  <% if selected_reception.nil? %>
+    <p data-testid="patient-actions-disabled">行を選ぶと、この患者の操作（上へ／下へ・顧客・カルテ・会計・予約）が使えます。</p>
+  <% else %>
+    <ul data-testid="patient-actions-enabled">
+      <li>
+        <%= button_to "上へ", move_reception_path(selected_reception, direction: "up", kind: @kind, hide: @hide_done ? "1" : nil), method: :patch, data: { testid: "btn-move-up" } %>
+      </li>
+      <li>
+        <%= button_to "下へ", move_reception_path(selected_reception, direction: "down", kind: @kind, hide: @hide_done ? "1" : nil), method: :patch, data: { testid: "btn-move-down" } %>
+      </li>
+      <li><a href="/animals/<%= selected_reception.patient.karte_no %>" data-testid="btn-open-customer">顧客</a></li>
+      <li><a href="/animals/<%= selected_reception.patient.karte_no %>/karte" data-testid="btn-open-karte">カルテ</a></li>
+      <li><a href="/animals/<%= selected_reception.patient.karte_no %>/accounting" data-testid="btn-open-accounting">会計</a></li>
+      <li><a href="/reservations/new?patient=<%= selected_reception.patient.karte_no %>" data-testid="btn-open-reservation">予約</a></li>
+    </ul>
+  <% end %>
+
+  <p>
+    <%# 完了全削除／完了削除（状態C）。完了行を消すと当日件数が数えられなくなるため、あえて塞んである。 %>
+    <a href="/todo/reception_done_delete" data-testid="btn-delete-done" aria-disabled="true">完了削除（あえて動かしていません）</a>
+  </p>
+
+  <p><a href="/animals/new">新規登録</a></p>
   <p><a href="/">トップへ戻る</a></p>
 </div>

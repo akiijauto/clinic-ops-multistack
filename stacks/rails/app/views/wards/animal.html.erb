@@ -2,6 +2,20 @@
 <div data-testid="screen-ward">
   <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の入院記録</h1>
 
+  <% if @success %>
+    <p data-testid="success-banner">保存しました。</p>
+  <% end %>
+  <% if @error %>
+    <p data-testid="error-banner"><%= @error_message %></p>
+  <% end %>
+
+  <h2>入院を開始する</h2>
+  <%= form_with url: "/animals/#{@patient.karte_no}/ward", method: :post, local: true do %>
+    <input type="date" name="admitted_on" value="<%= Date.current %>">
+    <input type="text" name="room" placeholder="処置室" required>
+    <button type="submit">入院登録</button>
+  <% end %>
+
   <% if @hospitalizations.empty? %>
     <p data-testid="empty-care-record">入院の記録がありません。</p>
   <% else %>
@@ -19,6 +33,31 @@
             </li>
           <% end %>
         </ul>
+      <% end %>
+
+      <% if h.open? %>
+        <h3>ケア記録を追加</h3>
+        <%= form_with url: "/animals/#{@patient.karte_no}/ward/#{h.id}/care_records", method: :post, local: true do %>
+          <select name="kind">
+            <% CareRecord::KINDS.each do |k| %>
+              <option value="<%= k %>"><%= k %></option>
+            <% end %>
+          </select>
+          <input type="text" name="content" placeholder="内容">
+          <select name="performed_by_staff_id">
+            <option value="">実施者を選択</option>
+            <% Staff.active.order(:staff_code).each do |s| %>
+              <option value="<%= s.id %>"><%= s.name %></option>
+            <% end %>
+          </select>
+          <button type="submit">追加</button>
+        <% end %>
+
+        <h3>退院</h3>
+        <%= form_with url: "/animals/#{@patient.karte_no}/ward/#{h.id}/discharge", method: :post, local: true do %>
+          <input type="date" name="discharged_on" value="<%= Date.current %>">
+          <button type="submit">退院登録</button>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>

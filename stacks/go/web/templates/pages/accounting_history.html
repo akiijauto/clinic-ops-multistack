@@ -1,0 +1,44 @@
+{{define "title"}}会計履歴 {{.KarteNo}}{{end}}
+{{define "content"}}
+<div data-testid="screen-accounting-history">
+  <h1>会計履歴</h1>
+
+  <nav data-testid="scope-switch">
+    <a href="/animals/{{.KarteNo}}/accounting/history?scope=patient">この動物</a>
+    <a href="/animals/{{.KarteNo}}/accounting/history?scope=owner">この飼主</a>
+    <a href="/animals/{{.KarteNo}}/accounting/history?scope=all">全体</a>
+    <span data-testid="current-scope">（現在: {{.Scope}}）</span>
+  </nav>
+
+  {{if not .Rows}}
+  <p data-testid="empty-accounting-history">該当する伝票がありません。</p>
+  {{else}}
+  <table>
+    <thead>
+      <tr>
+        <th>伝票No</th><th>会計日</th><th>状態</th><th>患者</th><th>飼主</th>
+        <th>税抜合計</th><th>消費税額</th><th>税込合計</th><th>未算入行数</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr data-testid="row-billing" data-billing-id="{{.BillingID}}"{{if .IsCurrent}} data-current-patient="true"{{end}}>
+        <td><a href="/animals/{{$.KarteNo}}/accounting?slip={{.BillingID}}">{{.SlipNo}}</a></td>
+        <td>{{.BilledOn}}</td>
+        <td>{{.Status}}</td>
+        <td>{{.PatientName}}</td>
+        <td>{{.OwnerName}}</td>
+        <td><span data-check="billing.net_amount">{{.NetAmount}}</span></td>
+        <td><span data-check="billing.tax_amount">{{.TaxAmount}}</span></td>
+        <td><span data-check="billing.total_amount">{{.TotalAmount}}</span></td>
+        <td><span data-check="billing.excluded_count">{{.ExcludedCount}}</span></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  <p><a href="/animals/{{.KarteNo}}/accounting">会計へ戻る</a></p>
+  <p><a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

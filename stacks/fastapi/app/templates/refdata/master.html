@@ -1,0 +1,40 @@
+{# マスタ。screens.md 25番。参照専用——編集欄・保存ボタンを一切置かない。 #}
+{% extends "base.html" %}
+{% from "_macros.html" import screen, row, empty %}
+
+{% block title %}マスタ（{{ key }}）{% endblock %}
+
+{% block content %}
+<section {{ screen("settings-master") }}>
+  <h1>マスタ</h1>
+  <nav>
+    {% for k in keys %}
+    <a href="/settings/master/{{ k }}" {% if k == key %}aria-current="true"{% endif %}>{{ k }}</a>
+    {% endfor %}
+  </nav>
+
+  <h2>{{ key }}（{{ rows|length }} 件・参照専用）</h2>
+  {% if rows %}
+  <table>
+    <thead><tr>{% for col in rows[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr {{ row("master") }}>
+        {% for col, val in r.items() %}
+        <td>
+          {%- if col == "unit_price" and val is none -%}
+            <span class="hint">未設定</span>
+          {%- else -%}
+            {{ val }}
+          {%- endif -%}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p {{ empty("master") }}>該当するデータがありません。</p>
+  {% endif %}
+</section>
+{% endblock %}

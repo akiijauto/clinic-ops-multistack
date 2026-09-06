@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync, type SQLInputValue, type StatementSync } from 'node:sqlite';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { moduleDir } from './paths.ts';
@@ -39,11 +39,11 @@ export function closeDb(): void {
  * `hasOwnProperty`, which bites in tests and in React rendering. Every read
  * goes through here so rows are plain objects everywhere else.
  */
-export function rows<T>(stmt: { all: (...p: never[]) => unknown[] }, ...params: never[]): T[] {
+export function rows<T>(stmt: StatementSync, ...params: SQLInputValue[]): T[] {
   return stmt.all(...params).map((r) => ({ ...(r as object) })) as T[];
 }
 
-export function row<T>(stmt: { get: (...p: never[]) => unknown }, ...params: never[]): T | undefined {
+export function row<T>(stmt: StatementSync, ...params: SQLInputValue[]): T | undefined {
   const r = stmt.get(...params);
   return r === undefined ? undefined : ({ ...(r as object) } as T);
 }

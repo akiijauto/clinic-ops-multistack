@@ -1,20 +1,11 @@
 /**
- * `src/lib/db.ts`'s shared `row()` / `rows()` helpers are declared with the
- * extra query parameters typed `...params: never[]`, which only type-checks
- * for zero-argument calls -- passing any actual bind value (`row(stmt, id)`)
- * fails `tsc --strict` (`Argument of type 'string' is not assignable to
- * parameter of type 'never'`, confirmed by compiling a throwaway call).
- * `db.ts` is one of the shared files area1 was told to use as-is and flag
- * rather than edit, so this module re-implements the same one-line
- * normalization (`node:sqlite` rows have a null prototype -- see `db.ts`'s
- * own comment) for the parameterized calls area1 needs everywhere. Reported
- * to the team lead as a bug in the shared helper.
+ * Historically this re-implemented `db.ts`'s `row()`/`rows()` because those
+ * were declared `...params: never[]`, which only type-checked for
+ * zero-argument calls. That was a real bug in the shared helper (area1
+ * found it and worked around it here rather than editing a file marked
+ * "use as-is, flag instead" -- correctly). `db.ts` now types its params as
+ * `SQLInputValue[]`, matching `node:sqlite`'s own `StatementSync` signature,
+ * so this module is just a thin re-export under the names call sites here
+ * already use.
  */
-export function one<T>(stmt: { get: (...p: unknown[]) => unknown }, ...params: unknown[]): T | undefined {
-  const r = stmt.get(...params);
-  return r === undefined ? undefined : ({ ...(r as object) } as T);
-}
-
-export function many<T>(stmt: { all: (...p: unknown[]) => unknown[] }, ...params: unknown[]): T[] {
-  return stmt.all(...params).map((r) => ({ ...(r as object) })) as T[];
-}
+export { row as one, rows as many } from '../db.ts';

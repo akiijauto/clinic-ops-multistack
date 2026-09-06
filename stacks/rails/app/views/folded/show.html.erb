@@ -1,0 +1,16 @@
+<div data-testid="screen-folded">
+  <h1>折りたたみ表示</h1>
+  <p>この企画では扱わないと決めたもの一覧です（<%= @items.size %> 件）。理由も添えてあります。</p>
+
+  <ul>
+    <% @items.each do |item| %>
+      <li id="folded-<%= item[:key] %>" <%= "style=\"font-weight:bold\"".html_safe if item[:key] == @key %>>
+        <strong><%= item[:title] %></strong>
+        <p><%= item[:message] %></p>
+        <p>この企画のどこで見えるか: <%= item[:appears] %></p>
+      </li>
+    <% end %>
+  </ul>
+
+  <p><%= link_to "設定の機能設定へ", "/settings/features" %></p>
+</div>

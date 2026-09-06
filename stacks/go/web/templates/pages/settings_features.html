@@ -1,0 +1,24 @@
+{{define "title"}}機能設定{{end}}
+{{define "content"}}
+<div data-testid="screen-settings-features">
+  <h1>機能設定</h1>
+  <p>この企画ではスコープに入れなかった機能を、理由つきでまとめて示す。読むだけの画面で、
+     この画面自体から機能の出し入れはできない（<code>ClinicFeature</code> はこの企画では持たない）。</p>
+
+  <table>
+    <thead>
+      <tr><th>機能</th><th>理由</th></tr>
+    </thead>
+    <tbody>
+      {{range .Notes}}
+      <tr data-testid="row-feature" data-feature-key="{{.Key}}">
+        <td>{{.Title}}</td>
+        <td>{{.Message}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <p><a href="/settings">設定へ戻る</a> ・ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

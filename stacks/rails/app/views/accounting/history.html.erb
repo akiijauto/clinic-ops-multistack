@@ -1,0 +1,44 @@
+<% content_for :title, "会計履歴" %>
+<div data-testid="screen-accounting-history">
+  <h1>会計履歴 - <%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+
+  <p>
+    範囲:
+    <a href="/animals/<%= @patient.karte_no %>/accounting/history?scope=patient">動物</a> /
+    <a href="/animals/<%= @patient.karte_no %>/accounting/history?scope=owner">飼主</a> /
+    <a href="/animals/<%= @patient.karte_no %>/accounting/history?scope=all">全体</a>
+    （現在: <%= @scope %>）
+  </p>
+
+  <% if @billings.empty? %>
+    <p data-testid="empty-accounting-history">該当する伝票がありません。</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>伝票No</th><th>会計日</th><th>状態</th><th>患者</th><th>飼主</th>
+            <th>税抜合計</th><th>消費税額</th><th>税込合計</th><th>未算入行数</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% @billings.each do |b| %>
+          <% calc = b.calc %>
+          <tr data-testid="row-billing" data-billing-id="<%= b.id %>"
+              <%= "data-current=\"true\"" if b.patient_id == @patient.id %>>
+            <td><%= b.slip_no.presence || "(確定前)" %></td>
+            <td><%= b.billed_on %></td>
+            <td><%= b.status %></td>
+            <td><%= b.patient.name_kanji %></td>
+            <td><%= b.patient.karte_no == @patient.karte_no ? "" : b.patient.owner&.name_kanji %></td>
+            <td><span data-check="billing.net_amount"><%= calc.net_amount %></span></td>
+            <td><span data-check="billing.tax_amount"><%= calc.tax_amount %></span></td>
+            <td><span data-check="billing.total_amount"><%= calc.total %></span></td>
+            <td><span data-check="billing.excluded_count"><%= calc.excluded_detail_count %></span></td>
+            <td><a href="/animals/<%= b.patient.karte_no %>/accounting?slip=<%= b.id %>">会計画面で開く</a></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <p><a href="/animals/<%= @patient.karte_no %>/accounting">会計へ戻る</a></p>
+  <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
+</div>

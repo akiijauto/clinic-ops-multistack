@@ -5,17 +5,34 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"sync"
 )
 
 // Store は `data/` から読み込んだ内容をメモリ上に持つ。
-// 契約の完了の判定（spec/README.md）にある「保存の道具は各レーンが選んでよい」
-// を踏まえ、書き込みが要らない検算1・2の範囲ではファイルを読むだけで足りる。
+//
+// 会計の確定・明細の追加等（検算1・2の範囲を超える書き込み）を足したため、
+// 複数リクエストからの同時アクセスに備えて mu で守る
+// （internal/store が保存先を決めるまでの、プロセス内メモリだけの書き込み）。
 type Store struct {
-	clinic       Clinic
-	priceItems   map[string]PriceItem
-	billings     map[int]Billing
-	detailsByID  map[int][]BillingDetail // billing_id -> details
-	billingOrder []int                   // 元の並び順を残す（決定的な応答のため）
+	mu sync.RWMutex
+
+	clinic     Clinic
+	priceItems map[string]PriceItem
+
+	ownersByID     map[int]Owner
+	patientsByID   map[int]Patient
+	patientsByNo   map[string]Patient // karte_no -> Patient
+	preventions    []Prevention
+	preventionName map[string]string // kind code -> 表示名
+
+	billings        map[int]Billing
+	detailsByID     map[int][]BillingDetail // billing_id -> details（row_no順）
+	billingOrder    []int                   // 元の並び順を残す（決定的な応答のため）
+	billingsByOwner map[int][]int           // owner_id -> billing id（新しい順）
+
+	nextBillingID int
+	nextDetailID  int
 }
 
 // ResolveDataDir は hint（既定 "data"）が指すディレクトリに `seed.json` が
@@ -52,7 +69,7 @@ func hasSeed(dir string) bool {
 	return err == nil
 }
 
-// Load は dataDir から seed.json と price_items.json を読み込む。
+// Load は dataDir から seed.json・price_items.json・masters.json を読み込む。
 func Load(dataDir string) (*Store, error) {
 	var seed seedFile
 	if err := readJSON(filepath.Join(dataDir, "seed.json"), &seed); err != nil {
@@ -62,24 +79,68 @@ func Load(dataDir string) (*Store, error) {
 	if err := readJSON(filepath.Join(dataDir, "price_items.json"), &items); err != nil {
 		return nil, err
 	}
+	var masters mastersFile
+	if err := readJSON(filepath.Join(dataDir, "masters.json"), &masters); err != nil {
+		return nil, err
+	}
 
 	s := &Store{
-		clinic:      seed.Clinic,
-		priceItems:  make(map[string]PriceItem, len(items)),
-		billings:    make(map[int]Billing, len(seed.Billings)),
-		detailsByID: make(map[int][]BillingDetail),
+		clinic:     seed.Clinic,
+		priceItems: make(map[string]PriceItem, len(items)),
+
+		ownersByID:     make(map[int]Owner, len(seed.Owners)),
+		patientsByID:   make(map[int]Patient, len(seed.Patients)),
+		patientsByNo:   make(map[string]Patient, len(seed.Patients)),
+		preventions:    seed.Preventions,
+		preventionName: make(map[string]string, len(masters.PreventionKinds)),
+
+		billings:        make(map[int]Billing, len(seed.Billings)),
+		detailsByID:     make(map[int][]BillingDetail),
+		billingsByOwner: make(map[int][]int),
 	}
 	for _, it := range items {
 		s.priceItems[it.PriceCode] = it
 	}
+	for _, o := range seed.Owners {
+		s.ownersByID[o.ID] = o
+	}
+	for _, p := range seed.Patients {
+		s.patientsByID[p.ID] = p
+		s.patientsByNo[p.KarteNo] = p
+	}
+	for _, k := range masters.PreventionKinds {
+		s.preventionName[k.Code] = k.Name
+	}
 	for _, b := range seed.Billings {
 		s.billings[b.ID] = b
 		s.billingOrder = append(s.billingOrder, b.ID)
+		if b.ID >= s.nextBillingID {
+			s.nextBillingID = b.ID + 1
+		}
 	}
 	for _, d := range seed.BillingDetails {
 		s.detailsByID[d.BillingID] = append(s.detailsByID[d.BillingID], d)
+		if d.ID >= s.nextDetailID {
+			s.nextDetailID = d.ID + 1
+		}
 	}
+	for bid, ds := range s.detailsByID {
+		ds := ds
+		sort.Slice(ds, func(i, j int) bool { return ds[i].RowNo < ds[j].RowNo })
+		s.detailsByID[bid] = ds
+	}
+	s.rebuildOwnerIndexLocked()
 	return s, nil
+}
+
+// rebuildOwnerIndexLocked は billingsByOwner を billingOrder から作り直す。
+// 呼び出し側で mu を確保していること（Load 時・新規伝票の作成後に呼ぶ）。
+func (s *Store) rebuildOwnerIndexLocked() {
+	s.billingsByOwner = make(map[int][]int, len(s.billingsByOwner))
+	for _, id := range s.billingOrder {
+		b := s.billings[id]
+		s.billingsByOwner[b.OwnerID] = append(s.billingsByOwner[b.OwnerID], id)
+	}
 }
 
 func readJSON(path string, v any) error {
