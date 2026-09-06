@@ -1,0 +1,16 @@
+/animals/{karte_no} => 顧客
+/animals/{karte_no}/accounting => 会計
+/animals/{karte_no}/accounting/history => 会計履歴
+/animals/{karte_no}/delete => 削除
+/animals/{karte_no}/dosing/{kind_id} => 投薬
+/animals/{karte_no}/exam => 検査
+/animals/{karte_no}/history => 来院履歴
+/animals/{karte_no}/karte => カルテ
+/animals/{karte_no}/karte/cancel => 取消
+/animals/{karte_no}/karte/copy_prev => 前回コピー
+/animals/{karte_no}/karte/new => カルテ
+/animals/{karte_no}/karte/{visit_id}/delete => 診察の削除
+/animals/{karte_no}/karte/{visit_id}/restore => 診察の削除の取り消し
+/animals/{karte_no}/papers => 書類
+/animals/{karte_no}/prevention/{kind_id} => 予防
+/animals/{karte_no}/ward => 入院

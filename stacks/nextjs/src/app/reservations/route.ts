@@ -51,6 +51,6 @@ export async function POST(req: Request): Promise<Response> {
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     const body = renderForm({ mode: 'new', values, banner: errorBanner(e.message) });
-    return htmlResponse(page({ title: '予約（新規）', screenKey: 'screen-reservations', body }));
+    return htmlResponse(page({ title: '予約', screenKey: 'screen-reservations', body }));
   }
 }

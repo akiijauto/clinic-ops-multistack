@@ -834,3 +834,35 @@ $ go build ./... && go test ./...
 `clinicops.exe` を再ビルドして入れ替え、8401 で再起動して確認している。
 
 `stacks/go/` 以外は変更していない。コミット・pushはしていない。
+
+---
+
+## 画面名をナビの表示と揃える（2026-09-06）
+
+指揮役の実測「3画面の名前がナビと違う」を受けて修正。
+
+- `web/templates/pages/settings.html`: `<h1>設定（病院設定）</h1>` → `<h1>設定</h1>` +
+  `<p>病院設定</p>`（補足は見出しの下へ）
+- `web/templates/pages/staff.html`: `<h1>スタッフ（担当選択）</h1>` → `<h1>スタッフ</h1>` +
+  `<p>担当選択</p>`
+- `web/templates/pages/ward_day.html`（`/ward` `/ward/day` が実際に描画するテンプレート。
+  `ward.html` ではない）: `title` を `入院（{{.Date}}）` → `入院`（可変値を外す）、
+  `<h1>入院（本日の入院患者）</h1>` → `<h1>入院</h1>` + `<p>本日の入院患者（{{.Date}}）</p>`
+
+### 確かめたこと
+
+```
+$ python tests/run.py http://127.0.0.1:8401
+全 28 件 通過（新規「見た目 画面名がナビの表示と同じ」含む — 9 画面の名前がナビと一致）
+
+$ go build ./... && go vet ./... && go test ./...
+全部ok
+
+$ python tests/shots.py /ward /settings /staff
+/ward — 揃っている
+/settings — 揃っている
+/staff — 揃っている
+```
+
+`stacks/go/` 以外は変更していない。コミット・pushはしていない。
+これで担当（共通ナビ・タイトル・トップ本文・画面名統一）は完了。

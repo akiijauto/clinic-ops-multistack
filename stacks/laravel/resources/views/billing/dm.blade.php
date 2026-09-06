@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'DM管理')
+@section('title', 'DM')
 
 @section('content')
     <div class="card" data-testid="screen-dm">
-        <h1>DM管理</h1>
+        <h1>DM</h1>
 
         <form method="get" action="/dm">
             <label>区分

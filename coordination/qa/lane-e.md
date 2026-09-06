@@ -440,3 +440,30 @@ $ python tests/run.py http://127.0.0.1:8405 → 全26件通過
 $ python tests/shots.py / /about /settings /folded
   → /のnav=10本、/settingsのnav=10本で5実装とも揃った
 ```
+
+## 2026-09-06 続報2: 画面名をナビの表示と同じにする
+
+指揮役の実測で `/dm`（DM管理≠DM）・`/settings`（設定（病院設定）≠設定）・
+`/ward`（入院（一覧）≠入院）の3画面がナビの表示と違う名前になっていた。
+
+`area1/html.ts`と`render.ts`の両`page()`が`<h1>`/`<title>`を呼び出し側の`title`引数から
+自動生成する形にしてあったので、**呼び出し側の`title`を直すだけで済んだ**。
+
+- `src/app/dm/route.ts`: `'DM管理'` → `'DM'`
+- `src/app/settings/route.ts`（GET/POST成功/POST失敗の3箇所）: `'設定（病院設定）'` → `'設定'`
+- `src/app/_area4/ward-screen.ts`: `'入院（一覧）'` → `'入院'`
+- ついでに`src/app/reservations/route.ts`のPOST失敗時（`screen-reservations`と同じ画面）も
+  `'予約（新規）'` → `'予約'`に統一（クローラーはGETしか辿らないため今回の実測には
+  出ていないが、同じ画面が状況によって違う名前を持つのは同じ問題のため合わせて直した）
+
+括弧書きの補足はどれも本文側（`<fieldset><legend>`や「対象日:」表示等）に既にあったため、
+見出しの下に説明を足す必要は無かった。
+
+**再検証**:
+```
+$ npm run typecheck → エラー0
+$ BASE_URL=http://127.0.0.1:8405 npm test → 44/44
+$ python tests/run.py http://127.0.0.1:8405 → 全28件通過
+  （新規の「見た目 画面名がナビの表示と同じ」も含め9画面で一致）
+$ python tests/shots.py /ward /settings /dm → 3画面とも「揃っている」
+```

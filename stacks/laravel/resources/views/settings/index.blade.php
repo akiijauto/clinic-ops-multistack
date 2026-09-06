@@ -4,7 +4,8 @@
 
 @section('content')
     <div class="card" data-testid="screen-settings">
-        <h1>病院設定</h1>
+        <h1>設定</h1>
+        <p>病院設定</p>
 
         @if (!empty($success))
             <div data-testid="success-banner" class="success-banner">{{ $success }}</div>

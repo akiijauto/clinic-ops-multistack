@@ -72,5 +72,5 @@ export async function GET(req: Request): Promise<Response> {
       <thead><tr><th>カルテNo</th><th>飼主</th><th>動物名</th><th>実施内容</th><th>次回予定日</th><th>実施日</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
-  return htmlResponse(page({ title: 'DM管理', screenKey: 'screen-dm', body }));
+  return htmlResponse(page({ title: 'DM', screenKey: 'screen-dm', body }));
 }

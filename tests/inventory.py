@@ -956,6 +956,108 @@ def register(check, Client, Report):
             return False, f"絞り込むと行が増えている（全体{n1}行 → 先頭区分{n2}行）"
         return True, f"{len(codes)} 区分すべてにタブがある（全体{n1}行 / 先頭区分{n2}行）"
 
+    @check("inventory", "見た目 画面名がナビの表示と同じ（同じ画面を別の名前で呼ばない）")
+    def _screen_names(c, rep):
+        """ナビに載っている画面の `<h1>` を、ナビの表示と突き合わせる。
+
+        実測すると、同じ画面が5通りに呼ばれていた（2026-09-06）。
+
+            /ward     入院（本日の入院患者）／入院中の患者（2026-09-06）／入院／入院（一覧）
+            /settings 設定（病院設定）／病院設定／設定
+
+        **中身は同じなのに、並べると別の画面に見える。**
+        括弧書きの補足も、日付も、画面名ではない。説明が要るなら見出しの下に置く。
+        """
+        status, html, _ = c.get("/")
+        if status != 200 or not html:
+            return False, f"トップが開けない（status={status}）"
+        nav = re.search(r"<nav[^>]*>(.*?)</nav>", _visible(html), re.S)
+        if not nav:
+            return False, "トップにナビが無い（検査が働いていない）"
+
+        labels = {}
+        for m in re.finditer(r'<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>', nav.group(1), re.S):
+            href = m.group(1).split("#")[0].split("?")[0]
+            if href.startswith("http"):
+                i = href.find("/", 8)
+                href = href[i:] if i > 0 else "/"
+            text = re.sub(r"<[^>]+>", "", m.group(2)).strip()
+            if href.startswith("/") and text:
+                labels[href.rstrip("/") or "/"] = text
+        if len(labels) < 8:
+            return False, f"ナビから {len(labels)} 本しか読めない（検査が働いていない）"
+
+        bad = []
+        for path, label in sorted(labels.items()):
+            if path == "/":
+                continue                       # トップは題名そのもの（別の検査で見る）
+            st, h, _ = c.get(path)
+            if st != 200 or not h:
+                continue
+            m = re.search(r"<h1[^>]*>(.*?)</h1>", _visible(h), re.S)
+            h1 = re.sub(r"<[^>]+>", "", m.group(1)).strip() if m else ""
+            if h1 != label:
+                bad.append(f"{path}「{h1[:16]}」≠「{label}」")
+        if bad:
+            return False, f"{len(bad)} 画面の名前がナビと違う: {', '.join(bad[:3])}"
+        return True, f"{len(labels) - 1} 画面の名前がナビと一致"
+
+    @check("inventory", "見た目 ナビに無い画面の名前も契約と同じ（患者名を見出しに混ぜない）")
+    def _screen_names2(c, rep):
+        """ナビに載っていない画面の `<h1>` を、契約の `summary` と突き合わせる。
+
+        ナビに載っている画面はナビの表示に揃えた。**載っていない画面はまだ割れていた。**
+
+            カルテ  「モモ（もも）」／「カルテ — モモ（10003）」／「カルテ」／「カルテ — モモ」
+            検査    「検査」／「モモ（10003）の検査」／「検査 — モモ（10003）」／「検査 — モモ」
+            会計    「会計」／「会計 - モモ（10003）」／「会計 — 10003」
+
+        **患者名を見出しに混ぜると、画面名が患者ごとに変わる。**
+        誰のカルテかは、見出しの下に出せばよい（`spec/screens.md` 末尾の規則）。
+
+        画面名は `spec/openapi.yaml` の `summary` を正とする。括弧書きは説明なので落とす
+        （`顧客（飼主・動物の詳細）` → `顧客`）。
+        """
+        with open(_SPEC, encoding="utf-8") as f:
+            src = f.read()
+        want = {}
+        cur = None
+        for line in src.splitlines():
+            m = re.match(r"^  (/\S*):\s*$", line)
+            if m:
+                cur = m.group(1)
+                continue
+            m = re.search(r'summary:\s*"([^"]+)"', line)
+            if m and cur and not cur.startswith("/api"):
+                want.setdefault(cur, re.split(r"[（(]", m.group(1))[0].strip())
+
+        targets = [p for p in want
+                   if "{karte_no}" in p and p not in _NOT_SCREEN and not p.endswith("/print")]
+        if len(targets) < 5:
+            return False, f"対象が {len(targets)} 件しか組めない（検査が働いていない）"
+
+        sample = _samples()
+        bad, looked = [], 0
+        for p in sorted(targets):
+            real = _resolve(c, p, sample)
+            if real is None:
+                continue
+            st, h, _ = c.get(real)
+            if st != 200 or not h:
+                continue
+            looked += 1
+            m = re.search(r"<h1[^>]*>(.*?)</h1>", _visible(h), re.S)
+            h1 = re.sub(r"<[^>]+>", "", m.group(1)).strip() if m else ""
+            if h1 != want[p]:
+                bad.append(f"{p.split('/')[-1]}「{h1[:14]}」≠「{want[p]}」")
+        if looked < 5:
+            return False, f"{looked} 画面しか見られていない（検査が働いていない）"
+        if bad:
+            return False, f"{len(bad)} 画面の名前が契約と違う: {', '.join(bad[:3])}"
+        return True, f"{looked} 画面の名前が契約と一致"
+
+
+
 
 
 

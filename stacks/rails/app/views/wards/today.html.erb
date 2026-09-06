@@ -1,6 +1,9 @@
-<% content_for :title, "入院（本日）" %>
+<% content_for :title, "入院" %>
+<%# <h1>はナビの表示と同じ文字列にする（spec/screens.md 末尾「画面名はナビの表示と
+    同じにする」、2026-09-06追記）。日付は可変なので見出しの下に出す。 %>
 <div data-testid="screen-ward-day">
-  <h1>入院中の患者（<%= @date %>）</h1>
+  <h1>入院</h1>
+  <p>対象日: <%= @date %></p>
 
   <% if @hospitalizations.empty? %>
     <p data-testid="empty-hospitalization">入院中の患者はいません。</p>

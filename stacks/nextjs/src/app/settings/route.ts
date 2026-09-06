@@ -52,7 +52,7 @@ export async function GET(): Promise<Response> {
     tax_rate: 0.1,
     closed_weekdays: [],
   };
-  return page('設定（病院設定）', 'screen-settings', form(clinic));
+  return page('設定', 'screen-settings', form(clinic));
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -76,10 +76,10 @@ export async function POST(req: Request): Promise<Response> {
         tax_rate: Number(formData.get('tax_rate') ?? 0),
         closed_weekdays: toWeekdays(formData.getAll('closed_weekdays').map((v) => Number(v))),
       });
-    return page('設定（病院設定）', 'screen-settings', body);
+    return page('設定', 'screen-settings', body);
   }
 
   const saved = saveClinic(parsed.value);
   const body = `<p data-testid="success-banner" class="success-banner">保存しました。</p>${form(saved)}`;
-  return page('設定（病院設定）', 'screen-settings', body);
+  return page('設定', 'screen-settings', body);
 }

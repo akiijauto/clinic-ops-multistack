@@ -36,5 +36,5 @@ export function renderWardDay(dateJst: string): Response {
   </tbody>
 </table>`;
 
-  return htmlResponse(page({ title: '入院（一覧）', screenKey: 'screen-ward-day', body }));
+  return htmlResponse(page({ title: '入院', screenKey: 'screen-ward-day', body }));
 }

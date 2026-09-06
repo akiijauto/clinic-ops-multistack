@@ -584,3 +584,33 @@ $ python tests/shots.py /today
 ```
 
 **残っていること**: 無し。次の指示待ち。
+
+---
+
+## 2026-09-06 — 画面名をナビの表示と揃える（担当分完了）
+
+指揮役の指摘（`/ward` `/settings` `/dm` の `<h1>` がナビの表示と違う）に対応。
+FastAPIを手本にした。
+
+1. `app/views/wards/today.html.erb`（`/ward` と `/ward/day` の両方がこのテンプレートを
+   共有）— `<h1>入院中の患者（{日付}）</h1>` → `<h1>入院</h1>`。日付は
+   `<p>対象日: {日付}</p>` として見出しの下に移した。`content_for :title` も
+   `入院（本日）` → `入院`。
+2. `app/views/settings/show.html.erb` — `<h1>病院設定</h1>` → `<h1>設定</h1>`。
+3. `app/views/dm/index.html.erb` — `<h1>DM管理</h1>` → `<h1>DM</h1>`。
+
+### 自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+全 28 件 通過（新規「見た目 画面名がナビの表示と同じ」含む — 9画面一致）
+```
+
+```
+$ python tests/shots.py /ward /settings /dm
+/ward — 揃っている
+/settings — 揃っている
+/dm — 揃っている
+```
+
+**レーンBの担当分はこれで完了。次の指示待ち。**

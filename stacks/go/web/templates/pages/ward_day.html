@@ -1,7 +1,8 @@
-{{define "title"}}入院（{{.Date}}）{{end}}
+{{define "title"}}入院{{end}}
 {{define "content"}}
 <div data-testid="screen-ward-day">
-  <h1>入院（本日の入院患者）</h1>
+  <h1>入院</h1>
+  <p>本日の入院患者（{{.Date}}）</p>
   <form method="get" action="/ward/day">
     <label>日付 <input type="date" name="date" value="{{.Date}}"></label>
     <button type="submit">この日を見る</button>
