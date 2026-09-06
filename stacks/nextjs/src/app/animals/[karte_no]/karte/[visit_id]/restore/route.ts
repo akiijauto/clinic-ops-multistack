@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { getVisit, getPatientByKarteNo, restoreVisit } from '@/lib/area1/data';
 import { escapeHtml, htmlResponse, notFoundHtml, successBanner, parseForm } from '@/lib/area1/html';
+import { PRIMARY_NAV, pageTitle } from '@/lib/nav';
 
 type Params = { params: Promise<{ karte_no: string; visit_id: string }> };
 
@@ -16,10 +17,13 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
   const reason = form.reason || null;
   restoreVisit(db, visit.id, null, reason);
 
+  const primaryNav = PRIMARY_NAV.map(({ href, label }) => `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`).join('');
   const body = `<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><title>診察の復元</title><link rel="stylesheet" href="/ui.css"></head>
+<html lang="ja"><head><meta charset="utf-8"><title>${escapeHtml(pageTitle('診察の復元'))}</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
+<nav data-testid="primary-nav">${primaryNav}</nav>
 <div data-testid="screen-karte">
+<h1>診察の復元</h1>
 ${successBanner('復元しました。')}
 <p><a href="/animals/${escapeHtml(karteNo)}/history">来院履歴へ戻る</a> ｜ <a href="/animals/${escapeHtml(karteNo)}/karte">カルテへ</a></p>
 </div>

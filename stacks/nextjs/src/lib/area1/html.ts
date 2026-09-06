@@ -9,7 +9,7 @@
  * (`spec/openapi.yaml`「HTMLフォーム送信時のエラーの出し方」).
  */
 
-import { PRIMARY_NAV } from '../nav.ts';
+import { PRIMARY_NAV, pageTitle } from '../nav.ts';
 
 export function escapeHtml(v: unknown): string {
   if (v === null || v === undefined) return '';
@@ -25,13 +25,24 @@ const e = escapeHtml;
 
 /** Wraps page content in the shared shell and a `screen-<key>` container. */
 export function page(opts: { title: string; screenKey: string; nav?: string; body: string }): string {
-  const primaryNav = PRIMARY_NAV.map(({ href, label }) => `<a href="${e(href)}">${e(label)}</a>`).join(' ｜ ');
+  const primaryNav = PRIMARY_NAV.map(({ href, label }) => `<a href="${e(href)}">${e(label)}</a>`).join('');
+  // `<nav>` (not `<header>`) is load-bearing: spec/ui.css styles the `nav`
+  // element and hides it under `@media print`, and tests/inventory.py's
+  // checker only looks for the 9 common links inside a real `<nav>`.
+  // No `｜` separator between links -- `spec/ui.css`'s `nav a { margin-right }`
+  // already spaces them (2026-09-06、指揮役の指摘: 区切り記号を自分で足すと
+  // 他実装と見た目が割れる)。
+  // The `<h1>` is generated here (from `opts.title`) rather than by each
+  // caller so every screen using this shell always has one -- callers
+  // previously left it out, which is why `/today` (and others) had an
+  // empty heading (spec/screens.md 追記「トップ画面と共通ナビ」).
   return `<!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><title>${e(opts.title)}</title><link rel="stylesheet" href="/ui.css"></head>
+<head><meta charset="utf-8"><title>${e(pageTitle(opts.title))}</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
-<header data-testid="primary-nav">${primaryNav}</header>
+<nav data-testid="primary-nav">${primaryNav}</nav>
 <div data-testid="${e(opts.screenKey)}">
+<h1>${e(opts.title)}</h1>
 ${opts.nav ?? ''}
 ${opts.body}
 </div>

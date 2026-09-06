@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Clinic Ops" %></title>
+    <%# 全実装で <title> の形を揃える（spec/screens.md 末尾）。
+        「画面名 — 動物病院 窓口業務システム」。画面名が無いページは病院名だけにする。 %>
+    <title><%= [content_for(:title), "動物病院 窓口業務システム"].select(&:present?).join(" — ") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Clinic Ops">
@@ -17,15 +19,29 @@
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%# 2026-09-06: Rails既定のfavicon/アセットのlink群は外した。中身は/ui.cssだけで、
+        他4実装にはfaviconが無い。共通クローラーは<nav>の外の href をすべて数えるため、
+        中身の無いlinkタグが「トップの本文リンクが多すぎる」の誤検出を招いていた。 %>
   </head>
 
   <body>
-    <%= yield %>
+    <%# 共通ナビ（spec/screens.md 末尾「トップ画面と共通ナビは、5実装で同一にする」）。
+        順序もこのとおり。印刷画面は layout: false で描くため、ここを経由しない。 %>
+    <nav>
+      <strong>動物病院 窓口業務システム</strong>
+      <a href="/">トップ</a>
+      <a href="/today">本日の患者</a>
+      <a href="/search">検索</a>
+      <a href="/reservations">予約</a>
+      <a href="/ward">入院</a>
+      <a href="/dm">DM</a>
+      <a href="/sales">売上集計</a>
+      <a href="/staff">スタッフ</a>
+      <a href="/settings">設定</a>
+      <a href="/about">このシステムについて</a>
+    </nav>
+    <main>
+      <%= yield %>
+    </main>
   </body>
 </html>

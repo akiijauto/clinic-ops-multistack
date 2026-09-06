@@ -3,10 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{block "title" .}}窓口業務{{end}}</title>
+<title>{{block "title" .}}トップ{{end}} — 動物病院 窓口業務システム</title>
 <link rel="stylesheet" href="/ui.css">
 </head>
 <body>
+{{/* 他4実装（Laravel・FastAPI）は <nav> 直下に <a> を並べる形で、
+     spec/ui.css の `nav a { margin-right }` が効く前提になっている。
+     <ul><li> で包むと既定のボックス表示になり、見た目が実装ごとに割れる
+     （2026-09-06、オーナーがブラウザで並べて実測）。ここも合わせる。 */}}
+<nav>
+  <a href="/">トップ</a>
+  <a href="/today">本日の患者</a>
+  <a href="/search">検索</a>
+  <a href="/reservations">予約</a>
+  <a href="/ward">入院</a>
+  <a href="/dm">DM</a>
+  <a href="/sales">売上集計</a>
+  <a href="/staff">スタッフ</a>
+  <a href="/settings">設定</a>
+  <a href="/about">このシステムについて</a>
+</nav>
 <main id="main">
 {{block "content" .}}{{end}}
 </main>

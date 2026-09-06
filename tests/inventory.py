@@ -225,6 +225,24 @@ _QUERY_SAMPLE = {
 }
 
 
+def _visible(html: str) -> str:
+    """人に見えない部分を落とす。
+
+    **コメントは画面に見えない。** それを読んで判断していたせいで、
+    Rails の開発時機能がHTMLコメントに `app/views/folded/show.html.erb` のような
+    文字列を埋めていたのを、判定器が `/folded/` の鍵として拾って404にしていた
+    （2026-09-06、レーンBが原因を突き止めた。判定器の欠陥10件目）。
+
+        **見えないものを読んで、見えるものの判断をしない。**
+
+    `<script>` と `<style>` の中身も同じ理由で落とす。
+    """
+    html = re.sub(r"<!--.*?-->", " ", html, flags=re.S)
+    html = re.sub(r"<script\b.*?</script>", " ", html, flags=re.S | re.I)
+    html = re.sub(r"<style\b.*?</style>", " ", html, flags=re.S | re.I)
+    return html
+
+
 def _split():
     allp = _spec_paths()
     screens = [p for p in allp if not p.startswith("/api") and p not in _NOT_SCREEN]
@@ -300,6 +318,7 @@ def register(check, Client, Report):
                 st, html, _ = c.get(probe)
                 if st != 200 or not html:
                     continue
+                html = _visible(html)
                 for sg in segs:
                     m = re.search(r"/" + re.escape(sg) + r"/([A-Za-z0-9_.\-]+)", html)
                     if m:
@@ -765,7 +784,7 @@ def register(check, Client, Report):
         `spec/screens.md` 末尾「トップ画面と共通ナビは、5実装で同一にする」を正とする。
         """
         H1 = "動物病院 窓口業務システム"
-        NAV = ["/today", "/search", "/reservations", "/ward", "/dm",
+        NAV = ["/", "/today", "/search", "/reservations", "/ward", "/dm",
                "/sales", "/staff", "/settings", "/about"]
 
         status, html, _ = c.get("/")
@@ -799,15 +818,42 @@ def register(check, Client, Report):
             st, h, _ = c.get(real)
             if st != 200 or not h or "<html" not in h.lower():
                 continue
+            h = _visible(h)
             looked += 1
             nav = re.search(r"<nav[^>]*>(.*?)</nav>", h, re.S)
             if not nav:
                 bad.append(f"{p}(navなし)")
                 continue
-            hrefs = set(re.findall(r'href="([^"]+)"', nav.group(1)))
-            miss = [n for n in NAV if not any(x == n or x.endswith(n) for x in hrefs)]
+            # **「9本あるか」ではなく「9本ちょうどか」を見る。**
+            #
+            # 最初は「契約の9本が含まれているか」しか見ていなかった。
+            # その結果、**余分な項目が入っていても緑**になった。実際に並べると
+            # Rails と Next.js のナビには「トップ」、Laravel には「担当: 未選択」が
+            # 余分に入っていて、**同じに見えなかった**（2026-09-06、オーナーが指摘）。
+            #
+            #     含まれているかを見る検査は、**余分なものを見つけられない。**
+            #     揃っているかを見るには、**過不足の両方**を見なければならない。
+            hrefs = re.findall(r'href="([^"]+)"', nav.group(1))
+            paths = []
+            for x in hrefs:
+                x = x.split("#")[0].split("?")[0]
+                if x.startswith("http"):
+                    i = x.find("/", 8)
+                    x = x[i:] if i > 0 else "/"
+                if x.startswith("/"):
+                    paths.append(x.rstrip("/") or "/")
+            # **契約側も実装側と同じ正規化を通す。**
+            # 片側だけ `rstrip("/")` していたので、`/` が `""` になり、
+            # 同じ項目が「欠け」と「余分」に**同時に**出た（2026-09-06、指揮役の誤り）。
+            want = [n.rstrip("/") or "/" for n in NAV]
+            miss = [n for n in want if n not in paths]
+            extra = [x for x in paths if x not in want]
             if miss:
                 bad.append(f"{p}({len(miss)}本欠け)")
+            if extra:
+                bad.append(f"{p}(余分{len(extra)}本:{','.join(extra[:2])})")
+            elif [x for x in paths if x in want] != want:
+                bad.append(f"{p}(並び順が違う)")
             if not re.search(r"<h1[^>]*>\s*\S", h):
                 bad.append(f"{p}(h1が空)")
         if looked < 10:
@@ -815,6 +861,86 @@ def register(check, Client, Report):
         if bad:
             return False, f"{len(bad)} 画面が契約どおりでない: {', '.join(bad[:4])}"
         return True, f"{looked} 画面で見出しとナビを確認"
+
+    @check("inventory", "見た目 トップの本文が契約どおり（ナビの複製を並べない）")
+    def _top_body(c, rep):
+        """トップの本文を見る。
+
+        **ナビを揃えても、本文が違えば同じには見えない**（2026-09-06、オーナーが
+        5実装を並べて指摘）。実測すると、Goは26本のリンク一覧、Railsは7本の一覧、
+        FastAPIは「本日の患者」の中身がそのまま出ていた。
+
+            ナビが揃っていることと、画面が揃っていることは別。
+            **検査が見ている範囲を狭くすると、その外はいくらでも割れる。**
+        """
+        status, html, _ = c.get("/")
+        if status != 200 or not html:
+            return False, f"トップが開けない（status={status}）"
+
+        body = re.sub(r"<nav[^>]*>.*?</nav>", "", _visible(html), flags=re.S)
+        text = re.sub(r"<[^>]+>", " ", body)
+
+        need = [("学習", "学習・研究目的であること"),
+                ("研究", "学習・研究目的であること"),
+                ("合成", "データが架空であること"), ("架空", "データが架空であること")]
+        if not (("学習" in text and "研究" in text) and ("合成" in text or "架空" in text)):
+            return False, "トップに「学習・研究目的」「データは架空」の説明が無い"
+
+        links = re.findall(r'href="([^"]+)"', body)
+        inner = [x for x in links if x.startswith("/") or "127.0.0.1" in x]
+        if len(inner) > 6:
+            return False, (f"本文のリンクが {len(inner)} 本ある（ナビの複製を並べていないか）")
+
+        # トップに「本日の患者」の中身が出ていないか
+        if "完了全削除" in text or "本日の受付はまだありません" in text:
+            return False, "トップに「本日の患者」の中身が出ている（画面を出し分けていない）"
+        return True, f"説明あり・本文のリンク {len(inner)} 本"
+
+    @check("inventory", "契約 本日の患者に受付区分のタブがある")
+    def _kind_tabs(c, rep):
+        """`spec/screens.md` 1番が名指しで求めているタブを確かめる。
+
+            `Reception` を**受付区分（`data/masters.json` の受付区分）ごとのタブ**で
+            絞った一覧。…「区分タブを押す → その区分の当日ぶんだけに絞る」
+
+        契約にも `openapi.yaml` の `/today` にも `kind` クエリが定義されている。
+        にもかかわらず、**5実装のうち2つがタブを持っていなかった**（2026-09-06）。
+
+        どの検査にも引っかからなかった理由は2つある。
+
+        1. ナビの検査は **最初の `<nav>` しか見ない**。タブは2つ目の `<nav>` にある
+        2. `kind` を渡しても渡さなくても200が返るので、**在庫の検査は素通りする**
+
+            機能が無いことは、**その機能を名指しで探さないかぎり見つからない。**
+        """
+        try:
+            with open(os.path.join(_DATA, "masters.json"), encoding="utf-8") as f:
+                kinds = json.load(f).get("reception_kinds") or []
+        except Exception:
+            return False, "data/masters.json が読めない（検査が働いていない）"
+        codes = [k.get("code") for k in kinds if k.get("code")]
+        if len(codes) < 3:
+            return False, f"受付区分が {len(codes)} 件しか読めない（検査が働いていない）"
+
+        status, html, _ = c.get("/today")
+        if status != 200 or not html:
+            return False, f"本日の患者が開けない（status={status}）"
+        html = _visible(html)
+        miss = [k for k in codes if f"kind={k}" not in html]
+        if miss:
+            return False, (f"受付区分のタブが {len(miss)}/{len(codes)} 件無い: "
+                           f"{', '.join(miss[:4])}")
+
+        # **タブが押せるだけでは足りない。** 絞り込みが効いているかまで見る。
+        s1, h1, _ = c.get("/today")
+        s2, h2, _ = c.get(f"/today?kind={codes[0]}")
+        if s2 != 200:
+            return False, f"/today?kind={codes[0]} が {s2}"
+        n1 = len(re.findall(r'data-testid="row-reception"', h1 or ""))
+        n2 = len(re.findall(r'data-testid="row-reception"', h2 or ""))
+        return True, f"{len(codes)} 区分すべてにタブがある（全体{n1}行 / 先頭区分{n2}行）"
+
+
 
 
 

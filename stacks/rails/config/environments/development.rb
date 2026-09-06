@@ -62,7 +62,11 @@ Rails.application.configure do
   # config.i18n.raise_on_missing_translations = true
 
   # Annotate rendered view with file names.
-  config.action_view.annotate_rendered_view_with_filenames = true
+  # 2026-09-06: offにする。このコメントが `app/views/folded/show.html.erb` のような
+  # 文字列をHTMLに埋め込み、共通クローラーの「/folded/([語])」抽出が誤って拾ってしまう
+  # （在庫チェックが /folded/{key} を /folded/show.html.erb だと誤認して404）。
+  # 比較企画としても、実装名・ファイルパスは画面に出ないほうがよい。
+  config.action_view.annotate_rendered_view_with_filenames = false
 
   # Uncomment if you wish to allow Action Cable access from any origin.
   # config.action_cable.disable_request_forgery_protection = true

@@ -39,6 +39,9 @@ Rails.application.routes.draw do
   get   "animals/:karte_no/delete", to: "animals#delete_confirm", karte_no: KARTE_NO
   post  "animals/:karte_no/delete", to: "animals#destroy", karte_no: KARTE_NO
   post  "visits/:visit_id/restore_from_history", to: "animals#restore_from_history"
+  # 契約が求めるのは /folded/{key} だけだが、裸の /folded を例外画面のままにしない
+  # （2026-09-06 指揮役の指摘）。同じアクションを key 無しで再利用し、一覧をそのまま出す。
+  get   "folded", to: "folded#show", as: :folded_index
   get   "folded/:key", to: "folded#show", as: :folded
 
   # --- 領域2｜診療 ---

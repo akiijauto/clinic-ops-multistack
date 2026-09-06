@@ -17,15 +17,26 @@
  * 自前で足してよい（`page()`の`nav`引数）。ここに載せるのは
  * 「どの画面からも1クリックで行ける、領域の入口」だけに絞る。
  */
+// spec/screens.md 追記（2026-09-06）「共通ナビ」の並びそのまま
+// （`/` へのトップ導線だけは、その表に無いがどの画面からも要るため先頭に足す）。
 export const PRIMARY_NAV: readonly { href: string; label: string }[] = [
   ['/', 'トップ'],
   ['/today', '本日の患者'],
   ['/search', '検索'],
   ['/reservations', '予約'],
   ['/ward', '入院'],
-  ['/staff', 'スタッフ'],
   ['/dm', 'DM'],
   ['/sales', '売上集計'],
+  ['/staff', 'スタッフ'],
   ['/settings', '設定'],
   ['/about', 'このシステムについて'],
 ].map(([href, label]) => ({ href, label }));
+
+// spec/screens.md 追記（2026-09-06）: <title> は「画面名 — 動物病院 窓口業務システム」の
+// 形にする。レーン名・実装名（「clinic-ops (Next.js)」等）は画面に出す言葉ではない
+// （どのスタックかはポート番号で分かる）。
+export const SITE_TITLE = '動物病院 窓口業務システム';
+
+export function pageTitle(screenName: string): string {
+  return `${screenName} — ${SITE_TITLE}`;
+}

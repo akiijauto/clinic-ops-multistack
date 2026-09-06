@@ -1,5 +1,7 @@
 <% content_for :title, "カルテ" %>
 
+<h1>カルテ — <%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+
 <% if @notice %>
   <p data-testid="success-banner"><%= @notice %></p>
 <% end %>

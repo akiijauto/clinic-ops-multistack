@@ -1,14 +1,23 @@
-{{define "title"}}窓口業務 トップ{{end}}
+{{define "title"}}トップ{{end}}
 {{define "content"}}
 <div data-testid="screen-top">
   <h1>動物病院 窓口業務システム</h1>
+  {{/* spec/screens.md「トップ画面の本文」（2026-09-06追記）: 本文は
+       h1・説明・本日の患者への導線1本だけにする。ナビと同じ行き先を
+       もう一度並べない（共通ナビは layouts/base.html が全画面に出す）。
+       個別画面（動物・伝票IDに依存するもの）への入口は、検算8のクロール
+       用にトップから直接張らず、他画面（本日の患者・検索など）が
+       自然に持つ導線に任せる（コメント: coordination/qa/lane-a.md）。 */}}
+  <p>
+    これは動物病院の窓口業務システムを題材にした<strong>学習・研究目的</strong>の実装です。
+    同じ仕様を5つの技術スタック（Go・Ruby on Rails・PHP/Laravel・Python/FastAPI・
+    TypeScript/Next.js）で実装し、比べています。
+  </p>
+  <p>
+    表示している飼主・動物・診察・会計などのデータは<strong>すべて架空の合成データ</strong>です。
+    実在する動物病院・飼主・動物の情報は一切含みません。
+  </p>
   <p>本日の診察件数 <span data-check="visit_count.today">{{.VisitCountToday}}</span> 件</p>
-  <nav>
-    <ul>
-      {{range .Links}}
-      <li><a href="{{.Href}}">{{.Label}}</a></li>
-      {{end}}
-    </ul>
-  </nav>
+  <p><a href="/today">本日の患者へ</a></p>
 </div>
 {{end}}

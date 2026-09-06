@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { getVisit, getPatientByKarteNo, deleteVisit } from '@/lib/area1/data';
 import { escapeHtml, htmlResponse, notFoundHtml, successBanner, errorBanner, parseForm } from '@/lib/area1/html';
+import { PRIMARY_NAV, pageTitle } from '@/lib/nav';
 
 type Params = { params: Promise<{ karte_no: string; visit_id: string }> };
 
@@ -15,9 +16,11 @@ type Params = { params: Promise<{ karte_no: string; visit_id: string }> };
  * etc.).
  */
 function render(karteNo: string, visitId: string, visit: { visit_date: string; diagnosis: string; chief_complaint: string; symptom: string; deleted_at: string | null }, banner: string): string {
+  const primaryNav = PRIMARY_NAV.map(({ href, label }) => `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`).join('');
   const body = `<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><title>診察の削除</title><link rel="stylesheet" href="/ui.css"></head>
+<html lang="ja"><head><meta charset="utf-8"><title>${escapeHtml(pageTitle('診察の削除'))}</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
+<nav data-testid="primary-nav">${primaryNav}</nav>
 <div data-testid="screen-karte">
 <div data-testid="screen-visit-delete">
 ${banner}

@@ -336,3 +336,107 @@ $ python tests/run.py http://127.0.0.1:8405
 $ BASE_URL=... npm test → 44/44
 $ curl .../api/sales/summary → total_net_amount: 5185704（入れ直し前後で変わらず）
 ```
+
+## 2026-09-06 トップ画面と共通ナビを契約どおりに揃える（指揮役の実測「36画面が契約どおりでない」の対応）
+
+指揮役の実測（`/(navなし), /about(8本欠け), /today(9本欠け), /today(h1が空)` 等）を再現して
+原因を特定。**ナビの入れ物がそもそも `<nav>` ではなかった。**
+
+1. `layout.tsx`（`/` のみ）と `area1/html.ts`の`page()`（today/search/reservations/ward/dm/
+   sales/staff等の大半の画面）は、共通ナビを `<header data-testid="primary-nav">` で
+   包んでいた。`tests/inventory.py`の判定器は`<nav[^>]*>(.*?)</nav>`しか見ないため、
+   9本とも実在するのに**全部「navなし」**にされていた
+2. `render.ts`の`page()`（settings*/about/folded/billing/exam/karte）は`<nav>`こそ
+   使っていたが、そこに入れていたのはsettings専用の4本（設定/機能設定/取込/マスタ）だけで、
+   共通9本は別の`<header>`に置いていた。settings以外の画面（about等）から見ると
+   「`<nav>`の中に設定関連の4本しか無い」＝共通9本のうち8本欠けに見えていた
+3. `area1/html.ts`の`page()`は`<h1>`を自分では作らず、呼び出し側のbodyに任せる作りだったが、
+   `/today`を含む大半の呼び出し元はh1を書いていなかった（`h1が空`の直接の原因）
+
+**対処**（3ファイルとも「同じ入れ物に9本まとめる」「h1を仕組みで保証する」方向で統一）:
+- `layout.tsx` / `area1/html.ts`: `<header>` → `<nav data-testid="primary-nav">` に変更
+- `render.ts`: 共通9本とsettings専用4本を同じ`<nav>`要素に統合（`<header>`を廃止）
+- `area1/html.ts`の`page()`: `<h1>${opts.title}</h1>`をテンプレート側で自動生成するよう変更
+  （呼び出し元が書き忘れる余地を無くす。既存の呼び出し元はどれも自前のh1を持っていなかった
+  ので二重化なし、grepで確認済み）
+- `nav.ts`: `PRIMARY_NAV`の並びをspec末尾の表（本日の患者・検索・予約・入院・DM・売上集計・
+  スタッフ・設定・このシステムについて）に合わせて並べ替え（スタッフとDM/売上集計が
+  入れ替わっていた）。トップ導線（`/`）だけは表に無いが先頭に残す（Laravel/Railsと同じ構成）
+- `nav.ts`に`pageTitle(screenName)`を追加し、`<title>`を統一。`area1/html.ts`と`render.ts`の
+  両`page()`、および`page()`を経由しない生HTMLの2画面（診察の削除・復元、
+  `animals/{karte_no}/karte/{visit_id}/{delete,restore}`）もこれに合わせて修正
+  （実装名「clinic-ops (Next.js)」を`<title>`から除去。復元画面は`<h1>`も無かったので追加）
+- ルートlayoutの`metadata.title`も`pageTitle('トップ')`に統一（Reactで描画されるのは`/`だけで、
+  他の全画面はroute.tsが自前でHTML文書を返しlayoutを経由しない）
+
+**再検証**:
+```
+$ npm run typecheck   → エラー0
+$ BASE_URL=http://127.0.0.1:8405 npm test → 44/44
+$ python tests/run.py http://127.0.0.1:8405 → 全25件通過
+  （直前までNGだった「見た目 トップの見出しと共通ナビが契約どおり」も含め全通過。
+    35画面で見出しとナビを確認）
+$ python tests/shots.py / /today /about /settings /sales ...
+  → 全画面でh1がLaravel/Go/Rails/FastAPIと一致。titleは書式差はあるが実装名の漏れなし
+```
+
+### `/folded`（key無し）は404のままにした
+
+`spec/openapi.yaml`に定義があるのは`/folded/{key}`のみで、`key`必須のパスパラメータ。
+`/folded`単体は契約に無い。Laravel（レーンC）は`{key?}`を任意にして一覧（全項目）も
+兼ねさせているが、Next.jsでは次の理由で**404のまま**にした。
+
+- 「全項目を1画面で見る」というscreens.md 7番の要求自体は、既に`/settings/features`
+  （画面23・同じ元データ`dropped-features.ts`を参照専用で列挙）で満たされている。
+  `/folded`にも同じ内容の一覧を重複して作ると、契約に無いエンドポイントを増やすだけで
+  実利が無い
+- `tests/inventory.py`側もこの前提で書かれている
+  （`_resolve()`のコメント「`/folded`は一覧に全項目を並べる作りで自分の個別ページへ
+  リンクしない実装があり、個別への入口は`/settings/features`側にあった」）。つまり
+  判定器は「`/folded`が一覧を持たない実装」を折り込み済みで、`/settings/features`
+  等から`key`のサンプルを拾うようフォールバックが用意されている
+- 個別ボタン（状態B）からの導線は`/folded/{key}`へ直接リンクしており、`/folded`
+  自体への遷移経路はどの画面にも無い（＝到達性が要件化されていない）
+
+**保留事項**: 一覧が要る、と決まったら`src/app/folded/page.tsx`（or `route.ts`）を1枚足し、
+`dropped-features.ts`の全件を`/settings/features`と同じ書式で並べればよい
+（データソースは既に共通化済み）。
+
+## 2026-09-06 続報: ナビの中身が画面ごとに違っていた／トップ本文がナビの複製だった
+
+前節の対処後、指揮役の再実測で2件の指摘。
+
+1. `/about` `/folded` のナビに`/settings/features` `/settings/import`が混ざっていた
+   （余分3本）。原因: `render.ts`の`page()`が、共通10本を運ぶ`<nav>`の**同じ要素の中に**
+   settings専用4本も詰めていた（前節で「同じ`<nav>`に統合する」対処をした際、
+   統合先を誤り、settings専用リンクごと共通ナビに混ぜてしまっていた）
+2. トップの本文にリンクが7本あった（判定器の上限は6本）。3本は本文自身の
+   `<Link href="/folded/...">` `<Link href="/about">`（ナビに既にある行き先を本文でも
+   リンクにしていた）、残り4本はNext.js/Turbopackがdevモードで自動注入する
+   `<link rel="preload"/stylesheet href="/ui.css">`（2本、ブラウザへの資源ヒントで
+   アプリコードの管轄外）とHMRクライアント用チャンク（devのみ、本番では出ない）
+
+**対処**:
+- `render.ts`: settings専用4本を`<nav>`から外し、`testid`が`screen-settings`で始まる
+  画面（設定・機能設定・取込・マスタ）でだけ表示する**`<div>`**（`<nav>`ではない）に移動。
+  Laravelの`settings/index.blade.php`が`<a class="button">`を`<nav>`の外に置いているのと
+  同じ形にした（`tests/shots.py`で確認: 5実装とも`/settings`のnav本数が10本で揃った）
+- `page.tsx`（トップ）: 本文の`<Link href="/folded/...">`と`<Link href="/about">`を
+  プレーンテキストに変更（行き先は共通ナビに既にあるため、本文からは1本
+  ＝`/today`だけにした。spec/screens.md追記「トップ画面の本文」どおり）
+- `layout.tsx` / `area1/html.ts`の`page()` / raw HTMLルート2本（診察の削除・復元）:
+  ナビの`<a>`間の区切り記号（｜ / |）を削除。`spec/ui.css`の`nav a { margin-right }`が
+  間隔を付けるため、自前の区切り文字は他実装との見た目のズレになる
+
+**再検証**:
+```
+$ npm run typecheck → エラー0
+$ BASE_URL=http://127.0.0.1:8405 npm test → 44/44
+$ python tests/run.py http://127.0.0.1:8405 → 全26件通過
+  （「見た目 トップの見出しと共通ナビが契約どおり」「見た目 トップの本文が契約どおり」
+    両方OK。本文のリンクは5本＝ui.css preload/stylesheet分の資源ヒント2本
+    ＋devモードのみのグローバルCSS/HMRチャンク2本（`next build`では出ない）
+    ＋`/today`の1本。アプリが書いた実リンクは1本のみ）
+$ python tests/shots.py / /about /settings /folded
+  → /のnav=10本、/settingsのnav=10本で5実装とも揃った
+```

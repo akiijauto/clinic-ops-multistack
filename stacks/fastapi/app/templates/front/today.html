@@ -6,8 +6,28 @@
 {% block title %}{% if screen_key == "top" %}トップ{% else %}本日の患者{% endif %}{% endblock %}
 
 {% block content %}
+{% if screen_key == "top" %}
+{# トップの本文は契約（spec/screens.md「トップ画面の本文」）で3点だけと決まっている:
+   h1・説明（学習研究目的／データは架空／5スタック実装比較）・本日の患者への導線1本。
+   ナビと同じ行き先を並べない（本文リンクは/todayの1本のみ）。 #}
 <section {{ screen(screen_key) }}>
-  <h1>{% if screen_key == "top" %}動物病院 窓口業務システム{% else %}本日の患者{% endif %}</h1>
+  <h1>動物病院 窓口業務システム</h1>
+  <p>
+    これは動物病院の窓口業務システムを題材にした<strong>学習・研究目的</strong>の実装です。
+    同じ仕様（<code>spec/</code>）を Go・Ruby on Rails・PHP/Laravel・Python/FastAPI・
+    TypeScript/Next.js の5つのスタックで実装し、同じ問題を別の道具で解くと何が変わるかを
+    比べています。
+  </p>
+  <p>
+    表示している飼主・動物・診察・会計などのデータは<strong>すべて架空の合成データ</strong>です。
+    実在の動物病院・飼主・動物の情報は一切含みません。
+  </p>
+  <p>対象日の診察件数: <span data-check="visit_count.today">{{ visit_count_today }}</span></p>
+  <p><a class="button" href="/today">本日の患者へ</a></p>
+</section>
+{% else %}
+<section {{ screen(screen_key) }}>
+  <h1>本日の患者</h1>
   <p>対象日の診察件数: <span data-check="visit_count.today">{{ visit_count_today }}</span></p>
 
   {% if not receptions %}
@@ -48,4 +68,5 @@
     {{ action_button("完了削除", "c", todo_key="complete_delete_one") }}
   </p>
 </section>
+{% endif %}
 {% endblock %}
