@@ -412,3 +412,54 @@ def register(check, Client, Report):
         return True, f"{len(pr)}/{len(others)} 件が応答" + (f"（{len(un)} 件は確かめられない）" if un else "")
 
 
+    @check("inventory", "見た目 共通CSS(/ui.css)を配っていて、全画面が読んでいる")
+    def _ui(c, rep):
+        """`spec/ui.css` が配られ、画面から読まれているかを見る。
+
+        **配っただけでは揃わない。読まれていなければ意味が無い。**
+        そして**中身が同じでなければ、読んでいても揃わない。**
+        だから3つを見る。
+
+          1. `/ui.css` が配られているか
+          2. その中身が `spec/ui.css` と同じか（各実装が書き換えていないか）
+          3. 画面が実際に読んでいるか
+
+        2 が要るのは、今日「配ったつもりが各実装で別物になっていた」型の事故を
+        何度も見たからである。**同じ名前の別物ほど気づきにくいものは無い。**
+        """
+        want_path = os.path.join(_ROOT, "spec", "ui.css")
+        try:
+            with open(want_path, encoding="utf-8") as f:
+                want = f.read()
+        except Exception:
+            return False, "spec/ui.css が読めない（検査が働いていない）"
+
+        status, body, _ = c.get("/ui.css")
+        if status != 200:
+            return False, f"/ui.css が配られていない（status={status}）"
+        norm = lambda s: "".join(s.split())
+        if norm(body) != norm(want):
+            return False, (f"/ui.css の中身が spec/ui.css と違う"
+                           f"（配布 {len(body)}字 / 正 {len(want)}字）")
+
+        # 画面が読んでいるか。**代表ではなく、辿れる範囲を全部見る。**
+        sample = _samples()
+        screens, _ = _split()
+        looked, bad = 0, []
+        for p in screens:
+            real = _resolve(c, p, sample)
+            if real is None:
+                continue
+            st, html, _ = c.get(real)
+            if st != 200 or not html or "<html" not in html.lower():
+                continue
+            looked += 1
+            if "ui.css" not in html:
+                bad.append(p)
+        if looked < 10:
+            return False, f"{looked} 画面しか見られていない（検査が働いていない）"
+        if bad:
+            return False, f"{len(bad)} 画面が読んでいない: {', '.join(bad[:4])}"
+        return True, f"{looked} 画面すべてが読んでいる"
+
+
