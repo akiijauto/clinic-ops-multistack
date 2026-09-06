@@ -13,12 +13,23 @@
         </p>
 
         <table>
+            <thead>
+                <tr>
+                    @foreach ($labels as $label)
+                        <th>{{ $label }}</th>
+                    @endforeach
+                </tr>
+            </thead>
             <tbody>
-                @foreach ($rows as $row)
+                @forelse ($cells as $row)
                     <tr data-testid="row-master">
-                        <td><pre style="margin:0">{{ json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre></td>
+                        @foreach ($row as $value)
+                            <td>{{ $value }}</td>
+                        @endforeach
                     </tr>
-                @endforeach
+                @empty
+                    <tr data-testid="empty-master"><td class="empty">データがありません。</td></tr>
+                @endforelse
             </tbody>
         </table>
     </div>

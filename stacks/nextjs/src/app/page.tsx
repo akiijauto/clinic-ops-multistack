@@ -10,7 +10,7 @@ export default function Home() {
 
   return (
     <main data-testid="screen-top">
-      <h1>clinic-ops / Next.js（レーンE）</h1>
+      <h1>動物病院 窓口業務システム</h1>
       <p>
         学習・研究目的の実装です。動物病院の窓口業務を題材に、同じ仕様（<code>spec/</code>）を
         5つの技術スタックで実装し比較しています。ここにあるデータは<strong>すべて合成データ</strong>

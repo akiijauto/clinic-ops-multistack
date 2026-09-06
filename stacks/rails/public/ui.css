@@ -166,3 +166,29 @@ form { margin: 8px 0 16px; }
   table { border: 1px solid #000; }
   th, td { border-bottom: 1px solid #999; }
 }
+
+
+/* 端末が暗い配色を好むときは、そちらに合わせる。
+ *
+ * 明るい配色だけを決めていたので、暗い設定の端末では**閲覧側が勝手に反転**し、
+ * 5実装が同じCSSを読んでいても**見え方が揃わなかった**（2026-09-06、オーナーの
+ * 画面で判明）。**同じCSSを配ることと、同じに見えることは別。**
+ * ここで両方の配色を決めておけば、どちらの設定でも同じに見える。 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181d;
+    --panel: #1c2229;
+    --ink: #e6ebf0;
+    --muted: #9aa8b6;
+    --line: #2c3540;
+    --accent: #6fbf95;
+    --accent-weak: #1e2b25;
+    --warn: #f0a884;
+    --warn-weak: #2c2019;
+  }
+  thead th { color: var(--ink); }
+  tbody tr:hover { background: #222a31; }
+  button.disabled, .button.disabled, button[disabled], a.disabled {
+    background: #262d35; color: #6b7885; border-color: var(--line);
+  }
+}

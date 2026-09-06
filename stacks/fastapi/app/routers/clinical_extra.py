@@ -456,18 +456,56 @@ async def prevention_save(karte_no: str, kind_id: str, request: Request, db: Ses
 # 画面 — 書類
 # ============================================================
 
-@router.get("/animals/{karte_no}/papers", response_class=HTMLResponse)
-def papers_screen(karte_no: str, request: Request, db: Session = Depends(get_db)):
-    patient = _patient_or_404(karte_no, db)
-    papers = (
+def _papers_of(patient: models.Patient, db: Session) -> list[models.Paper]:
+    return (
         db.query(models.Paper)
         .filter(models.Paper.patient_id == patient.id, models.Paper.removed_at.is_(None))
         .order_by(models.Paper.created_at.desc())
         .all()
     )
+
+
+@router.get("/animals/{karte_no}/papers", response_class=HTMLResponse)
+def papers_screen(karte_no: str, request: Request, db: Session = Depends(get_db)):
+    patient = _patient_or_404(karte_no, db)
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        request, "clinical/papers.html", {"patient": patient, "papers": papers, "banner": None},
+        request, "clinical/papers.html",
+        {"patient": patient, "papers": _papers_of(patient, db), "banner": None},
+    )
+
+
+@router.post("/animals/{karte_no}/papers", response_class=HTMLResponse)
+async def papers_create_screen(karte_no: str, request: Request, db: Session = Depends(get_db)):
+    """書類の取込（screens.md 13番「PDFを取り込む」）。
+
+    契約（openapi.yaml）はこの画面パスにGETしか定義していないが、`/settings` と
+    同じ前例（同じ画面パスへ保存フォームを足す）に倣ってPOSTを追加した
+    （2026-09-06、レーンR 5巡目「登録UIが無い」の指摘対応。
+    `coordination/qa/lane-d.md` D-25）。Go/Rails/Laravelも独立に同じ形
+    （`POST /animals/{karte_no}/papers`）へ収束している。
+
+    `Paper` はタイトル・備考だけの台帳（ファイル本体を扱わない設計。D-11/D-15参照）
+    なので、「PDF以外の形式を拒否する」はこの実装では該当しない（受け取るファイル
+    自体が無い）。
+    """
+    patient = _patient_or_404(karte_no, db)
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    note = (form.get("note") or "").strip() or None
+
+    templates = request.app.state.templates
+    if not title:
+        return templates.TemplateResponse(
+            request, "clinical/papers.html",
+            {"patient": patient, "papers": _papers_of(patient, db), "banner": ("error", "タイトルは必須です。")},
+        )
+
+    db.add(models.Paper(patient_id=patient.id, title=title, note=note, created_at=dt.datetime.now(JST)))
+    db.commit()
+    return templates.TemplateResponse(
+        request, "clinical/papers.html",
+        {"patient": patient, "papers": _papers_of(patient, db), "banner": ("success", "取り込みました。")},
     )
 
 

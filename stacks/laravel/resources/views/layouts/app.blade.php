@@ -14,7 +14,7 @@
 </head>
 <body>
 <nav>
-    <strong>clinic-ops-multistack（Laravel）</strong>
+    <strong>動物病院 窓口業務システム</strong>
     {{--
         ルート相対パスで書く（url() は絶対URLを返すため、共通クローラーの
         href="/..." 判定にかからず「辿れない」扱いになる。spec/acceptance.md 検算8）。

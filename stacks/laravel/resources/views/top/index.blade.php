@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="card" data-testid="screen-top">
-        <h1>clinic-ops-multistack（Laravel実装）</h1>
+        <h1>動物病院 窓口業務システム</h1>
         <p>
             これは動物病院の窓口業務システムを題材にした<strong>学習・研究目的</strong>の実装です。
             同じ仕様（<code>spec/</code>）を Go・Ruby on Rails・PHP/Laravel・Python/FastAPI・

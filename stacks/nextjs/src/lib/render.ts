@@ -11,6 +11,8 @@
  * choice; only the `data-testid` / `data-check` markers are load-bearing.
  */
 
+import { PRIMARY_NAV } from './nav.ts';
+
 export function escapeHtml(value: unknown): string {
   return String(value ?? '').replace(/[&<>"']/g, (c) => {
     switch (c) {
@@ -28,17 +30,17 @@ export function escapeHtml(value: unknown): string {
   });
 }
 
-const NAV = [
-  ['/', 'トップ'],
+// settings画面固有の下位ナビ。サイト全体の入口は`PRIMARY_NAV`（`lib/nav.ts`）が担う。
+const SETTINGS_NAV = [
   ['/settings', '設定'],
   ['/settings/features', '機能設定'],
   ['/settings/import', '取込'],
   ['/settings/master', 'マスタ'],
-  ['/about', 'このシステムについて'],
 ] as const;
 
 export function page(title: string, testid: string, body: string): Response {
-  const nav = NAV.map(([href, label]) => `<a href="${href}">${escapeHtml(label)}</a>`).join(' | ');
+  const primaryNav = PRIMARY_NAV.map(({ href, label }) => `<a href="${href}">${escapeHtml(label)}</a>`).join(' ｜ ');
+  const settingsNav = SETTINGS_NAV.map(([href, label]) => `<a href="${href}">${escapeHtml(label)}</a>`).join(' | ');
   const html = `<!doctype html>
 <html lang="ja">
 <head>
@@ -47,7 +49,8 @@ export function page(title: string, testid: string, body: string): Response {
 <link rel="stylesheet" href="/ui.css">
 </head>
 <body>
-<nav>${nav}</nav>
+<header data-testid="primary-nav">${primaryNav}</header>
+<nav>${settingsNav}</nav>
 <main data-testid="${escapeHtml(testid)}">
 <h1>${escapeHtml(title)}</h1>
 ${body}

@@ -1,4 +1,4 @@
-{# 検索。カルテNo・氏名で患者を探し、カルテ画面へ入る入口。 #}
+{# 検索。`spec/screens.md` 4番。「飼主・動物」と「診察の中身」を独立に表示する。 #}
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty %}
 
@@ -8,20 +8,42 @@
 <section {{ screen("search") }}>
   <h1>検索</h1>
   <form method="get" action="/search">
-    <input type="text" name="q" value="{{ q }}" placeholder="カルテNo・氏名">
+    <input type="text" name="q" value="{{ q }}" placeholder="氏名・カナ・カルテNo・電話番号・診察の中身">
     <button type="submit">検索</button>
   </form>
 
+  {% if not q %}
+  <p {{ empty("search") }}>検索語を入れてください。</p>
+  {% else %}
+  <h2>飼主・動物</h2>
   {% if not patients %}
   <p {{ empty("patient") }}>該当する動物がいません。</p>
   {% else %}
   <ul class="patient-list">
     {% for p in patients %}
     <li {{ row("patient") }}>
-      <a href="/animals/{{ p.karte_no }}/karte">{{ p.karte_no }} — {{ p.name_kanji }}（{{ p.species }}）</a>
+      <a href="/animals/{{ p.karte_no }}/karte">{{ p.karte_no }} — {{ p.name_kanji }}（{{ p.species }}）／
+        飼主: {{ p.owner.name_kanji if p.owner else "" }}</a>
     </li>
     {% endfor %}
   </ul>
+  {% endif %}
+
+  <h2>診察の中身</h2>
+  {% if not visit_hits %}
+  <p {{ empty("visit") }}>該当する診察記録がありません。</p>
+  {% else %}
+  <ul class="visit-hit-list">
+    {% for h in visit_hits %}
+    <li {{ row("visit") }}>
+      <a href="/animals/{{ h.patient.karte_no if h.patient else '' }}/karte?visit_id={{ h.visit.id }}">
+        {{ h.patient.karte_no if h.patient else "" }} — {{ h.patient.name_kanji if h.patient else "" }}
+        （{{ h.field_label }}）: {{ h.excerpt }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
   {% endif %}
 </section>
 {% endblock %}

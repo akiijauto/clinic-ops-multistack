@@ -3,11 +3,11 @@
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty, action_button %}
 
-{% block title %}本日の患者{% endblock %}
+{% block title %}{% if screen_key == "top" %}トップ{% else %}本日の患者{% endif %}{% endblock %}
 
 {% block content %}
 <section {{ screen(screen_key) }}>
-  <h1>本日の患者</h1>
+  <h1>{% if screen_key == "top" %}動物病院 窓口業務システム{% else %}本日の患者{% endif %}</h1>
   <p>対象日の診察件数: <span data-check="visit_count.today">{{ visit_count_today }}</span></p>
 
   {% if not receptions %}

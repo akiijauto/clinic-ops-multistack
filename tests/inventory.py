@@ -748,6 +748,75 @@ def register(check, Client, Report):
                            f"（古いデータを取り込んだまま入れ直していない疑い）")
         return True, f"{looked} 項目が data/ と一致"
 
+    @check("inventory", "見た目 トップの見出しと共通ナビが契約どおり（5実装で同じに見えるか）")
+    def _shell(c, rep):
+        """トップの見出しと、全画面のナビを契約と突き合わせる。
+
+        **「同じCSSを配った」と「同じに見える」は別だった**（2026-09-06、オーナーが
+        5実装を並べて指摘）。実測すると、トップの `<h1>` が5通り、ナビの本数が
+        0〜10本、`<h1>` が空の画面が複数あった。
+
+        原因は契約が**トップの題名・見出し・ナビを何も決めていなかった**こと。
+        R-24（検査画面の既定表示）と同じ型で、**契約が何も言っていない場所は割れる**。
+
+            割れていること自体は、それまでどの検査にも引っかからなかった。
+            **どの実装も200を返していたから。**
+
+        `spec/screens.md` 末尾「トップ画面と共通ナビは、5実装で同一にする」を正とする。
+        """
+        H1 = "動物病院 窓口業務システム"
+        NAV = ["/today", "/search", "/reservations", "/ward", "/dm",
+               "/sales", "/staff", "/settings", "/about"]
+
+        status, html, _ = c.get("/")
+        if status != 200 or not html:
+            return False, f"トップが開けない（status={status}）"
+
+        m = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S)
+        h1 = re.sub(r"<[^>]+>", "", m.group(1)).strip() if m else ""
+        if h1 != H1:
+            return False, f"トップの見出しが契約と違う: 「{h1[:30]}」（契約は「{H1}」）"
+
+        # **内部呼称が画面に出ていないか。** レーン名や実装名は体制の言葉であって、
+        # 画面に出すものではない。「同じものを比べる」企画で見出しが違っては比べられない。
+        leaked = [w for w in ("レーン", "lane-", "評価版") if w in html[:4000]]
+        if leaked:
+            return False, f"体制の内部呼称が画面に出ている: {', '.join(leaked)}"
+
+        # ナビは**全画面**に同じものが要る。トップだけ揃えても意味が無い。
+        sample = _samples()
+        screens, _ = _split()
+        bad, looked = [], 0
+        for p in screens:
+            # **印刷用の画面にナビは要らない。** `spec/ui.css` の `@media print` も
+            # ナビを隠している。紙に出すものに画面の導線を求めるのは、検査の側が
+            # 厳しすぎる（2026-09-06、Laravel の印刷2画面だけが落ちて気づいた）。
+            if p.endswith("/print"):
+                continue
+            real = _resolve(c, p, sample)
+            if real is None:
+                continue
+            st, h, _ = c.get(real)
+            if st != 200 or not h or "<html" not in h.lower():
+                continue
+            looked += 1
+            nav = re.search(r"<nav[^>]*>(.*?)</nav>", h, re.S)
+            if not nav:
+                bad.append(f"{p}(navなし)")
+                continue
+            hrefs = set(re.findall(r'href="([^"]+)"', nav.group(1)))
+            miss = [n for n in NAV if not any(x == n or x.endswith(n) for x in hrefs)]
+            if miss:
+                bad.append(f"{p}({len(miss)}本欠け)")
+            if not re.search(r"<h1[^>]*>\s*\S", h):
+                bad.append(f"{p}(h1が空)")
+        if looked < 10:
+            return False, f"{looked} 画面しか見られていない（検査が働いていない）"
+        if bad:
+            return False, f"{len(bad)} 画面が契約どおりでない: {', '.join(bad[:4])}"
+        return True, f"{looked} 画面で見出しとナビを確認"
+
+
 
 
 

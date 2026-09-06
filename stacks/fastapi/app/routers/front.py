@@ -65,19 +65,83 @@ def today_screen(request: Request, db: Session = Depends(get_db)):
     )
 
 
+_VISIT_SEARCH_FIELDS = [
+    ("chief_complaint", "主訴"), ("symptom", "症状"), ("diagnosis", "診断"), ("treatment", "処置"),
+]
+
+
+def _excerpt(text: str, q: str, radius: int = 15) -> str:
+    """当たった前後の文字を出す（`spec/screens.md` 4番）。"""
+    idx = text.find(q)
+    if idx < 0:
+        return text[: radius * 2]
+    start = max(0, idx - radius)
+    end = min(len(text), idx + len(q) + radius)
+    prefix = "…" if start > 0 else ""
+    suffix = "…" if end < len(text) else ""
+    return f"{prefix}{text[start:end]}{suffix}"
+
+
 @router.get("/search", response_class=HTMLResponse)
 def search_screen(request: Request, q: str | None = None, db: Session = Depends(get_db)):
-    query = db.query(models.Patient).filter(models.Patient.deleted_at.is_(None))
+    """検索。`spec/screens.md` 4番:
+    - 「飼主・動物」（`Owner`/`Patient` を氏名・カナ・カルテNo・電話番号で検索）
+    - 「診察の中身」（`Visit` の主訴・症状・診断・処置を全文検索、当たった欄と前後を出す）
+    2つは独立（片方0件でももう片方は出す）。`q` が空のときはどちらも出さない
+    （案内文だけ）。`deleted_at` の入った Owner/Patient/Visit は既定で対象外。
+    """
+    patients: list[models.Patient] = []
+    visit_hits: list[dict] = []
+
     if q:
         like = f"%{q}%"
-        query = query.filter(
-            (models.Patient.name_kanji.like(like))
-            | (models.Patient.name_kana.like(like))
-            | (models.Patient.karte_no.like(like))
+        patients = (
+            db.query(models.Patient)
+            .join(models.Owner, models.Patient.owner_id == models.Owner.id)
+            .filter(
+                models.Patient.deleted_at.is_(None),
+                models.Owner.deleted_at.is_(None),
+                (models.Patient.name_kanji.like(like))
+                | (models.Patient.name_kana.like(like))
+                | (models.Patient.karte_no.like(like))
+                | (models.Owner.name_kanji.like(like))
+                | (models.Owner.name_kana.like(like))
+                | (models.Owner.phone.like(like))
+                | (models.Owner.mobile.like(like)),
+            )
+            .order_by(models.Patient.karte_no)
+            .limit(50)
+            .all()
         )
-    patients = query.order_by(models.Patient.karte_no).limit(50).all()
+
+        visit_filter = None
+        for col, _label in _VISIT_SEARCH_FIELDS:
+            cond = getattr(models.Visit, col).like(like)
+            visit_filter = cond if visit_filter is None else (visit_filter | cond)
+        visits = (
+            db.query(models.Visit)
+            .join(models.Patient, models.Visit.patient_id == models.Patient.id)
+            .filter(models.Visit.deleted_at.is_(None), models.Patient.deleted_at.is_(None), visit_filter)
+            .order_by(models.Visit.visit_date.desc())
+            .limit(50)
+            .all()
+        )
+        patient_by_id = {p.id: p for p in db.query(models.Patient).all()}
+        for v in visits:
+            p = patient_by_id.get(v.patient_id)
+            for col, label in _VISIT_SEARCH_FIELDS:
+                value = getattr(v, col) or ""
+                if q in value:
+                    visit_hits.append({
+                        "visit": v, "patient": p, "field_label": label,
+                        "excerpt": _excerpt(value, q),
+                    })
+
     templates = request.app.state.templates
-    return templates.TemplateResponse(request, "front/search.html", {"patients": patients, "q": q or ""})
+    return templates.TemplateResponse(
+        request, "front/search.html",
+        {"patients": patients, "visit_hits": visit_hits, "q": q or ""},
+    )
 
 
 def _dm_rows(db: Session) -> list[models.Prevention]:
@@ -141,11 +205,54 @@ def sales_screen(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request, "front/sales.html", {"summary": summary})
 
 
+_CURRENT_STAFF_COOKIE = "current_staff_id"
+
+
+def _current_staff(request: Request, db: Session) -> models.Staff | None:
+    raw = request.cookies.get(_CURRENT_STAFF_COOKIE)
+    if not raw or not raw.isdigit():
+        return None
+    return db.get(models.Staff, int(raw))
+
+
 @router.get("/staff", response_class=HTMLResponse)
 def staff_screen(request: Request, db: Session = Depends(get_db)):
     rows = db.query(models.Staff).filter(models.Staff.is_active.is_(True)).order_by(models.Staff.staff_code).all()
     templates = request.app.state.templates
-    return templates.TemplateResponse(request, "front/staff.html", {"staff": rows})
+    return templates.TemplateResponse(
+        request, "front/staff.html", {"staff": rows, "current_staff": _current_staff(request, db)},
+    )
+
+
+@router.post("/staff", response_class=HTMLResponse)
+def staff_select(
+    request: Request, db: Session = Depends(get_db),
+    action: str = Form(...), staff_id: int | None = Form(None),
+):
+    """担当選択（`spec/screens.md` 21番）。**認証ではない**——パスワードは扱わない。
+
+    選択は認証ではないので Cookie で十分（`spec/README.md`「他の画面の閲覧・保存は
+    妨げられない」——未選択でも他画面は普通に使える設計と合う）。契約に
+    `POST /staff` の定義は無いが、`/settings` 同様「同じ画面パスへ保存フォームを足す」
+    前例に倣った（`coordination/qa/lane-d.md` D-25、レーンR 5巡目の指摘への対応）。
+    """
+    rows = db.query(models.Staff).filter(models.Staff.is_active.is_(True)).order_by(models.Staff.staff_code).all()
+    templates = request.app.state.templates
+
+    if action == "clear":
+        response = templates.TemplateResponse(
+            request, "front/staff.html", {"staff": rows, "current_staff": None},
+        )
+        response.delete_cookie(_CURRENT_STAFF_COOKIE)
+        return response
+
+    selected = db.get(models.Staff, staff_id) if staff_id else None
+    resp = templates.TemplateResponse(
+        request, "front/staff.html", {"staff": rows, "current_staff": selected},
+    )
+    if selected is not None:
+        resp.set_cookie(_CURRENT_STAFF_COOKIE, str(selected.id), max_age=60 * 60 * 24 * 30)
+    return resp
 
 
 @router.get("/settings", response_class=HTMLResponse)

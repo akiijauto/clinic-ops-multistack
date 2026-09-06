@@ -13,9 +13,11 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app import models
@@ -97,4 +99,59 @@ def get_billing(billing_id: int, db: Session = Depends(get_db)):
     billing = db.get(models.Billing, billing_id)
     if billing is None:
         raise ApiError("not_found")
+    return serialize_billing(billing, db)
+
+
+class BillingDetailIn(BaseModel):
+    price_code: str
+    name: str
+    quantity: float
+    unit_price: int | None = None
+    is_taxable: bool
+
+
+class BillingUpdate(BaseModel):
+    billed_on: dt.date
+    status: str = "draft"
+    staff_id: int | None = None
+    cashier_staff_id: int | None = None
+    paid_amount: int | None = None
+    payment_method: str | None = None
+    details: list[BillingDetailIn]
+
+
+@router.patch("/billings/{billing_id}")
+def update_billing(billing_id: int, body: BillingUpdate, db: Session = Depends(get_db)):
+    """会計伝票の更新（明細の追加・確定・支払い記録）。`BillingCreate` の形で
+    明細を**丸ごと入れ替える**（部分パッチではない——契約の `BillingCreate` が
+    `details` を配列で必須にしていることに合わせた。行の対応づけを別途受け取る
+    形にしていないため、いちばん誤解の余地が無い「置き換え」にした）。
+
+    2026-09-06、レーンR 5巡目の指摘（`coordination/qa/lane-d.md` D-25）で
+    405のまま未実装だったことが分かり、追加した。
+    """
+    billing = db.get(models.Billing, billing_id)
+    if billing is None:
+        raise ApiError("not_found")
+    if body.status not in ("draft", "confirmed"):
+        raise ApiError("invalid_input", [{"field": "status", "message": "statusはdraft/confirmedのいずれかです。"}])
+
+    billing.billed_on = body.billed_on
+    billing.status = body.status
+    billing.staff_id = body.staff_id
+    billing.cashier_staff_id = body.cashier_staff_id
+    billing.paid_amount = body.paid_amount
+    billing.payment_method = body.payment_method
+
+    for d in list(billing.details):
+        db.delete(d)
+    db.flush()
+    for i, d in enumerate(body.details, start=1):
+        db.add(models.BillingDetail(
+            billing_id=billing.id, row_no=i, price_code=d.price_code, name=d.name,
+            quantity=d.quantity, unit_price=d.unit_price, is_taxable=d.is_taxable,
+        ))
+
+    db.commit()
+    db.refresh(billing)
     return serialize_billing(billing, db)

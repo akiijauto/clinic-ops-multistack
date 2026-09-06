@@ -209,6 +209,19 @@ func (s *Server) handleAPIPatchBilling(w http.ResponseWriter, r *http.Request) {
 		apperr.Write(w, apperr.New(apperr.InvalidJSON))
 		return
 	}
+	// **明細の追加。** spec/openapi.yaml はこの経路の要約に「明細の追加・確定・
+	// 支払い記録」と明記しているが、以前は `in.Details` を一度も参照しておらず、
+	// 明細を渡しても200を返すだけで黙って何も起きなかった
+	// （レーンR 5巡目レビュー、`spec/README.md`「画面に できます と書いて
+	// 出来ていない状態を作らない」に反する）。`POST /api/patients/{karte_no}/billings`
+	// （新規作成）と同じ `AddDetail` を使い、確定・支払いより先に反映する
+	// （確定は「明細が1行も無い伝票は確定できない」を見るため、この順序が必要）。
+	for _, d := range in.Details {
+		if _, addErr := s.billing.AddDetail(id, d.PriceCode, d.Quantity); addErr != nil {
+			writeBillingErr(w, addErr)
+			return
+		}
+	}
 	if in.PaidAmount != nil || in.PaymentMethod != nil || in.CashierStaffID != nil {
 		if err := s.billing.RecordPayment(id, in.PaidAmount, in.PaymentMethod, in.CashierStaffID); err != nil {
 			writeBillingErr(w, err)

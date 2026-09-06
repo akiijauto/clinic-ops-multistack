@@ -1,6 +1,6 @@
 {# 書類（紙カルテPDF）。`spec/screens.md` 領域2「13. 書類」。
    `Paper` はタイトル・備考だけを持つ台帳（`app/models.py` Paper のコメント参照）。
-   物理削除でよい（契約に restore が無い）。 #}
+   取消は論理削除（`removed_at`。D-18で物理削除から訂正済み）。 #}
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty, success_banner, error_banner %}
 
@@ -16,6 +16,13 @@
 
   {% if patient %}
   <p>カルテNo: {{ patient.karte_no }} / {{ patient.name_kanji }}</p>
+
+  <h2>書類を取り込む</h2>
+  <form method="post" action="/animals/{{ patient.karte_no }}/papers">
+    <label>タイトル <input type="text" name="title" required></label>
+    <label>メモ <input type="text" name="note"></label>
+    <button type="submit" class="button">取り込む</button>
+  </form>
   {% endif %}
 
   {% if not papers %}

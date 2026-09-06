@@ -1,10 +1,37 @@
 <% content_for :title, "スタッフ" %>
 <div data-testid="screen-staff">
   <h1>スタッフ</h1>
+
+  <p data-testid="current-staff">
+    いま選択中の担当:
+    <% if current_staff %>
+      <%= current_staff.name %>（<%= current_staff.role %>）
+    <% else %>
+      未選択
+    <% end %>
+  </p>
+
   <ul>
     <% @staffs.each do |s| %>
-      <li data-testid="row-staff"><%= s.name %>（<%= s.role %>）</li>
+      <li data-testid="row-staff">
+        <%= s.name %>（<%= s.role %>）
+        <% if current_staff&.id == s.id %>
+          <span data-testid="staff-selected">選択中</span>
+        <% else %>
+          <%= form_with url: "/staff/select", method: :post, local: true, style: "display:inline" do %>
+            <%= hidden_field_tag :staff_id, s.id %>
+            <button type="submit" data-testid="btn-select-staff-<%= s.id %>">選ぶ</button>
+          <% end %>
+        <% end %>
+      </li>
     <% end %>
   </ul>
+
+  <% if current_staff %>
+    <%= form_with url: "/staff/clear", method: :post, local: true do %>
+      <button type="submit" data-testid="btn-clear-staff">担当を外す</button>
+    <% end %>
+  <% end %>
+
   <p><a href="/">トップへ戻る</a></p>
 </div>

@@ -126,9 +126,16 @@ func (s *Store) preventionNameFor(kind string) string {
 // DMCSV は DMRows と同じ絞り込み・同じ並びの結果を CSV（UTF-8, LF）にする。
 // 画面（/dm）とCSV（/dm.csv）の件数・並びが完全一致することが検算条件
 // （spec/screens.md 16）なので、行データの組み立ては必ずこの関数に通す。
+// DMCSV は `/dm.csv`・`/api/dm` が共通で使う絞り込み結果をCSVの本文に組み立てる。
+//
+// `spec/README.md`「CSVの文字コード」は **UTF-8 BOMつき・改行はCRLF** と決めている
+// （Excelで開いたときに文字化けさせないため）。以前は改行がLFのみでBOMも無く、
+// この契約に反していた（レーンR 5巡目レビュー）。BOMはこの関数の呼び出し側
+// （HTTP応答本文の先頭）で付ける — 文字列としての扱いやすさのため、
+// この関数自体はBOMを含まない本文だけを返す。
 func DMCSV(rows []DMRow) string {
 	var b strings.Builder
-	b.WriteString("karte_no,owner_name_kanji,patient_name_kanji,kind,next_due_date,performed_date\n")
+	b.WriteString("karte_no,owner_name_kanji,patient_name_kanji,kind,next_due_date,performed_date\r\n")
 	for _, r := range rows {
 		next := ""
 		if r.NextDueDate != nil {
@@ -141,10 +148,15 @@ func DMCSV(rows []DMRow) string {
 			}
 			b.WriteString(csvEscape(f))
 		}
-		b.WriteByte('\n')
+		b.WriteString("\r\n")
 	}
 	return b.String()
 }
+
+// UTF8BOM はCSV本文の先頭に付けるUTF-8のBOM（EF BB BF）。
+// 生の3バイトを文字コードで書く（エディタ・差分ツールで見えない文字として
+// 消えたり壊れたりしないようにするため）。
+const UTF8BOM = "\xEF\xBB\xBF"
 
 func csvEscape(s string) string {
 	if strings.ContainsAny(s, ",\"\n") {

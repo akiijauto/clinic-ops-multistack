@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -88,19 +88,37 @@ def _serialize(r: models.Reservation) -> dict:
 @router.get("/api/reservations")
 def list_reservations(
     db: Session = Depends(get_db),
+    date_from: dt.date | None = Query(None, alias="from"),
+    date_to: dt.date | None = Query(None, alias="to"),
     staff_id: int | None = None,
     room: str | None = None,
     status: str | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
+    """`from`/`to`（日付）・`staff_id`・`room`・`status` で絞り込む。
+
+    `from`/`to` が実際には無視されていた件（2026-09-06、レーンR 5巡目の指摘・
+    `coordination/qa/lane-d.md` D-25）を直した。`starts_at` の**日付部分**が
+    `from`〜`to`（両端含む）に入る予約を対象にする。半開区間で比較するため
+    `to` は翌日0時未満として扱う。
+    """
     q = db.query(models.Reservation)
+    if date_from is not None:
+        start = dt.datetime.combine(date_from, dt.time.min)
+        q = q.filter(models.Reservation.starts_at >= start)
+    if date_to is not None:
+        end = dt.datetime.combine(date_to + dt.timedelta(days=1), dt.time.min)
+        q = q.filter(models.Reservation.starts_at < end)
     if staff_id is not None:
         q = q.filter(models.Reservation.staff_id == staff_id)
     if room is not None:
         q = q.filter(models.Reservation.room == room)
     if status is not None:
         q = q.filter(models.Reservation.status == status)
-    rows = q.order_by(models.Reservation.starts_at).all()
-    return {"items": [_serialize(r) for r in rows], "total": len(rows)}
+    total = q.count()
+    rows = q.order_by(models.Reservation.starts_at).offset(offset).limit(limit).all()
+    return {"items": [_serialize(r) for r in rows], "total": total}
 
 
 @router.post("/api/reservations", status_code=201)

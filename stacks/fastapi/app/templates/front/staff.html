@@ -1,5 +1,6 @@
-{# スタッフ（担当選択）。いまは一覧表示のみ。担当を選ぶ操作は次段階。
-   `Staff.password_hash` は画面に一切出さない（spec/screens.md 21）。 #}
+{# スタッフ（担当選択）。`spec/screens.md` 21番。
+   `Staff.password_hash` は画面に一切出さない。認証ではないのでCookieで選択を持つ
+   （2026-09-06、レーンR 5巡目の指摘で選択手段が無いことが判明し追加）。 #}
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty %}
 
@@ -9,12 +10,33 @@
 <section {{ screen("staff") }}>
   <h1>スタッフ</h1>
 
+  <p>いま選ばれている担当:
+    <span data-check="current-staff">{% if current_staff %}{{ current_staff.name }}（{{ current_staff.role }}）{% else %}未選択{% endif %}</span>
+    {% if current_staff %}
+    <form method="post" style="display:inline">
+      <input type="hidden" name="action" value="clear">
+      <button type="submit">担当を外す</button>
+    </form>
+    {% endif %}
+  </p>
+
   {% if not staff %}
   <p {{ empty("staff") }}>スタッフが登録されていません。</p>
   {% else %}
   <ul class="staff-list">
     {% for s in staff %}
-    <li {{ row("staff") }}>{{ s.name }}（{{ s.role }}）</li>
+    <li {{ row("staff") }}>
+      {{ s.name }}（{{ s.role }}）
+      {% if current_staff and current_staff.id == s.id %}
+      <span aria-current="true">（選択中）</span>
+      {% else %}
+      <form method="post" style="display:inline">
+        <input type="hidden" name="action" value="select">
+        <input type="hidden" name="staff_id" value="{{ s.id }}">
+        <button type="submit">選ぶ</button>
+      </form>
+      {% endif %}
+    </li>
     {% endfor %}
   </ul>
   {% endif %}

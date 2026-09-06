@@ -1,4 +1,84 @@
+<% content_for :title, "カルテ" %>
+
+<% if @notice %>
+  <p data-testid="success-banner"><%= @notice %></p>
+<% end %>
+<% if @error %>
+  <p data-testid="error-banner"><%= @error %></p>
+<% end %>
+
 <%= render "visits" %>
+
+<h2>診察一覧（新しい順）</h2>
+<% if @visits.empty? %>
+  <p>まだ診察の記録がありません。</p>
+<% else %>
+  <ul>
+    <% @visits.each do |visit| %>
+      <% current = @form_visit.persisted? && @form_visit.id == visit.id %>
+      <li data-testid="visit-switch-<%= visit.id %>">
+        <% if current %>
+          <strong><%= visit.visit_date %>（<%= visit.visit_no %>回目・編集中）</strong>
+        <% else %>
+          <%= link_to "#{visit.visit_date}（#{visit.visit_no}回目）",
+                      "/animals/#{@patient.karte_no}/karte?visit_id=#{visit.id}" %>
+        <% end %>
+        <%= link_to "印刷", "/animals/#{@patient.karte_no}/karte/#{visit.id}/print", data: { testid: "btn-print-visit-#{visit.id}" } %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<p>
+  <%= link_to "新しい診察を起こす", "/animals/#{@patient.karte_no}/karte/new", data: { testid: "btn-new-visit" } %>
+  <%= link_to "前回コピー", "/animals/#{@patient.karte_no}/karte/copy_prev", data: { testid: "btn-copy-prev" } %>
+  <%= link_to "カルテ全体を印刷", "/animals/#{@patient.karte_no}/karte/print", data: { testid: "btn-print-karte" } %>
+</p>
+
+<h2><%= @form_visit.persisted? ? "診察の編集" : "新規診察の入力" %></h2>
+<% notes = @form_visit.progress_notes.to_a %>
+<% notes << @form_visit.progress_notes.build if @form_visit.progress_notes.size == notes.size %>
+<%= form_with model: @form_visit, url: "/animals/#{@patient.karte_no}/karte", scope: :visit,
+              method: :post, local: true, data: { testid: "form-karte" } do |f| %>
+  <%= hidden_field_tag :visit_id, @form_visit.id if @form_visit.persisted? %>
+  <p><label>来院日 <%= f.date_field :visit_date %></label></p>
+  <p><label>来院時刻 <%= f.time_field :visit_time %></label></p>
+  <p><label>体重(kg) <%= f.text_field :body_weight_kg %></label></p>
+  <p><label>主訴 <%= f.text_field :chief_complaint %></label></p>
+  <p><label>症状 <%= f.text_area :symptom %></label></p>
+  <p><label>診断 <%= f.text_area :diagnosis %></label></p>
+  <p><label>治療 <%= f.text_area :treatment %></label></p>
+  <p><label>担当医
+    <%= f.collection_select :staff_id, Staff.active.order(:staff_code), :id, :name, include_blank: "未選択" %>
+  </label></p>
+
+  <h3>経過記録（行ごとに独立して保存されます）</h3>
+  <%= f.fields_for :progress_notes, notes do |pf| %>
+    <fieldset data-testid="progress-note-form-row">
+      <%= pf.hidden_field :id %>
+      <p>
+        <label>日付 <%= pf.date_field :entry_date, value: pf.object.entry_date || @form_visit.visit_date %></label>
+        <label>体温 <%= pf.text_field :temperature_c %></label>
+        <label>脈拍 <%= pf.text_field :pulse %></label>
+        <label>呼吸 <%= pf.text_field :respiration %></label>
+        <label>体重 <%= pf.text_field :body_weight_kg %></label>
+      </p>
+      <p>
+        <label>経過 <%= pf.text_area :symptom_course %></label>
+        <label>処置 <%= pf.text_area :treatment_rx %></label>
+        <label>メモ <%= pf.text_area :note %></label>
+      </p>
+    </fieldset>
+  <% end %>
+
+  <button type="submit" data-testid="btn-save-karte">保存</button>
+<% end %>
+
+<%# 取消（状態A。捨てる書きかけが無いときだけ灰色でよいが、直接叩かれた場合に備えて
+    常に動く経路として残す。spec/openapi.yaml screen_karte_cancel）。 %>
+<%= form_with url: "/animals/#{@patient.karte_no}/karte/cancel", method: :post, local: true do %>
+  <button type="submit" data-testid="btn-cancel-karte">入力を取り消す</button>
+<% end %>
 
 <p>
   <%# 一時保存（状態C）。書きかけは自動で控えている前提のため、あえて塞んである
@@ -6,3 +86,5 @@
       無効にする。消してはいけない（spec/README.md）。 %>
   <a href="/todo/temp_save" class="disabled" data-testid="btn-temp-save" aria-disabled="true">一時保存（あえて動かしていません）</a>
 </p>
+
+<p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>

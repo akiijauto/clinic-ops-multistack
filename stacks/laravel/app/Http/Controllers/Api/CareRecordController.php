@@ -12,11 +12,22 @@ use Illuminate\Http\Request;
 /**
  * 入院の実施記録（追加）のAPI。契約は spec/openapi.yaml `/api/hospitalizations/{id}/care-records`。
  * 実施者（staff_id/performed_by_staff_id）は必須。空の記録行は作らない（検算7）。
+ *
+ * 退院済みの入院には記録を追加できない（spec/screens.md画面18「満たすべきこと」）。
+ * 画面側（Ops\AnimalWardController::addCareRecord）は`isOngoing()`で拒否していたが、
+ * このAPIには同じチェックが無く、退院済みでも201で作成できてしまっていた
+ * （2026-09-06レビュー指摘。他4実装は422で拒否）。
  */
 class CareRecordController extends Controller
 {
     public function store(Request $request, Hospitalization $hospitalization): JsonResponse
     {
+        if (! $hospitalization->isOngoing()) {
+            return ApiError::response(ApiError::INVALID_INPUT, [
+                ['field' => 'hospitalization_id', 'message' => '退院済みの入院には記録を追加できません。'],
+            ]);
+        }
+
         $staffId = $request->input('performed_by_staff_id', $request->input('staff_id'));
         if (! $staffId) {
             return ApiError::response(ApiError::INVALID_INPUT, [

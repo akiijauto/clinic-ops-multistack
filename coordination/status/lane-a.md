@@ -700,3 +700,87 @@ $ python tests/run.py http://127.0.0.1:8401
 
 `go build ./...` / `go test ./...` も全緑。`stacks/go/` 以外は変更していない。
 コミット・pushはしていない。
+
+---
+
+## 追記7（2026-09-06、レーンR 5巡目レビュー対応・3件）
+
+**すべて自分で再現してから直した。** 3件とも実在するバグだった（判定器が見ていない範囲、との指摘どおり）。
+
+### 1. 会計PATCHが黙って何も起きない（最優先で対応）
+
+`PATCH /api/billings/{id}`（`internal/server/billing_api.go` `handleAPIPatchBilling`）が
+リクエストの `details` を一度も参照していなかった。200を返すが実際には反映されない
+（`spec/README.md`「画面に できます と書いて出来ていない状態を作らない」に反する）。
+
+**再現**（直す前）: draft伝票(id=2)へ `PATCH` で明細1件追加 → 200が返るが、
+直後の `GET` で明細・合計とも変化なし。
+
+**直した内容**: `POST /api/patients/{karte_no}/billings`（新規作成）と同じ
+`s.billing.AddDetail` を、確定・支払い記録より先に適用するようにした
+（確定は「明細が1行も無い伝票は確定できない」を見るため、順序が必要）。
+`AddDetail` は元々「確定済みの伝票には追加できない」ガードを持っていたので、
+そちらのエラー処理（422）もそのまま活きる。
+
+**実測（直した後）**:
+```
+$ curl -X PATCH .../api/billings/2 -d '{"details":[{"price_code":"PR0050",...,"unit_price":16500,...}]}'
+→ 明細が5件目として追加され、税抜合計 14,300→30,800 に反映
+$ curl .../api/billings/2（再GET）→ 上記が保持されている
+$ curl -X PATCH .../api/billings/1（確定済み）-d '{"details":[...]}'
+→ 422（確定済みへの追加は拒否。想定どおり）
+```
+
+### 2. 予約の日付フィルタが無視される
+
+`GET /api/reservations`・`GET /reservations`（画面）のどちらも `from`/`to`/`staff_id`/`room`
+（APIはさらに `status`）を一度も読んでおらず、常に全件を返していた。
+
+**直した内容**: `internal/server/reservation.go` に `reservationFilter`（共通の絞り込み条件と
+`matches` 判定）を追加し、APIハンドラで使用。画面側（`reservation_screen.go`）も
+同じ `reservationFilterFromQuery`/`matches` を呼ぶようにし、別計算を作らなかった。
+
+**実測（直した後）**:
+```
+$ curl .../api/reservations → total=60（全件）
+$ curl .../api/reservations?from=2026-09-01&to=2026-09-01 → total=4（その日の4件のみ）
+$ curl .../reservations（画面）→ row-reservation 60件
+$ curl .../reservations?from=2026-09-01&to=2026-09-01 → row-reservation 4件
+```
+
+### 3. DM CSVがBOM無し・LFのみ
+
+`spec/README.md`「CSVの文字コード」（UTF-8 BOMつき・CRLF）に反していた。
+
+**直した内容**: `internal/billing/dm.go` の `DMCSV` の改行を `\r\n` に変更。
+BOM（`\xEF\xBB\xBF`）を定数 `billing.UTF8BOM` として追加し、
+`internal/server/dm.go` の `handleDMCSV` が応答本文の先頭に書くようにした
+（生のバイト列で持たせ、エディタ上で見えない文字として消えないようにした）。
+既存の `TestDMCSV_CountMatchesScreenRows`（`\n`の出現数だけを数える）は
+CRLFにも`\n`が含まれるため無修正で通る。
+
+**実測（直した後、生バイトで確認）**:
+```
+先頭3バイト = EF BB BF（BOMあり）
+本文全体が \r\n（CRLF）で、単独のLFは0箇所
+```
+
+### 副作用として気づいたこと
+
+`spec/ui.css` が指揮役側で更新されていた（暗い配色対応が追加、4010字→4685字）。
+`stacks/go/web/static/ui.css` を再同期し `diff` で完全一致を確認した
+（このセッション中に検知——`--only inventory` の「見た目」検査が先に落ち、気づけた）。
+
+### 実測（全体）
+
+```
+$ python tests/run.py http://127.0.0.1:8401 --only inventory
+全 10 件 通過（新規の「契約 押しても何も起きないボタンにしない」「書き込み 作って・
+確かめて・取り消せる」「データ 実装が読んでいる中身がdata/と一致する」も含め全緑）
+
+$ python tests/run.py http://127.0.0.1:8401
+全 24 件 通過
+```
+
+`go build ./...` / `go test ./...` も全緑。`stacks/go/` 以外は変更していない。
+コミット・pushはしていない。

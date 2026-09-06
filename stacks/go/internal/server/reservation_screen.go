@@ -49,7 +49,14 @@ func (s *Server) handleReservationsScreen(w http.ResponseWriter, r *http.Request
 
 	var rows []reservationRowView
 	if s.clinical != nil {
+		// GET /api/reservations と同じ絞り込みを使う（別計算をしない）。
+		// 以前は from/to/staff_id/room を読んでおらず、常に全件を表示していた
+		// （レーンR 5巡目レビュー）。
+		f := reservationFilterFromQuery(r.URL.Query())
 		for _, res := range s.clinical.Reservations() {
+			if !f.matches(res) {
+				continue
+			}
 			staff := ""
 			if res.StaffID != nil {
 				staff = strconv.Itoa(*res.StaffID)

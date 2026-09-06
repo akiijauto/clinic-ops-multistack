@@ -30,4 +30,6 @@ Route::post('/animals/{karte_no}/ward/{hospitalization_id}/care-records', [Anima
 Route::post('/animals/{karte_no}/ward/{hospitalization_id}/discharge', [AnimalWardController::class, 'discharge'])->name('animals.ward.discharge');
 
 Route::get('/staff', [StaffController::class, 'index'])->name('staff');
+Route::post('/staff/clear', [StaffController::class, 'clear'])->name('staff.clear');
+Route::post('/staff/{id}/select', [StaffController::class, 'select'])->name('staff.select');
 Route::get('/todo/{key}', [TodoController::class, 'show'])->name('todo');

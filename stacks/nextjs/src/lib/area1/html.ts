@@ -9,6 +9,8 @@
  * (`spec/openapi.yaml`「HTMLフォーム送信時のエラーの出し方」).
  */
 
+import { PRIMARY_NAV } from '../nav.ts';
+
 export function escapeHtml(v: unknown): string {
   if (v === null || v === undefined) return '';
   return String(v)
@@ -23,11 +25,12 @@ const e = escapeHtml;
 
 /** Wraps page content in the shared shell and a `screen-<key>` container. */
 export function page(opts: { title: string; screenKey: string; nav?: string; body: string }): string {
+  const primaryNav = PRIMARY_NAV.map(({ href, label }) => `<a href="${e(href)}">${e(label)}</a>`).join(' ｜ ');
   return `<!doctype html>
 <html lang="ja">
 <head><meta charset="utf-8"><title>${e(opts.title)}</title><link rel="stylesheet" href="/ui.css"></head>
 <body>
-<header><a href="/">トップ</a> ｜ <a href="/today">本日の患者</a> ｜ <a href="/search">検索</a></header>
+<header data-testid="primary-nav">${primaryNav}</header>
 <div data-testid="${e(opts.screenKey)}">
 ${opts.nav ?? ''}
 ${opts.body}

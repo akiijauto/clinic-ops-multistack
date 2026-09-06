@@ -22,7 +22,7 @@ class KarteController < ApplicationController
   # 画面側＝リンクの見た目に任せる。ここでは404にしない）。
   def copy_prev
     load_visits
-    prev = @patient.visits.kept.order(visit_no: :desc).first
+    prev = @patient.visits.kept.order(visit_date: :desc, visit_no: :desc).first
     @form_visit = @patient.visits.build(
       visit_date: Date.current,
       body_weight_kg: prev&.body_weight_kg,
@@ -97,8 +97,12 @@ class KarteController < ApplicationController
     @patient = Patient.kept.find_by!(karte_no: params[:karte_no])
   end
 
+  # 新しい順（spec/screens.md #9「この患者の診察一覧（新しい順）」）。
+  # visit_no は作成順の連番であって来院日の順ではない（過去日を後から登録する運用がありうる）
+  # ため、visit_date を主キーにする（animals_controller#history と同じ並び規則。
+  # レビュー役の指摘 5-03 で発覚。qa/lane-b.md参照）。
   def load_visits
-    @visits = @patient.visits.kept.includes(:progress_notes).order(visit_no: :desc)
+    @visits = @patient.visits.kept.includes(:progress_notes).order(visit_date: :desc, visit_no: :desc)
   end
 
   def selected_visit

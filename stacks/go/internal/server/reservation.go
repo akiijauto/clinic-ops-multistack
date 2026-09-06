@@ -18,16 +18,64 @@ type reservationListJSON struct {
 	Total int   `json:"total"`
 }
 
+// reservationFilter は `GET /reservations`（画面）・`GET /api/reservations`
+// （API）が共通で使う絞り込み条件（spec/openapi.yaml の from/to/staff_id/room/status）。
+type reservationFilter struct {
+	From, To string // 日付("YYYY-MM-DD")。空なら無制限
+	StaffID  string // 空なら絞り込まない
+	Room     string
+	Status   string
+}
+
+func reservationFilterFromQuery(q map[string][]string) reservationFilter {
+	get := func(k string) string {
+		if v := q[k]; len(v) > 0 {
+			return v[0]
+		}
+		return ""
+	}
+	return reservationFilter{From: get("from"), To: get("to"), StaffID: get("staff_id"), Room: get("room"), Status: get("status")}
+}
+
+// matches は1件の予約が絞り込み条件に合うかを見る。
+// StartsAt は "2026-09-01T09:00:00+09:00" 形式で、先頭10文字が暦日
+// （from/to と同じ "YYYY-MM-DD" 形式なので文字列のまま比較できる）。
+func (f reservationFilter) matches(res clinical.Reservation) bool {
+	if f.From != "" && len(res.StartsAt) >= 10 && res.StartsAt[:10] < f.From {
+		return false
+	}
+	if f.To != "" && len(res.StartsAt) >= 10 && res.StartsAt[:10] > f.To {
+		return false
+	}
+	if f.StaffID != "" && (res.StaffID == nil || strconv.Itoa(*res.StaffID) != f.StaffID) {
+		return false
+	}
+	if f.Room != "" && res.Room != f.Room {
+		return false
+	}
+	if f.Status != "" && res.Status != f.Status {
+		return false
+	}
+	return true
+}
+
 // handleListReservations は `GET /api/reservations`（読み取り）。
+//
+// 以前は from/to/staff_id/room/status のいずれも見ておらず、絞り込みが
+// 常に無視されていた（レーンR 5巡目レビュー、`spec/openapi.yaml` が
+// 「期間・担当・処置室で絞り込み」と明記しているのに反する）。
 func (s *Server) handleListReservations(w http.ResponseWriter, r *http.Request) {
 	if s.clinical == nil {
 		writeJSON(w, http.StatusOK, reservationListJSON{Items: []any{}, Total: 0})
 		return
 	}
-	rows := s.clinical.Reservations()
-	items := make([]any, len(rows))
-	for i, res := range rows {
-		items[i] = res
+	f := reservationFilterFromQuery(r.URL.Query())
+	all := s.clinical.Reservations()
+	items := make([]any, 0, len(all))
+	for _, res := range all {
+		if f.matches(res) {
+			items = append(items, res)
+		}
 	}
 	writeJSON(w, http.StatusOK, reservationListJSON{Items: items, Total: len(items)})
 }

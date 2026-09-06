@@ -31,6 +31,10 @@ func (s *Server) handleDMCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="dm.csv"`)
 	w.WriteHeader(http.StatusOK)
+	// spec/README.md「CSVの文字コード」: UTF-8はBOMつき、改行はCRLF。
+	// 以前はBOM無し・LFのみで、Excelで開いたときの文字化けを防げていなかった
+	// （レーンR 5巡目レビュー）。改行(CRLF)は billing.DMCSV 側で対応済み。
+	_, _ = w.Write([]byte(billing.UTF8BOM))
 	_, _ = w.Write([]byte(body))
 }
 
