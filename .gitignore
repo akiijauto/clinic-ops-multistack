@@ -46,3 +46,6 @@ stacks/laravel/tools/php.ini
 # 2026-09-06: ビルド済みバイナリを追跡させた失敗を繰り返さないため、
 #             生成物は最初から外す。tests/shots.py を走らせれば何度でも作れる。
 tests/shots/
+
+# レーンが調査中に作る一時ファイル（成果物ではない）
+targets.txt
