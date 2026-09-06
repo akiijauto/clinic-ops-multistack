@@ -235,7 +235,29 @@ func (s *Server) Routes() []Route {
 func (s *Server) handle(mux *http.ServeMux, pattern string, h http.HandlerFunc) {
 	method, path := splitPattern(pattern)
 	s.routes = append(s.routes, Route{Method: method, Pattern: path})
-	mux.HandleFunc(pattern, h)
+	mux.HandleFunc(pattern, s.guardReadOnly(method, h))
+}
+
+// guardReadOnly は `CLINICOPS_READ_ONLY=1` のとき、書き込みの要求を断る。
+//
+// **この設定は長いあいだ、起動ログに出すだけで何も止めていなかった**
+// （2026-09-06、公開の直前に気づいた）。設定名があるのに効かないのは、
+// **「止めてあるつもり」を作るぶん、無いより悪い。**
+//
+//	誰でも触れる場所に置くなら、**止まっていることを確かめてから置く。**
+//
+// 断るのは GET / HEAD 以外。画面は読めるが、保存・削除はできない。
+func (s *Server) guardReadOnly(method string, h http.HandlerFunc) http.HandlerFunc {
+	if !s.cfg.ReadOnly || method == "" || method == http.MethodGet || method == http.MethodHead {
+		return h
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.log.Info("read_only: 書き込みを断った", "method", r.Method, "path", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"error":"read_only",` +
+			`"message":"公開版は読み取り専用です。保存・削除はできません。"}`))
+	}
 }
 
 // handleRaw は http.Handler をそのまま登録する版。
