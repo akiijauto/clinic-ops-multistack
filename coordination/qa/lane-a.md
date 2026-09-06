@@ -309,3 +309,31 @@ $ python tests/run.py http://127.0.0.1:8401 --only crawl
 閾値判定でOKのまま。`data-testid`確認も35→34画面と1件減ったが、これも閾値内でOK。
 コードは `internal/server/screens.go` の `topNav()`/`navLink` ごと削除
 （テンプレートから参照されなくなった時点で死んだコードのため）。
+
+---
+
+## FeatureNotes と FoldedItems のキー不一致（2026-09-06、見つけて直した）
+
+`spec/screens.md`「機能設定」は「『折りたたみ表示』画面と、この画面の掲載内容
+（項目と理由）が一致する」ことを求めている。実際は `internal/settings/masters.go`
+の `FeatureNotes()` と `internal/reception/folded.go` の `FoldedItems()` が
+別々にハードコードされており、末尾6件のキーが食い違っていた。
+
+| FeatureNotes（機能設定） | FoldedItems（折りたたみ表示） |
+| --- | --- |
+| `price_item_hierarchy` | `price_item_4_layer` |
+| `receipt` | `receipt_claim` |
+| `clinic_point` | `clinic_setting_points` |
+| `clinic_last_slip_no` | `clinic_setting_last_slip_no` |
+| `clinic_org_code` | `clinic_setting_institution_code` |
+| `clinic_logo` | `clinic_setting_logo` |
+
+`/folded/{key}` は未知のkeyを404にする契約（`spec/openapi.yaml`）なので、
+「機能設定」からこのキーで `/folded/{key}` へリンクを張ると、この6件だけ404になる。
+`FoldedItems()`（実際に `/folded/{key}` が読むデータ）を正として `FeatureNotes()` の
+キーを合わせた。
+
+**直していないこと**: 両者の `Title`/`Message` の文言は完全一致ではない
+（例: 「料金分類の4階層」／「PriceItem の4階層分類」）。今回の依頼はB状態への導線を
+足すことだったので、導線が生きること（キーの整合）までを直した。文言の統一まで
+やるかどうかは指揮役の判断だと考え、勝手に広げなかった。必要なら次の依頼で対応する。

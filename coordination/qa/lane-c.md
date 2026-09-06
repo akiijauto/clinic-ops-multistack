@@ -443,3 +443,23 @@ POSTは201のまま。テスト用に作成したケア記録（id=109）は削�
 `karte_form.blade.php`は`/karte/new`と`/karte/copy_prev`の両方を1テンプレートで
 出しているため、`$mode`で見出しを分岐させた（前者「カルテ」、後者「前回コピー」。
 openapi.yamlのsummaryがこの2つで別の文言だったため）。
+
+## U. 2026-09-06 — 「紙カルテは元から無い」の印を付ける・外す入口を追加
+
+`spec/screens.md`画面13「できること」に明記されていたが、入口自体が無かった
+（レビュー指摘。5実装中2つしか持っていなかった）。
+
+契約（openapi.yaml）のPatientスキーマには定義が無く、`data/seed.json`の
+`no_paper_patient_ids`（[43,41,10]、指揮役追加。契約側の定義ではない）を初期値に
+使うため、`patients.no_paper`列を追加した
+（`database/migrations/2026_09_06_000002_add_no_paper_to_patients_table.php`）。
+
+- `DatabaseSeeder::seedPatients()`で`no_paper_patient_ids`に含まれるidを`true`に設定
+- `Clinical\PaperController::toggleNoPaper()`（`POST /animals/{karte_no}/papers/no-paper`）で
+  押すたびに反転（付ける⇄外す）。押して何も起きない状態にはしていない
+- `resources/views/clinical/papers.blade.php`に現在の状態表示（`data-testid="no-paper-status"`）
+  とトグルボタン（`data-testid="no-paper-toggle"`）を追加
+
+実測: karte_no=10010（no_paper=true）は「元から無い」の印が表示される。
+karte_no=10041で印を外す→success-banner「印を外しました。」→DBがfalseに変わる→
+再度押して元の状態（true）に戻したことを確認済み。

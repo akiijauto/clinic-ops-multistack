@@ -152,17 +152,22 @@ func FeatureNotes() []FeatureNote {
 			Message: "固定データへ移した。参照はできるが、編集する画面は作らない。"},
 		{Key: "billing_category_master", Kind: "folded", Title: "会計分類・診療科・定型文マスタの編集",
 			Message: "固定データへ移した。参照はできるが、編集する画面は作らない。"},
-		{Key: "price_item_hierarchy", Kind: "folded", Title: "料金分類の4階層",
+		// 以下6件は internal/reception/folded.go の FoldedItems() とキーが
+		// 食い違っていた（例: ここは "receipt"、あちらは "receipt_claim"）。
+		// /folded/{key} は未知のkeyを404にする契約なので、このズレのままだと
+		// 「折りたたみ表示で見る」導線が全部404になる。FoldedItems() 側を
+		// 正として合わせた（2026-09-06、レーンA。coordination/qa/lane-a.md）。
+		{Key: "price_item_4_layer", Kind: "folded", Title: "料金分類の4階層",
 			Message: "2階層に減らした。階層の深さは比較の題材にならないため。"},
-		{Key: "receipt", Kind: "folded", Title: "レセプト（保険請求）",
+		{Key: "receipt_claim", Kind: "folded", Title: "レセプト（保険請求）",
 			Message: "制度の知識が要り、間違えると害があるため、この企画では扱わない。"},
-		{Key: "clinic_point", Kind: "folded", Title: "病院設定のポイント（会員制度）",
+		{Key: "clinic_setting_points", Kind: "folded", Title: "病院設定のポイント（会員制度）",
 			Message: "会員制度の設計が要り、比較の題材にならないため、この企画では扱わない。"},
-		{Key: "clinic_last_slip_no", Kind: "folded", Title: "病院設定の最終伝票番号",
+		{Key: "clinic_setting_last_slip_no", Kind: "folded", Title: "病院設定の最終伝票番号",
 			Message: "伝票番号は会計データ自身が持つ。採番の続きを設定で持つのは運用移行のための仕組みで、新規に作るこの企画には要らない。"},
-		{Key: "clinic_org_code", Kind: "folded", Title: "病院設定の機関コード",
+		{Key: "clinic_setting_institution_code", Kind: "folded", Title: "病院設定の機関コード",
 			Message: "保険請求で使う番号。レセプトを扱わないため使い道が無い。"},
-		{Key: "clinic_logo", Kind: "folded", Title: "病院設定のロゴ画像",
+		{Key: "clinic_setting_logo", Kind: "folded", Title: "病院設定のロゴ画像",
 			Message: "画像の取り扱いが主題になってしまうため、この企画では扱わない。"},
 	}
 }

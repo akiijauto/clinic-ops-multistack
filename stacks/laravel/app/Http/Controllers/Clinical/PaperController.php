@@ -34,6 +34,30 @@ class PaperController extends Controller
         return view('clinical.papers', ['patient' => $patient, 'papers' => $papers]);
     }
 
+    /**
+     * 「この子の紙カルテは元から無い」の印を付ける・外す（画面13「できること」。
+     * 2026-09-06レビュー指摘。他4実装のうち2つしか入口を持っていなかった）。
+     * 押すたびに反転する（付ける⇄外す）。押して何も起きない状態にはしない。
+     */
+    public function toggleNoPaper(string $karteNo): View|Response
+    {
+        $patient = Patient::where('karte_no', $karteNo)->first();
+        if ($patient === null) {
+            return ApiError::response(ApiError::NOT_FOUND);
+        }
+
+        $patient->no_paper = ! $patient->no_paper;
+        $patient->save();
+
+        $papers = Paper::where('patient_id', $patient->id)->whereNull('removed_at')->orderByDesc('created_at')->get();
+
+        return view('clinical.papers', [
+            'patient' => $patient,
+            'papers' => $papers,
+            'success' => $patient->no_paper ? '「紙カルテは元から無い」の印を付けました。' : '印を外しました。',
+        ]);
+    }
+
     public function store(Request $request, string $karteNo): View|Response
     {
         $patient = Patient::where('karte_no', $karteNo)->first();

@@ -906,3 +906,50 @@ $ python tests/shots.py
 ```
 
 `stacks/go/` 以外は変更していない。コミット・pushはしていない。
+
+---
+
+## B状態（/folded/{key}）への導線を追加（2026-09-06）
+
+指揮役の実測「Goだけ /folded/{key} への導線が0本」を受けて対応。
+
+- `web/templates/pages/settings_features.html`（機能設定）: 各行に
+  `<a class="disabled" href="/folded/{{.Key}}" aria-disabled="true">折りたたみ表示で見る</a>`
+  を追加（他4実装が集約している場所に合わせた）。
+- `web/templates/pages/today.html`: 「完了全削除」「完了削除」（状態C）とは別の段落に
+  「分院の切り替え」（状態B）を追加し `/folded/hospital_division` へリンク
+  （Rails・Laravelが/todayに置いているのと同じ導線）。
+
+### ついでに見つけて直したバグ
+
+`internal/settings/masters.go` の `FeatureNotes()` と `internal/reception/folded.go` の
+`FoldedItems()` は「同じ元データ」のはずが、6件でキー名が食い違っていた
+（例: 前者 `receipt` ／ 後者 `receipt_claim`）。`/folded/{key}` は未知のkeyを404にする
+契約なので、直さずにリンクを足すとその6件が404になっていた。`FoldedItems()` 側を
+正として `FeatureNotes()` のキーを合わせた。
+
+（残課題として、両者の `Title`/`Message` の文言は完全一致まではしていない
+= spec/screens.md「掲載内容が一致する」の厳密な要求には届いていない。
+今回はキーの整合〔導線が生きること〕までを直し、文言の統一は指揮役に確認してから
+着手する。coordination/qa/lane-a.md に記録済み）
+
+### 確かめたこと
+
+```
+$ python tests/run.py http://127.0.0.1:8401
+全 29 件 通過
+（在庫 契約の画面ルートが全部ある — 42/42 件ある。確かめられない0件に到達）
+
+$ go build ./... && go vet ./... && go test ./...
+全部ok
+
+$ curl http://127.0.0.1:8401/folded/<key>  （直した6件すべて）
+全部 200
+
+$ python tests/shots.py /settings/features /today
+/today — 揃っている
+```
+
+`/papers/1/remove` の405は5実装とも同じ（curlで確認済み）ため、そのままにした。
+
+`stacks/go/` 以外は変更していない。コミット・pushはしていない。

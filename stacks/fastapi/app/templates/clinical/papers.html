@@ -25,9 +25,7 @@
   </form>
   {% endif %}
 
-  {% if not papers %}
-  <p {{ empty("papers") }}>この動物に紐づく文書はありません。<a href="/papers/no-paper">案内を見る</a></p>
-  {% else %}
+  {% if papers %}
   <table class="paper-list">
     <thead><tr><th>タイトル</th><th>メモ</th><th>取込日</th><th></th></tr></thead>
     <tbody>
@@ -45,6 +43,24 @@
       {% endfor %}
     </tbody>
   </table>
+  {% elif no_paper %}
+  {# 「まだ取り込んでいない」（Paperが0件）とは別の状態。文言でも判別できるようにする
+     （2026-09-06、指揮役の指摘。判定器も「元から無」の文言かno-paper導線を見る）。 #}
+  <p data-testid="no-paper-flag" data-check="no-paper-flag">この子の紙カルテは元から無い、と登録されています。</p>
+  {% else %}
+  <p {{ empty("papers") }}>この動物に紐づく文書はありません。<a href="/papers/no-paper">案内を見る</a></p>
+  {% endif %}
+
+  {% if patient %}
+  {# 「この子の紙カルテは元から無い」の印の付け外し（screens.md 13番）。
+     押して何も起きない状態にはしない——実際にフラグを更新する。 #}
+  <form method="post" action="/papers/no-paper">
+    <input type="hidden" name="karte_no" value="{{ patient.karte_no }}">
+    <input type="hidden" name="value" value="{% if no_paper %}0{% else %}1{% endif %}">
+    <button type="submit" class="button">
+      {% if no_paper %}「元から無い」を外す{% else %}「元から無い」を付ける{% endif %}
+    </button>
+  </form>
   {% endif %}
 </section>
 {% endblock %}

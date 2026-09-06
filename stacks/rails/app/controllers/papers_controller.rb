@@ -6,6 +6,18 @@ class PapersController < ApplicationController
     @papers = @patient.papers.active.order(created_at: :desc)
   end
 
+  # 「この子の紙カルテは元から無い」の印を付ける・外す（spec/screens.md #13）。
+  def set_no_paper
+    @patient = Patient.kept.find_by!(karte_no: params[:karte_no])
+    if params[:value] == "1"
+      PatientNoPaper.find_or_create_by!(patient: @patient)
+    else
+      @patient.patient_no_paper&.destroy
+    end
+    @papers = @patient.papers.active.order(created_at: :desc)
+    render :index
+  end
+
   def show
     @paper = Paper.find(params[:paper_id])
     @patient = @paper.patient

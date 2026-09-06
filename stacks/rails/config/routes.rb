@@ -73,6 +73,8 @@ Rails.application.routes.draw do
   post  "animals/:karte_no/papers", to: "papers#create", karte_no: KARTE_NO
   post  "papers/:paper_id/remove", to: "papers#remove"
   get   "papers/:paper_id/remove", to: "application#method_not_allowed"
+  # 「元から無い」の印の付け外し（spec/screens.md #13。契約はendpointの形までは決めていない）。
+  post  "animals/:karte_no/papers/no_paper", to: "papers#set_no_paper", karte_no: KARTE_NO
 
   # --- 領域3｜会計・売上 ---
   get   "animals/:karte_no/accounting", to: "accounting#show", karte_no: KARTE_NO

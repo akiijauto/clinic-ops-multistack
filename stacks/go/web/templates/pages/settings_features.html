@@ -5,15 +5,20 @@
   <p>この企画ではスコープに入れなかった機能を、理由つきでまとめて示す。読むだけの画面で、
      この画面自体から機能の出し入れはできない（<code>ClinicFeature</code> はこの企画では持たない）。</p>
 
+  {{/* spec/screens.md「ボタンの3状態」: Bは model.md「落としたもの」に対応する
+       機能への導線で、消さずに置く（押せる見た目のまま、行き先は③折りたたみ表示に
+       集約する）。ここに導線が無いと /folded/{key} へ辿り着く手段が無くなる
+       （coordination/qa/lane-a.md）。 */}}
   <table>
     <thead>
-      <tr><th>機能</th><th>理由</th></tr>
+      <tr><th>機能</th><th>理由</th><th></th></tr>
     </thead>
     <tbody>
       {{range .Notes}}
       <tr data-testid="row-feature" data-feature-key="{{.Key}}">
         <td>{{.Title}}</td>
         <td>{{.Message}}</td>
+        <td><a class="disabled" href="/folded/{{.Key}}" aria-disabled="true">折りたたみ表示で見る</a></td>
       </tr>
       {{end}}
     </tbody>

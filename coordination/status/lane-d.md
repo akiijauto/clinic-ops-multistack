@@ -881,3 +881,39 @@ $ python tests/run.py http://127.0.0.1:8415
 
 サーバーは指揮役がデータ入れ替え後に起動していたものを一旦止め、`data/clinic.db` は
 そのままに（削除せず）入れ替え起動した。孤児無しを確認済み。
+
+## 完了の自己点検（11回目、書類「元から無い」印の実装）
+
+指揮役から「契約が名指しで求めている操作（screens.md 13番「この子の紙カルテは元から無い」の
+印を付ける・外す）が無い」との報告。5実装中FastAPIを含む2つが未実装だった。
+
+**「取り込んでいない」と「元から無い」は別の状態**（自分が以前、書類の削除を論理削除に
+直したときの「`restore`の有無と物理削除禁止は別要件」という切り分けと同じ形）。
+
+- `app/models.py`: `Patient` に `no_paper`（Boolean, default False）を追加
+- `app/seed_loader.py`: `data/seed.json` の `no_paper_patient_ids`（指揮役が追加。
+  契約に定義があるわけではない）を初期値として投入
+- `app/routers/clinical_extra.py`: `POST /papers/no-paper`（`karte_no`・`value`）を
+  新設し、`Patient.no_paper` を実際に更新する（押して何も起きない状態にはしていない）。
+  契約は`GET /papers/no-paper`（案内画面）しか定義していないが、`/settings`等と同じ
+  前例で同一パスへ追加。papers画面を返す3箇所（GET・取込POST・取消POST）すべてに
+  `no_paper` をテンプレートへ渡すよう統一
+- `app/templates/clinical/papers.html`: 書類0件のとき、`no_paper`なら「元から無い、と
+  登録されています」（`data-testid`/`data-check="no-paper-flag"`）、そうでなければ
+  従来の「まだ取り込んでいません」を出し分け。印の付け外しボタンを追加
+
+**マイグレーション**: Alembic等は無く`create_all()`のみ（既存テーブルへの列追加は
+自動で効かない）ため、`data/clinic.db`を退避コピーしてから削除し、`data/seed.json`
+（決定的な内容）から再投入させて起動し直した。再投入後に検算1の売上総合計が
+指揮役の報告どおり5,189,585円と一致することを確認してから、退避コピーを削除した。
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 30 件 通過
+```
+該当検査: OK 契約 書類に「元から無い」の印を付け外しできる — 「元から無い」の入口がある
+
+手動でも往復確認: `POST /papers/no-paper karte_no=10010&value=0` → フラグ表示が消える →
+`value=1` → 再度表示。トグルの前後でデータは元の状態（10010=フラグあり）に戻した。
+
+サーバーは今回はデータ再投入を伴う入れ替え起動（孤児無しを確認）。

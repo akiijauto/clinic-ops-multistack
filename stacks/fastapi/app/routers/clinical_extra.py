@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -471,7 +471,7 @@ def papers_screen(karte_no: str, request: Request, db: Session = Depends(get_db)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request, "clinical/papers.html",
-        {"patient": patient, "papers": _papers_of(patient, db), "banner": None},
+        {"patient": patient, "papers": _papers_of(patient, db), "banner": None, "no_paper": patient.no_paper},
     )
 
 
@@ -498,14 +498,20 @@ async def papers_create_screen(karte_no: str, request: Request, db: Session = De
     if not title:
         return templates.TemplateResponse(
             request, "clinical/papers.html",
-            {"patient": patient, "papers": _papers_of(patient, db), "banner": ("error", "タイトルは必須です。")},
+            {
+                "patient": patient, "papers": _papers_of(patient, db),
+                "banner": ("error", "タイトルは必須です。"), "no_paper": patient.no_paper,
+            },
         )
 
     db.add(models.Paper(patient_id=patient.id, title=title, note=note, created_at=dt.datetime.now(JST)))
     db.commit()
     return templates.TemplateResponse(
         request, "clinical/papers.html",
-        {"patient": patient, "papers": _papers_of(patient, db), "banner": ("success", "取り込みました。")},
+        {
+            "patient": patient, "papers": _papers_of(patient, db),
+            "banner": ("success", "取り込みました。"), "no_paper": patient.no_paper,
+        },
     )
 
 
@@ -513,6 +519,32 @@ async def papers_create_screen(karte_no: str, request: Request, db: Session = De
 def papers_no_paper(request: Request):
     templates = request.app.state.templates
     return templates.TemplateResponse(request, "clinical/papers_no_paper.html", {})
+
+
+@router.post("/papers/no-paper", response_class=HTMLResponse)
+def papers_no_paper_toggle(
+    request: Request, db: Session = Depends(get_db),
+    karte_no: str = Form(...), value: str = Form(...),
+):
+    """「この子の紙カルテは元から無い」の印を付ける・外す（screens.md 13番）。
+
+    契約（openapi.yaml）は `GET /papers/no-paper`（対象が無いことの案内画面）しか
+    定義していないが、`/settings` 等と同じ前例に倣い、Go/Rails/Laravelが独立に
+    収束した形（`POST /papers/no-paper` に `karte_no`・`value` を渡す）へ合わせた
+    （2026-09-06、指揮役の「入口が無い」指摘対応）。
+    「取り込んでいない」（Paperの行が0件）とは別の状態なので、独立したフラグとして持つ。
+    """
+    patient = _patient_or_404(karte_no, db)
+    patient.no_paper = value == "1"
+    db.commit()
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request, "clinical/papers.html",
+        {
+            "patient": patient, "papers": _papers_of(patient, db),
+            "banner": ("success", "更新しました。"), "no_paper": patient.no_paper,
+        },
+    )
 
 
 @router.get("/papers/{paper_id}", response_class=HTMLResponse)
@@ -549,7 +581,10 @@ def paper_remove(paper_id: int, request: Request, db: Session = Depends(get_db))
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request, "clinical/papers.html",
-        {"patient": patient, "papers": papers, "banner": ("success", "削除しました。")},
+        {
+            "patient": patient, "papers": papers, "banner": ("success", "削除しました。"),
+            "no_paper": patient.no_paper if patient is not None else False,
+        },
     )
 
 

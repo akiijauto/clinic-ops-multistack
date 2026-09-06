@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_05_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_190000) do
   create_table "audit_entries", force: :cascade do |t|
     t.string "action", null: false
     t.text "changes_json"
@@ -166,6 +166,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_010000) do
     t.index ["patient_id"], name: "index_papers_on_patient_id"
   end
 
+  create_table "patient_no_papers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "patient_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["patient_id"], name: "index_patient_no_papers_on_patient_id", unique: true
+  end
+
   create_table "patients", force: :cascade do |t|
     t.date "birth_date"
     t.string "breed"
@@ -291,6 +298,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_010000) do
   add_foreign_key "lab_tests", "staffs"
   add_foreign_key "lab_tests", "visits"
   add_foreign_key "papers", "patients"
+  add_foreign_key "patient_no_papers", "patients"
   add_foreign_key "patients", "owners"
   add_foreign_key "preventions", "patients"
   add_foreign_key "preventions", "staffs"

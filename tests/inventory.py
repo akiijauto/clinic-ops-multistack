@@ -630,6 +630,39 @@ def register(check, Client, Report):
             return False, f"理由の行き先が生きていない: {', '.join(dead)}"
         return True, f"{len(keys)} 個: {', '.join(sorted(keys))}"
 
+    @check("inventory", "契約 書類に「元から無い」の印を付け外しできる")
+    def _no_paper(c, rep):
+        """`spec/screens.md` 13番の「できること」を確かめる。
+
+            - 「この子の紙カルテは元から無い」の印を付ける・外す
+
+        **契約が名指しで求めているのに、確かめる検査が無かった。**
+        実測すると **5実装のうち2つしか持っていなかった**（2026-09-06）。
+
+        なぜ見えなかったか。**「取り込んでいない」と「元から無い」は、画面上どちらも
+        『何も無い』に見える。** 区別が付かないので、片方が欠けていても気づけない。
+        判定器も、書類の一覧が空であることしか見ていなかった。
+
+            **区別できないものは、区別して確かめないと欠けていても分からない。**
+
+        操作そのもの（押して状態が変わる）はここでは見ない。**入口が在るか**だけを見る。
+        押した結果まで見るには書き込みの往復が要るので、それは別の検査の仕事にする。
+        """
+        sample = _samples()
+        real = _resolve(c, "/animals/{karte_no}/papers", sample)
+        if real is None:
+            return False, "書類画面を開けない（検査が働いていない）"
+        status, html, _ = c.get(real)
+        if status != 200 or not html:
+            return False, f"書類画面が開けない（status={status}）"
+        h = _visible(html)
+        # 「元から無い」への入口。文言でも、no-paper への導線でも、どちらでもよい。
+        if "元から無" not in h and not re.search(r"no[_-]paper", h):
+            return False, ("「元から無い」の印を付け外しする入口が無い"
+                           "（取り込んでいないのか、元から無いのかを画面で区別できない）")
+        return True, "「元から無い」の入口がある"
+
+
     @check("inventory", "書き込み 作って・確かめて・取り消せる（GETだけでは分からない）")
     def _write_roundtrip(c, rep):
         """**書き込み経路を一度も検査していなかった。**

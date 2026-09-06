@@ -16,12 +16,13 @@ class Patient extends Model
 
     protected $fillable = [
         'karte_no', 'owner_id', 'name_kana', 'name_kanji', 'species', 'breed',
-        'sex', 'birth_date', 'neuter_date', 'deleted_at',
+        'sex', 'birth_date', 'neuter_date', 'no_paper', 'deleted_at',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
         'neuter_date' => 'date',
+        'no_paper' => 'boolean',
         'deleted_at' => 'datetime',
     ];
 

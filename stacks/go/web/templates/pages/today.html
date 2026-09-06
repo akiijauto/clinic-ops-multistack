@@ -27,6 +27,13 @@
     <a class="disabled" href="/todo/done" aria-disabled="true">完了削除</a>
   </p>
 
+  <!-- 分院の切り替えは model.md「落としたもの」＝状態B（病院は1件だけ扱う）。
+       上の2つ（状態C＝あえて塞いだもの）とは理由の中身が違うので、行き先を
+       /folded（③折りたたみ表示）に分ける（spec/screens.md「ボタンの3状態」）。 -->
+  <p>
+    <a class="disabled" href="/folded/hospital_division" aria-disabled="true">分院の切り替え</a>
+  </p>
+
   {{if .Rows}}
   <table>
     <thead>

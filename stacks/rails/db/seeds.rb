@@ -12,7 +12,7 @@ puts "== data/seed.json を読み込み中（anchor_date=#{seed['anchor_date']}�
 ActiveRecord::Base.transaction do
   # 依存の無い順に消す
   %w[
-    AuditEntry CareRecord Hospitalization Paper Reservation
+    AuditEntry CareRecord Hospitalization Paper PatientNoPaper Reservation
     BillingDetail Billing LabTestItem LabTest Dosing Prevention ProgressNote
     Visit Reception Patient Owner Staff Clinic
   ].each { |name| name.constantize.delete_all }
@@ -141,6 +141,13 @@ ActiveRecord::Base.transaction do
       id: p["id"], patient_id: p["patient_id"], title: p["title"], note: p["note"],
       created_at: p["taken_on"], removed_at: p["removed_at"]
     )
+  end
+
+  # 「この子の紙カルテは元から無い」の初期状態（spec/screens.md #13）。
+  # `no_paper_patient_ids` は契約に定義は無く、指揮役が初期状態として足したもの
+  # （2026-09-06）。値は Patient.id（seed.jsonのid列。karte_noではない）。
+  (seed["no_paper_patient_ids"] || []).each do |patient_id|
+    PatientNoPaper.create!(patient_id: patient_id)
   end
 
   seed["hospitalizations"].each do |h|

@@ -672,3 +672,37 @@ $ python tests/run.py http://127.0.0.1:8414
 ```
 
 **レーンBの担当分はこれで完了。次の指示待ち。**
+
+---
+
+## 2026-09-06 — 書類画面に「元から無い」の印の付け外しを追加（担当分完了）
+
+指揮役の指摘（契約が名指しで求める操作が5実装中2つしか無かった。Railsも無い側）に対応。
+Next.jsの形（別テーブルで「印が付いている＝行がある」）に合わせた。
+
+1. `db/migrate/20260906190000_create_patient_no_papers.rb`（新規）— `patient_no_papers`
+   （patient_id一意, timestamps）。Patientにboolean列を足す案もあったが、
+   「未設定」と「外した」を区別する必要が無い別テーブル方式にした。
+2. `app/models/patient_no_paper.rb`（新規）、`app/models/patient.rb` に
+   `has_one :patient_no_paper` と `no_paper?` を追加。
+3. `app/controllers/papers_controller.rb` に `set_no_paper` アクションを追加。
+4. `config/routes.rb` に `post animals/:karte_no/papers/no_paper` を追加
+   （契約はendpointの形までは決めていない）。
+5. `app/views/papers/index.html.erb` — 印が付いていれば `no-paper-flag` の文言、
+   付け外しのトグルボタン（`btn-set-no-paper` / `btn-unset-no-paper`）を追加。
+   実際に押して状態が変わることを手動確認済み。
+6. `db/seeds.rb` — `data/seed.json` の `no_paper_patient_ids`（[43,41,10]、Patient.id
+   基準。契約に定義は無く指揮役が足したもの）を読み込む処理を追加。
+   `db:migrate && db:seed` 実施済み。
+
+### 自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+全 30 件 通過（契約 書類に「元から無い」の印を付け外しできる）
+```
+
+副次的に `/papers/{paper_id}` 系の「確かめられない」も解消し、在庫チェックが
+42/42・36/36の完全一致になった。
+
+**レーンBの担当分はこれで完了。次の指示待ち。**

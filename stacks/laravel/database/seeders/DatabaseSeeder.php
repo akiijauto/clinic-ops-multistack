@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
             $this->seedClinic($seed['clinic']);
             $this->seedStaff($seed['staff']);
             $this->seedOwners($seed['owners']);
-            $this->seedPatients($seed['patients']);
+            $this->seedPatients($seed['patients'], $seed['no_paper_patient_ids'] ?? []);
             $this->seedReceptions($seed['receptions']);
             $this->seedVisits($seed['visits']);
             $this->seedProgressNotes($seed['progress_notes']);
@@ -119,7 +119,12 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    private function seedPatients(array $rows): void
+    /**
+     * @param  array<int>  $noPaperIds  「この子の紙カルテは元から無い」の初期値
+     *   （`data/seed.json`の`no_paper_patient_ids`。契約に定義は無く指揮役が追加したもの。
+     *   `patients.no_paper`列で持つ——2026-09-06レビュー指摘対応）
+     */
+    private function seedPatients(array $rows, array $noPaperIds = []): void
     {
         foreach ($rows as $p) {
             DB::table('patients')->insert([
@@ -133,6 +138,7 @@ class DatabaseSeeder extends Seeder
                 'sex' => $p['sex'],
                 'birth_date' => $p['birth_date'] ?? null,
                 'neuter_date' => $p['neuter_date'] ?? null,
+                'no_paper' => in_array($p['id'], $noPaperIds, true),
                 'deleted_at' => $this->dt($p['deleted_at'] ?? null),
                 'created_at' => $this->now(),
                 'updated_at' => $this->now(),

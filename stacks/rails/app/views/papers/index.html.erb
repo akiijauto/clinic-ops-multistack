@@ -10,9 +10,15 @@
     <p data-testid="error-banner"><%= @error_message %></p>
   <% end %>
 
-  <% if @papers.empty? %>
+  <%# 「取り込んでいない」と「元から無い」は画面上どちらも空に見えるため、区別できる
+      印を出す（spec/screens.md #13「できること」、2026-09-06 指揮役の指摘）。 %>
+  <% if @patient.no_paper? %>
+    <p data-testid="no-paper-flag">この子の紙カルテは元から無い、という印が付いています。</p>
+  <% elsif @papers.empty? %>
     <p data-testid="empty-papers">取り込み済みの文書はありません。</p>
-  <% else %>
+  <% end %>
+
+  <% unless @papers.empty? %>
     <table>
       <thead><tr><th>タイトル</th><th>メモ</th><th>取込日</th><th></th></tr></thead>
       <tbody>
@@ -38,5 +44,16 @@
     <button type="submit">取り込む</button>
   <% end %>
 
+  <%= form_with url: "/animals/#{@patient.karte_no}/papers/no_paper", method: :post, local: true do %>
+    <% if @patient.no_paper? %>
+      <%= hidden_field_tag :value, "0" %>
+      <button type="submit" data-testid="btn-unset-no-paper">「元から無い」の印を外す</button>
+    <% else %>
+      <%= hidden_field_tag :value, "1" %>
+      <button type="submit" data-testid="btn-set-no-paper">この子の紙カルテは元から無い、の印を付ける</button>
+    <% end %>
+  <% end %>
+
+  <p><a href="/papers/no-paper">「元から無い」の説明へ</a></p>
   <p><a href="/animals/<%= @patient.karte_no %>">顧客詳細へ戻る</a></p>
 </div>

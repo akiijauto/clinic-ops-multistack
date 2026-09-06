@@ -18,6 +18,24 @@
             <div data-testid="success-banner" class="success-banner">{{ $success }}</div>
         @endif
 
+        {{--
+            「取り込んでいない（0件）」と「元から無い」は一覧だけでは区別が付かない
+            （どちらも空に見える）ため、専用の印を付ける・外す入口を置く（画面13）。
+        --}}
+        <p data-testid="no-paper-status">
+            @if ($patient->no_paper)
+                この動物の紙カルテは<strong>元から無い</strong>という印が付いています。
+            @else
+                紙カルテが元から無いという印は付いていません。
+            @endif
+        </p>
+        <form method="post" action="/animals/{{ $patient->karte_no }}/papers/no-paper" style="display:inline">
+            @csrf
+            <button class="button secondary" type="submit" data-testid="no-paper-toggle">
+                {{ $patient->no_paper ? '印を外す' : '「紙カルテは元から無い」の印を付ける' }}
+            </button>
+        </form>
+
         <form method="post" action="/animals/{{ $patient->karte_no }}/papers">
             @csrf
             <p><label>題名 <input name="title"></label></p>

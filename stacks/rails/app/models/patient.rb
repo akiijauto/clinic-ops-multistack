@@ -14,6 +14,7 @@ class Patient < ApplicationRecord
   has_many :reservations
   has_many :hospitalizations
   has_many :papers
+  has_one :patient_no_paper, dependent: :destroy
 
   # 【仮決め】spec/openapi.yaml の KarteNo パターンは "^[0-9]+-[0-9]+$"（例:1001-1）
   # だが、data/seed.json の karte_no はハイフン無しの数字だけ（例: "10001"）。
@@ -26,6 +27,11 @@ class Patient < ApplicationRecord
   validates :sex, inclusion: { in: SEXES }
 
   before_validation :assign_karte_no, on: :create
+
+  # 「この子の紙カルテは元から無い」の印（spec/screens.md #13）。
+  def no_paper?
+    patient_no_paper.present?
+  end
 
   # 番号変更（spec/screens.md #3）：未使用の値にだけ付け替える。
   def change_karte_no!(new_no)

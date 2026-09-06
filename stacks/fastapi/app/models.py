@@ -118,6 +118,9 @@ class Patient(Base):
     birth_date: Mapped[dt.date | None] = mapped_column(Date, default=None)
     neuter_date: Mapped[dt.date | None] = mapped_column(Date, default=None)
     deleted_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # 「この子の紙カルテは元から無い」の印（screens.md 13番「書類」）。
+    # 「まだ取り込んでいない」（Paperの行が0件）と区別するための独立したフラグ。
+    no_paper: Mapped[bool] = mapped_column(Boolean, default=False)
 
     owner: Mapped["Owner"] = relationship(back_populates="patients")
 

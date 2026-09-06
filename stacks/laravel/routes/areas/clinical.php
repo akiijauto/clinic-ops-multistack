@@ -39,6 +39,7 @@ Route::post('/animals/{karte_no}/prevention/{kind_id}', [PreventionController::c
 
 Route::get('/animals/{karte_no}/papers', [PaperController::class, 'index'])->name('animals.papers');
 Route::post('/animals/{karte_no}/papers', [PaperController::class, 'store'])->name('animals.papers.store');
+Route::post('/animals/{karte_no}/papers/no-paper', [PaperController::class, 'toggleNoPaper'])->name('animals.papers.no-paper.toggle');
 Route::get('/papers/no-paper', [PaperController::class, 'noPaper'])->name('papers.no-paper');
 Route::get('/papers/{paper_id}', [PaperController::class, 'show'])->name('papers.show');
 Route::post('/papers/{paper_id}/remove', [PaperController::class, 'remove'])->name('papers.remove');

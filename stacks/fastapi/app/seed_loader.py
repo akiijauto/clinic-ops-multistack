@@ -74,6 +74,9 @@ def load_seed(session: Session) -> None:
         ))
     session.flush()
 
+    # `no_paper_patient_ids`: 「この子の紙カルテは元から無い」印の初期値（screens.md
+    # 13番）。契約に定義があるわけではなく、指揮役が seed.json に足したもの。
+    no_paper_ids = set(seed.get("no_paper_patient_ids") or [])
     for p in seed["patients"]:
         session.add(models.Patient(
             id=p["id"], karte_no=p["karte_no"], owner_id=p["owner_id"],
@@ -82,6 +85,7 @@ def load_seed(session: Session) -> None:
             birth_date=_parse_date(p.get("birth_date")),
             neuter_date=_parse_date(p.get("neuter_date")),
             deleted_at=_parse_dt(p.get("deleted_at")),
+            no_paper=p["id"] in no_paper_ids,
         ))
     session.flush()
 
