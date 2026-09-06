@@ -180,15 +180,32 @@ type PreventionKind struct {
 
 // seedFile は `data/seed.json` のうち、この計算に要る部分だけを読む。
 type seedFile struct {
-	Patients         []Patient         `json:"patients"`
-	Visits           []Visit           `json:"visits"`
-	ProgressNotes    []ProgressNote    `json:"progress_notes"`
-	LabTests         []LabTest         `json:"lab_tests"`
-	LabTestItems     []LabTestItem     `json:"lab_test_items"`
-	Reservations     []Reservation     `json:"reservations"`
-	Hospitalizations []Hospitalization `json:"hospitalizations"`
-	Dosings          []Dosing          `json:"dosings"`
-	Preventions      []Prevention      `json:"preventions"`
+	Patients          []Patient         `json:"patients"`
+	Visits            []Visit           `json:"visits"`
+	ProgressNotes     []ProgressNote    `json:"progress_notes"`
+	LabTests          []LabTest         `json:"lab_tests"`
+	LabTestItems      []LabTestItem     `json:"lab_test_items"`
+	Reservations      []Reservation     `json:"reservations"`
+	Hospitalizations  []Hospitalization `json:"hospitalizations"`
+	Dosings           []Dosing          `json:"dosings"`
+	Preventions       []Prevention      `json:"preventions"`
+	Papers            []seedPaper       `json:"papers"`
+	NoPaperPatientIDs []int             `json:"no_paper_patient_ids"`
+}
+
+// seedPaper は `data/seed.json` の `papers` 行そのまま
+// （`visit_id` を持つが、この実装の Paper 構造体は openapi.yaml の
+// スキーマ＝id/patient_id/title/note/created_at のみに絞っているため
+// 使わない。取込日 `taken_on` を CreatedAt に、`removed_at` を
+// DeletedAt に読み替える）。
+type seedPaper struct {
+	ID        int     `json:"id"`
+	PatientID int     `json:"patient_id"`
+	VisitID   *int    `json:"visit_id"`
+	Title     string  `json:"title"`
+	Note      *string `json:"note"`
+	TakenOn   string  `json:"taken_on"`
+	RemovedAt *string `json:"removed_at"`
 }
 
 // mastersFile は `data/masters.json` のうち、この画面が要る部分だけを読む。

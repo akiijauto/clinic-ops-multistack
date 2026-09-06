@@ -1,0 +1,10 @@
+{{define "title"}}書類（詳細）{{end}}
+{{define "content"}}
+<div data-testid="screen-paper-detail">
+  <h1>{{.Title}}</h1>
+  {{if .Removed}}<p data-testid="removed-flag">この書類は取り消し済みです。</p>{{end}}
+  <p>取込日: {{.CreatedAt}}</p>
+  <p>{{.Note}}</p>
+  <p><a href="/animals/{{.KarteNo}}/papers">書類の一覧へ戻る</a> ／ <a href="/">トップへ戻る</a></p>
+</div>
+{{end}}

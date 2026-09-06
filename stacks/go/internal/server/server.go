@@ -97,6 +97,11 @@ func (s *Server) Handler() http.Handler {
 	s.handle(mux, "POST /animals/{karte_no}/prevention/{kind_id}", s.handlePrevention)
 	s.handle(mux, "GET /animals/{karte_no}/papers", s.handlePapers)
 	s.handle(mux, "POST /animals/{karte_no}/papers", s.handlePapers)
+	// 固定パス "GET /papers/no-paper" は "GET /papers/{paper_id}" より先に
+	// 書く必要は無い（http.ServeMux はリテラルをワイルドカードより優先する）が、
+	// 紛らわしいので隣に置く。無いと "no-paper" が paper_id 扱いされ 404 になる。
+	s.handle(mux, "GET /papers/no-paper", s.handlePapersNoPaperScreen)
+	s.handle(mux, "GET /papers/{paper_id}", s.handlePaperDetail)
 	s.handle(mux, "POST /papers/{paper_id}/remove", s.handlePaperRemove)
 	s.handle(mux, "POST /papers/no-paper", s.handleNoPaper)
 

@@ -125,6 +125,35 @@ export function seed(): Record<string, number> {
     );
     counts.care_record = insert(db, 'care_record', careRecords);
 
+    // `paper`'s columns don't line up 1:1 with data/seed.json's `papers`
+    // rows: `created_at` is this table's own name for the take-in date
+    // (seed.json's `taken_on`), and `filename`/`period` are this lane's
+    // own additions (schema.sql) that seed.json does not carry at all.
+    // Reuse `title` as `filename` (both required, and seed titles already
+    // read like filenames) and leave `period` blank rather than invent a
+    // value the fixture doesn't have. Built explicitly (not spread from
+    // the raw row) so the mismatched `taken_on` key never reaches `insert`.
+    const papers = (fixtures.papers as Json[]).map((p) => ({
+      id: p.id,
+      patient_id: p.patient_id,
+      visit_id: p.visit_id,
+      title: p.title,
+      filename: p.title,
+      period: '',
+      note: p.note,
+      created_at: `${p.taken_on}T00:00:00+09:00`,
+      removed_at: p.removed_at,
+    }));
+    counts.paper = insert(db, 'paper', papers);
+
+    const noPaperPatientIds = (fixtures.no_paper_patient_ids as number[]) ?? [];
+    const anchorDate = fixtures.anchor_date as string;
+    counts.patient_no_paper = insert(
+      db,
+      'patient_no_paper',
+      noPaperPatientIds.map((patient_id) => ({ patient_id, set_at: `${anchorDate}T00:00:00+09:00` })),
+    );
+
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');

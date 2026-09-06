@@ -133,6 +133,16 @@ ActiveRecord::Base.transaction do
     ).save!(validate: false) # seed データは重複無しを自己検査済み（data/README.md）
   end
 
+  # note と ID 以外の Paper 列（created_at/removed_at）は seed.json の
+  # taken_on（取込日）/removed_at をそのまま使う。visit_id は現行スキーマに
+  # 列が無く保持できないため読み捨てる（openapi.yaml の Paper スキーマにも無い）。
+  seed["papers"].each do |p|
+    Paper.create!(
+      id: p["id"], patient_id: p["patient_id"], title: p["title"], note: p["note"],
+      created_at: p["taken_on"], removed_at: p["removed_at"]
+    )
+  end
+
   seed["hospitalizations"].each do |h|
     hosp = Hospitalization.create!(
       id: h["id"], patient_id: h["patient_id"], admitted_on: h["admitted_on"],
@@ -158,7 +168,7 @@ end
 # （明示的に id を指定して作っているため、次の自動採番がぶつからないように）。
 %w[clinics staffs owners patients receptions visits progress_notes preventions dosings
    lab_tests lab_test_items billings billing_details reservations hospitalizations
-   care_records].each do |table|
+   care_records papers].each do |table|
   max_id = ActiveRecord::Base.connection.select_value("SELECT MAX(id) FROM #{table}").to_i
   next if max_id.zero?
 
@@ -172,3 +182,4 @@ puts "receptions=#{Reception.count} visits=#{Visit.count} progress_notes=#{Progr
 puts "preventions=#{Prevention.count} dosings=#{Dosing.count} lab_tests=#{LabTest.count} lab_test_items=#{LabTestItem.count}"
 puts "billings=#{Billing.count} billing_details=#{BillingDetail.count}"
 puts "reservations=#{Reservation.count} hospitalizations=#{Hospitalization.count} care_records=#{CareRecord.count}"
+puts "papers=#{Paper.count}"

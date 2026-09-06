@@ -193,4 +193,14 @@ def load_seed(session: Session) -> None:
             ))
     session.flush()
 
+    # visit_id は models.Paper に列が無く保持できない（openapi.yaml の Paper
+    # スキーマにも無い）。taken_on（取込日）を created_at として使う。
+    for p in seed.get("papers", []):
+        session.add(models.Paper(
+            id=p["id"], patient_id=p["patient_id"], title=p["title"],
+            note=p.get("note"), created_at=_parse_dt(p["taken_on"] + "T00:00:00+09:00"),
+            removed_at=_parse_dt(p.get("removed_at")),
+        ))
+    session.flush()
+
     session.commit()

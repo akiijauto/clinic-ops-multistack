@@ -130,6 +130,23 @@ func Load(dataDir string) (*Store, error) {
 	for _, h := range seed.Hospitalizations {
 		s.hospByID[h.ID] = h
 	}
+	for _, sp := range seed.Papers {
+		var createdAt string
+		if sp.TakenOn != "" {
+			createdAt = sp.TakenOn + "T00:00:00+09:00"
+		}
+		s.papers = append(s.papers, Paper{
+			ID:        sp.ID,
+			PatientID: sp.PatientID,
+			Title:     sp.Title,
+			Note:      sp.Note,
+			CreatedAt: createdAt,
+			DeletedAt: sp.RemovedAt,
+		})
+	}
+	for _, pid := range seed.NoPaperPatientIDs {
+		s.noPaperPatients[pid] = true
+	}
 
 	s.nextVisitID = maxID(seed.Visits, func(v Visit) int { return v.ID }) + 1
 	s.nextProgressNoteID = maxID(seed.ProgressNotes, func(n ProgressNote) int { return n.ID }) + 1
@@ -137,7 +154,7 @@ func Load(dataDir string) (*Store, error) {
 	s.nextLabTestItemID = maxID(seed.LabTestItems, func(it LabTestItem) int { return it.ID }) + 1
 	s.nextDosingID = maxID(seed.Dosings, func(d Dosing) int { return d.ID }) + 1
 	s.nextPreventionID = maxID(seed.Preventions, func(p Prevention) int { return p.ID }) + 1
-	s.nextPaperID = 1
+	s.nextPaperID = maxID(seed.Papers, func(p seedPaper) int { return p.ID }) + 1
 	s.nextReservationID = maxID(seed.Reservations, func(r Reservation) int { return r.ID }) + 1
 	maxCare := 0
 	for _, h := range seed.Hospitalizations {

@@ -22001,5 +22001,120 @@
         }
       ]
     }
+  ],
+  "papers": [
+    {
+      "id": 1,
+      "patient_id": 6,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2026-06-17",
+      "removed_at": null
+    },
+    {
+      "id": 2,
+      "patient_id": 15,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "",
+      "taken_on": "2026-04-13",
+      "removed_at": null
+    },
+    {
+      "id": 3,
+      "patient_id": 58,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "手書き部分あり",
+      "taken_on": "2026-01-02",
+      "removed_at": null
+    },
+    {
+      "id": 4,
+      "patient_id": 4,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "",
+      "taken_on": "2026-06-02",
+      "removed_at": null
+    },
+    {
+      "id": 5,
+      "patient_id": 9,
+      "visit_id": null,
+      "title": "紙カルテ 2025年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2025-10-18",
+      "removed_at": null
+    },
+    {
+      "id": 6,
+      "patient_id": 7,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "",
+      "taken_on": "2026-04-23",
+      "removed_at": null
+    },
+    {
+      "id": 7,
+      "patient_id": 20,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2026-05-09",
+      "removed_at": null
+    },
+    {
+      "id": 8,
+      "patient_id": 55,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2026-08-14",
+      "removed_at": null
+    },
+    {
+      "id": 9,
+      "patient_id": 3,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "手書き部分あり",
+      "taken_on": "2026-03-20",
+      "removed_at": null
+    },
+    {
+      "id": 10,
+      "patient_id": 30,
+      "visit_id": null,
+      "title": "紙カルテ 2025年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2025-08-05",
+      "removed_at": null
+    },
+    {
+      "id": 11,
+      "patient_id": 29,
+      "visit_id": null,
+      "title": "紙カルテ 2025年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2025-12-08",
+      "removed_at": null
+    },
+    {
+      "id": 12,
+      "patient_id": 50,
+      "visit_id": null,
+      "title": "紙カルテ 2026年分",
+      "note": "前医からの紹介状を含む",
+      "taken_on": "2026-06-02",
+      "removed_at": null
+    }
+  ],
+  "no_paper_patient_ids": [
+    43,
+    41,
+    10
   ]
 }

@@ -43,6 +43,7 @@ class DatabaseSeeder extends Seeder
             $this->seedBillingDetails($seed['billing_details']);
             $this->seedReservations($seed['reservations']);
             $this->seedHospitalizations($seed['hospitalizations']);
+            $this->seedPapers($seed['papers']);
         });
 
         $this->command?->info('seed.json 読み込み完了。anchor_date='.$seed['anchor_date']);
@@ -351,6 +352,26 @@ class DatabaseSeeder extends Seeder
                     'updated_at' => $this->now(),
                 ]);
             }
+        }
+    }
+
+    /**
+     * papers.created_at/updated_at はこのテーブルでは Eloquent の標準タイムスタンプ
+     * （取込日を別列で持たない）。seed.json の taken_on を created_at として使う。
+     * visit_id は現行スキーマに列が無く保持できない（openapi.yaml の Paper スキーマにも無い）。
+     */
+    private function seedPapers(array $rows): void
+    {
+        foreach ($rows as $p) {
+            DB::table('papers')->insert([
+                'id' => $p['id'],
+                'patient_id' => $p['patient_id'],
+                'title' => $p['title'],
+                'note' => $p['note'] ?? null,
+                'removed_at' => $p['removed_at'] !== null ? $this->dt($p['removed_at']) : null,
+                'created_at' => $p['taken_on'].' 00:00:00',
+                'updated_at' => $p['taken_on'].' 00:00:00',
+            ]);
         }
     }
 }

@@ -98,9 +98,15 @@ def _samples() -> dict:
                 s["visit_id"] = str(v["id"])
                 break
 
+    # `paper_id` は長く「確かめられない」ままだった。**データに1件も無かったから。**
+    # 2026-09-06 に `data/seed.json` へ書類12件を足したので、ここから引けるようになった。
+    #
+    #     確かめられない範囲は、**データが原因なら、データで消せる。**
+    #     消したあとは、**判定器がその値を引けるようにしないと、消えたことにならない。**
     for key, coll, field in (("owner_no", "owners", "owner_no"),
                              ("id", "reservations", "id"),
-                             ("staff_id", "staff", "id")):
+                             ("staff_id", "staff", "id"),
+                             ("paper_id", "papers", "id")):
         rows = seed.get(coll) or []
         if rows and field in rows[0]:
             s.setdefault(key, str(rows[0][field]))
@@ -411,8 +417,18 @@ def register(check, Client, Report):
         _, _, un_s = _probe(c, screens)
         _, _, un_a = _probe(c, apis)
         un, tot = len(un_s) + len(un_a), len(screens) + len(apis)
-        if un > tot * 0.25:
-            return False, f"確かめられないものが {un}/{tot} 件。検査として成り立っていない"
+        # **上限を 25% から 5% へ締めた。**
+        #
+        # 25% は「確かめられないものが多すぎたら検査として成り立たない」という
+        # 下限を置いただけの数字で、**実際には7件（9%）あっても緑だった**。
+        # 2026-09-06 に `data/` へ書類を足し、判定器が `paper_id` を引けるようにして
+        # **0件になった**ので、緩いままにしておく理由が無くなった。
+        #
+        #     **一度0にしたものは、増えたらすぐ分かるようにしておく。**
+        #     「多すぎなければよい」の基準は、いつのまにか増えるのを許してしまう。
+        if un > tot * 0.05:
+            return False, (f"確かめられないものが {un}/{tot} 件。"
+                           f"一度0件にした範囲なので、増えた理由を確かめること")
         return True, f"対象 {tot} 件中、確かめられないのは {un} 件"
 
     @check("inventory", "在庫 契約が求める data-testid が画面に出ている")

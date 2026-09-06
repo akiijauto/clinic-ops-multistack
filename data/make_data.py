@@ -960,6 +960,37 @@ def build_all():
     reservations = build_reservations(patients, staff, clinic, 60)
     hospitalizations = build_hospitalizations(patients, staff, 8)
 
+    # ── 書類（紙カルテの取込記録）─────────────────────────
+    #
+    # **`papers` が1件も無かったので、`/papers/{paper_id}` は5実装とも
+    # 「確かめられない」のままだった**（2026-09-06）。契約には6ルートあり、
+    # `spec/screens.md` 13番も詳細に規定しているのに、**確かめようが無かった。**
+    #
+    #     確かめられない範囲は、**データが原因なら、データで消せる。**
+    #
+    # **PDFの実体は持たない。** 取込の記録（台帳）だけを持つ。
+    # `spec/model.md` で `KartePdf` を落とした理由が「ファイルの取り扱いが
+    # 主題になってしまう」だったので、そこは踏み越えない（裁定 R-21）。
+    #
+    # **乱数の最後に置いてある。** 途中に入れると、これ以前の抽選がずれて
+    # 売上などの数字が全部変わる。既に確かめた数字を動かさないための順番である。
+    papers = []
+    paper_targets = random.sample(patients, k=min(12, len(patients)))
+    for i, pt in enumerate(paper_targets, start=1):
+        taken = add_days(ANCHOR_DATE, -random.randint(0, 400))
+        papers.append({
+            "id": i,
+            "patient_id": pt["id"],
+            "visit_id": None,                      # 動物ぜんぶに紐づく（診察単位ではない）
+            "title": f"紙カルテ {taken.year}年分",
+            "note": random.choice(["前医からの紹介状を含む", "手書き部分あり", ""]),
+            "taken_on": taken.isoformat(),
+            "removed_at": None,
+        })
+    # **「元から紙カルテが無い」印も混ぜる。** 取り込んでいないのか、
+    # そもそも存在しないのかを画面で区別できるようにするため（screens.md 13番）。
+    no_paper_patient_ids = [p["id"] for p in random.sample(patients, k=3)]
+
     seed = {
         "note": "すべて架空のデータ。実在の動物病院・飼主・動物・獣医師・薬品名・保険会社名・料金は含まない。",
         "anchor_date": ANCHOR_DATE.isoformat(),
@@ -978,6 +1009,8 @@ def build_all():
         "billing_details": billing_details,
         "reservations": reservations,
         "hospitalizations": hospitalizations,
+        "papers": papers,
+        "no_paper_patient_ids": no_paper_patient_ids,
     }
 
     checks = run_self_checks(
@@ -1123,7 +1156,8 @@ def main():
           f" dosings={len(seed['dosings'])} lab_tests={len(seed['lab_tests'])}"
           f" lab_test_items={len(seed['lab_test_items'])} billings={len(seed['billings'])}"
           f" billing_details={len(seed['billing_details'])} reservations={len(seed['reservations'])}"
-          f" hospitalizations={len(seed['hospitalizations'])}")
+          f" hospitalizations={len(seed['hospitalizations'])}"
+          f" papers={len(seed['papers'])}")
     print()
 
     ok = print_checks(checks)

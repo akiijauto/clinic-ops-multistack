@@ -77,6 +77,44 @@ func (s *Server) handlePapers(w http.ResponseWriter, r *http.Request) {
 	_ = s.views.RenderHTTP(w, http.StatusOK, "papers", data)
 }
 
+type paperDetailView struct {
+	ID        int
+	KarteNo   string
+	Title     string
+	Note      string
+	CreatedAt string
+	Removed   bool
+}
+
+// handlePaperDetail は GET /papers/{paper_id}（screen_paper_detail。1件の詳細）。
+// 取り消し済みも引ける（handlePapers の一覧からは外れるが、詳細は残っているため）。
+func (s *Server) handlePaperDetail(w http.ResponseWriter, r *http.Request) {
+	if s.clinical == nil {
+		http.NotFound(w, r)
+		return
+	}
+	id, _ := strconv.Atoi(r.PathValue("paper_id"))
+	paper, ok := s.clinical.Paper(id)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	patient, ok := s.clinical.PatientByID(paper.PatientID)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	note := ""
+	if paper.Note != nil {
+		note = *paper.Note
+	}
+	data := paperDetailView{
+		ID: paper.ID, KarteNo: patient.KarteNo, Title: paper.Title, Note: note,
+		CreatedAt: paper.CreatedAt, Removed: paper.DeletedAt != nil,
+	}
+	_ = s.views.RenderHTTP(w, http.StatusOK, "paper_detail", data)
+}
+
 // handlePaperRemove は POST /papers/{paper_id}/remove（取消。論理削除）。
 func (s *Server) handlePaperRemove(w http.ResponseWriter, r *http.Request) {
 	if s.clinical == nil {
@@ -91,6 +129,12 @@ func (s *Server) handlePaperRemove(w http.ResponseWriter, r *http.Request) {
 	}
 	patient, _ := s.clinical.PatientByID(paper.PatientID)
 	http.Redirect(w, r, "/animals/"+patient.KarteNo+"/papers", http.StatusSeeOther)
+}
+
+// handlePapersNoPaperScreen は GET /papers/no-paper（screen_papers_no_paper。
+// 対象となる文書が無いことの静的な案内）。
+func (s *Server) handlePapersNoPaperScreen(w http.ResponseWriter, r *http.Request) {
+	_ = s.views.RenderHTTP(w, http.StatusOK, "papers_no_paper", nil)
 }
 
 // handleNoPaper は POST /papers/no-paper（「元から無い」印の付け外し。
