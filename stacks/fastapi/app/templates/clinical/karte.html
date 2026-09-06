@@ -7,11 +7,11 @@
 {% from "clinical/_visit_macro.html" import render_visit %}
 {% from "clinical/_visit_form_macro.html" import render_form %}
 
-{% block title %}カルテ — {{ patient.name_kanji }}{% endblock %}
+{% block title %}{{ screen_title }} — {{ patient.name_kanji }}{% endblock %}
 
 {% block content %}
 <section {{ screen("karte") }}>
-  <h1>カルテ</h1>
+  <h1>{{ screen_title }}</h1>
 
   {% if banner %}
     {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}

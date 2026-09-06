@@ -1,6 +1,7 @@
 <% content_for :title, "検査" %>
 <div data-testid="screen-exam">
-  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の検査</h1>
+  <h1>検査</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
 
   <% @lab_tests.each do |t| %>
     <h2><%= t.tested_on %>（<%= t.category %>）</h2>

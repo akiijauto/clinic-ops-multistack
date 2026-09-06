@@ -83,7 +83,13 @@ def _render(
     form_values: dict | None = None,
     banner: tuple[str, str] | None = None,
     show_deleted: bool = False,
+    screen_title: str = "カルテ",
 ) -> HTMLResponse:
+    """`screen_title`: `<h1>` の見出し。契約（openapi.yaml）の `summary` が画面ごとに
+    違う場合だけ変える（例: `/karte/copy_prev` は「前回コピー」で「カルテ」ではない。
+    `/karte`・`/karte/new` はどちらも「カルテ」のまま——2026-09-06、指揮役の
+    「ナビに無い画面の名前」検査で気づいた）。
+    """
     visits = _visits(patient, db, include_deleted=show_deleted)
     templates = request.app.state.templates
     return templates.TemplateResponse(
@@ -96,6 +102,7 @@ def _render(
             "banner": banner,
             "show_deleted": show_deleted,
             "has_prev_visit": bool(_visits(patient, db)),
+            "screen_title": screen_title,
         },
     )
 
@@ -174,7 +181,7 @@ def karte_copy_prev(karte_no: str, request: Request, db: Session = Depends(get_d
             for n in prev.progress_notes
         ],
     }
-    return _render(request, patient, db, target=None, form_values=form_values)
+    return _render(request, patient, db, target=None, form_values=form_values, screen_title="前回コピー")
 
 
 @router.post("/animals/{karte_no}/karte/cancel", response_class=HTMLResponse)

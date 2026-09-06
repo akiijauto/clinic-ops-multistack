@@ -8,7 +8,7 @@
 
 {% block content %}
 <section {{ screen("delete-confirm") }}>
-  <h1>削除の確認</h1>
+  <h1>削除</h1>
 
   {% if banner %}
     {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}

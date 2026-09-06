@@ -2,11 +2,12 @@
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, empty, value_check %}
 
-{% block title %}会計履歴 {{ karte_no }}{% endblock %}
+{% block title %}会計履歴{% endblock %}
 
 {% block content %}
 <section {{ screen("accounting-history") }}>
-  <h1>会計履歴 — {{ karte_no }}</h1>
+  <h1>会計履歴</h1>
+  <p>カルテNo: {{ karte_no }}</p>
 
   <nav>
     <a href="/animals/{{ karte_no }}/accounting/history?scope=patient" {% if scope=="patient" %}aria-current="true"{% endif %}>動物</a>

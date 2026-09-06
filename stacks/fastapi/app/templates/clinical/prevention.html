@@ -6,13 +6,13 @@
 
 {% block content %}
 <section {{ screen("prevention") }}>
-  <h1>予防（{{ kind_name }}）</h1>
+  <h1>予防</h1>
 
   {% if banner %}
     {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}
   {% endif %}
 
-  <p>カルテNo: {{ patient.karte_no }} / {{ patient.name_kanji }}</p>
+  <p>カルテNo: {{ patient.karte_no }} / {{ patient.name_kanji }} ／ 区分: {{ kind_name }}</p>
 
   <h2>{{ "記録の更新" if edit_target else "新規記録" }}</h2>
   <form method="post" action="/animals/{{ patient.karte_no }}/prevention/{{ kind_id }}">

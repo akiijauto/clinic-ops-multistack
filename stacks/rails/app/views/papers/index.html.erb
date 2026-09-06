@@ -1,6 +1,7 @@
 <% content_for :title, "書類" %>
 <div data-testid="screen-papers">
-  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の書類</h1>
+  <h1>書類</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
 
   <% if @success %>
     <p data-testid="success-banner">保存しました。</p>

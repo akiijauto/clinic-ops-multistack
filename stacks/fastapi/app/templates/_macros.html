@@ -1,21 +1,23 @@
 {# 共通マクロ。領域ごとのテンプレートはここを import して使うこと。
 
-   `qa/lane-d.md` D-4 の仮決めに従い、**`data-testid` は書かない。`data-check` だけ**を使う。
-   openapi.yaml が定義した命名規則（screen-<key> / row-<資源名> / empty-<資源名> /
-   success-banner / error-banner / disabled-action-<todoキー>）は、属性名だけ
-   `data-check` に載せ替えてそのまま流用する。 #}
+   `qa/lane-d.md` D-4 は「`data-testid` は書かず `data-check` だけ」という仮決めだったが、
+   2026-09-06に2回、この仮決めが検査を素通りさせる原因になった。
+   1回目はscreen-*（32画面とも data-testid が無かった）、2回目は row-reception
+   （受付区分タブの絞り込み行数を `data-testid="row-<資源名>"` で数える検査が
+   常に0行を返した——絞り込み自体は効いていたのに、目印の属性名が違うだけで
+   「効いていない」ように見えた）。**openapi.yaml の `x-data-testids` はそのまま
+   data-testid の名前として使われる契約**なので、以後は screen-* と同じく
+   row-<資源名> / empty-<資源名> も両方の名前で出す。 #}
 
 {# 画面コンテナ。各画面テンプレートは body 直下をこれで包む。
-   `spec/README.md`: data-testid=「在るか」／data-check=「値が正しいか」の2系統。
-   screen-* は両方の名前で出す（2026-09-06、指揮役の新規在庫検査で32画面とも
-   data-testid が無いと判明——data-check だけ出して data-testid を出し忘れていた）。 #}
+   `spec/README.md`: data-testid=「在るか」／data-check=「値が正しいか」の2系統。 #}
 {% macro screen(key) %}data-testid="screen-{{ key }}" data-check="screen-{{ key }}"{% endmacro %}
 
 {# 一覧の行（繰り返し）。 #}
-{% macro row(resource) %}data-check="row-{{ resource }}"{% endmacro %}
+{% macro row(resource) %}data-testid="row-{{ resource }}" data-check="row-{{ resource }}"{% endmacro %}
 
 {# 一覧が0件のときの表示。 #}
-{% macro empty(resource) %}data-check="empty-{{ resource }}"{% endmacro %}
+{% macro empty(resource) %}data-testid="empty-{{ resource }}" data-check="empty-{{ resource }}"{% endmacro %}
 
 {# 個別の数値（検算対象）。acceptance.md の13キーはここを直接使う。
    例: {{ value_check('billing.net_amount') }} #}

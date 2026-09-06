@@ -1,7 +1,8 @@
-{{define "title"}}削除の確認 {{.Patient.KarteNo}}{{end}}
+{{define "title"}}削除{{end}}
 {{define "content"}}
 <div data-testid="screen-delete-confirm">
-  <h1>削除の確認</h1>
+  <h1>削除</h1>
+  <p>削除の確認</p>
   {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
   {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
 

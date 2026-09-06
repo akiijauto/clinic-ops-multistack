@@ -46,7 +46,9 @@ function render(opts: {
       <label>次回予定日（空なら自動計算） <input type="date" name="next_due_date" value="${e(editing?.next_due_date ?? '')}"></label>
       <button type="submit">保存</button>
     </form>`;
-  return htmlResponse(page({ title: `予防 — ${kindName}`, screenKey: 'screen-prevention', body }));
+  // Bare contract summary (spec/openapi.yaml「予防」) -- the カルテNo/種別
+  // line above already says which kind this is.
+  return htmlResponse(page({ title: '予防', screenKey: 'screen-prevention', body }));
 }
 
 // GET /animals/{karte_no}/prevention/{kind_id} -- spec/openapi.yaml `screen_prevention`.

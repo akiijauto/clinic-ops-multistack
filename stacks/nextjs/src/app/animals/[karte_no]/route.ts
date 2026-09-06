@@ -32,6 +32,7 @@ export async function GET(req: Request, { params }: Params): Promise<Response> {
   const breeds = breedCandidates(db, record.species);
 
   const body = `
+<p>カルテNo: ${escapeHtml(record.karte_no)} ｜ 動物名: ${escapeHtml(record.name_kanji)} ｜ 飼主: ${escapeHtml(owner.name_kanji)}</p>
 <p data-testid="error-banner" hidden></p>
 <p data-testid="success-banner" hidden></p>
 
@@ -147,7 +148,9 @@ ${record.deleted_at ? `<p>削除済み（${escapeHtml(record.deleted_at)}）</p>
 })();
 </script>`;
 
-  return htmlResponse(page({ title: `顧客 - ${record.name_kanji}`, screenKey: 'screen-animal-detail', body }));
+  // Bare contract summary (spec/openapi.yaml「顧客」) -- the カルテNo/動物名/
+  // 飼主 line above already says whose record this is.
+  return htmlResponse(page({ title: '顧客', screenKey: 'screen-animal-detail', body }));
 }
 
 function renderIdCard(record: { karte_no: string; name_kanji: string; owner: { name_kanji: string } }): string {

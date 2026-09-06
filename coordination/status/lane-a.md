@@ -866,3 +866,43 @@ $ python tests/shots.py /ward /settings /staff
 
 `stacks/go/` 以外は変更していない。コミット・pushはしていない。
 これで担当（共通ナビ・タイトル・トップ本文・画面名統一）は完了。
+
+---
+
+## ナビに無い画面も openapi.yaml の summary に揃える（2026-09-06）
+
+指揮役の実測「7画面の名前が契約と違う」を受けて修正。`/ward` の日付を `<h1>` から
+`<p>` へ移したのと同じ考え方を、患者名・種別名にも適用した。
+
+- `delete_confirm.html`: `<h1>削除の確認</h1>` → `<h1>削除</h1>` + `<p>削除の確認</p>`
+- `dosing.html`: `<h1>投薬（{{.KindName}}）</h1>` → `<h1>投薬</h1>` + `<p>{{.KindName}}</p>`
+- `prevention.html`: 同様に `<h1>予防</h1>` + `<p>{{.KindName}}</p>`
+- `papers.html`: `<h1>書類（紙カルテPDF）</h1>` → `<h1>書類</h1>` + `<p>紙カルテPDF</p>`
+- `partials/karte_body.html`（`karte`・`karte_print` 画面が共通で使う部分テンプレート）:
+  `<h1>{{.Patient.NameKanji}}（{{.Patient.NameKana}}）</h1>` → `<h1>{{.Heading}}</h1>`
+  （既定「カルテ」）、動物名は `<dl>` の項目として残す。
+  `/karte/copy_prev`（GET）だけ contract の summary が別の「前回コピー」なので、
+  `internal/server/karte.go` の `karteView` に `Heading` フィールドを足し、
+  `buildNewVisitForm(copyFrom=true)` のときだけ上書きする形にした
+  （`/karte` `/karte/new` は既定の「カルテ」のまま）。
+- `<title>` からも患者名・カルテ番号を外した:
+  `accounting.html` `accounting_history.html` `animal_detail.html` `exam.html`
+  `history.html` `ward.html`（1動物の入院記録）`karte.html`（`.Heading` 連動）
+  `karte_print.html`
+
+### 確かめたこと
+
+```
+$ python tests/run.py http://127.0.0.1:8401
+全 29 件 通過（新規「見た目 ナビに無い画面の名前も契約と同じ」含む — 13 画面が契約と一致）
+
+$ go build ./... && go vet ./... && go test ./...
+全部ok
+
+$ python tests/shots.py
+/animals/10003/karte  h1=カルテ（Rails/Next.jsと同じ。Laravel/FastAPIは未対応）
+/animals/10003/exam   h1=検査
+/animals/10003/accounting h1=会計
+```
+
+`stacks/go/` 以外は変更していない。コミット・pushはしていない。

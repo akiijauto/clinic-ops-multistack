@@ -18,6 +18,13 @@ type karteView struct {
 	Patient patientView
 	Visits  []visitView
 
+	// Heading は画面の `<h1>`/`<title>` に出す固定の画面名（spec/openapi.yaml の
+	// summary が正。患者名・カルテ番号は入れない — spec/screens.md「画面名は
+	// ナビの表示・契約のsummaryと同じにする」2026-09-06追記）。
+	// 「カルテ」画面は素通しだと "カルテ" だが、「前回コピー」（GET
+	// /karte/copy_prev）だけ別の画面名を持つため、組み立て側で差し替える。
+	Heading string
+
 	Form           karteFormView
 	ErrorMessage   string
 	SuccessMessage string
@@ -184,8 +191,9 @@ func (s *Server) buildKarteViewFocused(karteNo string, focusVisitID int) (karteV
 			Breed:     patient.Breed,
 			Sex:       patient.Sex,
 		},
-		Visits: out,
-		Form:   form,
+		Visits:  out,
+		Form:    form,
+		Heading: "カルテ",
 	}, true
 }
 
@@ -207,6 +215,7 @@ func (s *Server) buildNewVisitForm(karteNo string, copyFrom bool) (karteView, bo
 		form.Symptom = prev.Symptom
 		form.Diagnosis = prev.Diagnosis
 		form.Treatment = prev.Treatment
+		data.Heading = "前回コピー" // spec/openapi.yaml の summary（GET /karte/copy_prev）
 	}
 	form.Notes = []noteFormView{{}}
 	data.Form = form

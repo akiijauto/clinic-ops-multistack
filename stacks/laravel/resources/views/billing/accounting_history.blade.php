@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', '会計履歴 — '.$patient->name_kanji)
+@section('title', '会計履歴')
 
 @section('content')
     <div class="card" data-testid="screen-accounting-history">
-        <h1>会計履歴 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>会計履歴</h1>
+        <p>{{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
 
         <p>
             範囲:

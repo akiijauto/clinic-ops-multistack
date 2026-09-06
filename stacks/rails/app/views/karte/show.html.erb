@@ -1,6 +1,9 @@
-<% content_for :title, "カルテ" %>
+<% content_for :title, @screen_name || "カルテ" %>
 
-<h1>カルテ — <%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+<%# <h1>は契約のsummaryと同じにする（spec/screens.md末尾）。copy_prevだけ別画面扱い
+    （契約上「前回コピー」）。患者名は見出しの下に置く。 %>
+<h1><%= @screen_name || "カルテ" %></h1>
+<p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
 
 <% if @notice %>
   <p data-testid="success-banner"><%= @notice %></p>

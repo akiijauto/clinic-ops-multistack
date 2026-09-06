@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', '書類 — '.$patient->name_kanji)
+@section('title', '書類')
 
 @section('content')
     <div class="card" data-testid="screen-papers">
-        <h1>書類 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>書類</h1>
+        <p>{{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
         <p><small>
             この企画は紙カルテPDFの実ファイル取込をスコープ外としています
             （<a href="/folded/karte_pdf">折りたたみ表示</a>参照）。ここでは題名とメモだけを記録します。

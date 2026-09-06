@@ -1,7 +1,8 @@
 <% content_for :title, "会計" %>
 <% confirmed = @billing.confirmed? %>
 <div data-testid="screen-accounting">
-  <h1>会計 - <%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+  <h1>会計</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
 
   <% if @op.present? %>
     <% if @billing.errors.any? %>

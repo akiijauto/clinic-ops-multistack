@@ -1,6 +1,6 @@
 <% content_for :title, "削除確認" %>
 <div data-testid="screen-delete-confirm">
-  <h1>削除の確認</h1>
+  <h1>削除</h1>
 
   <% if @deleted %>
     <p data-testid="success-banner">削除しました（<%= @patient.name_kanji %> / <%= @owner.name_kanji %>）。行は残っており、集計からは消えません。</p>

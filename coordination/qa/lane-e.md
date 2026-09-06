@@ -467,3 +467,82 @@ $ python tests/run.py http://127.0.0.1:8405 → 全28件通過
   （新規の「見た目 画面名がナビの表示と同じ」も含め9画面で一致）
 $ python tests/shots.py /ward /settings /dm → 3画面とも「揃っている」
 ```
+
+## 2026-09-06 続報3: ナビに無い画面（患者名を見出しに混ぜていた）
+
+指揮役の実測で12画面が`spec/openapi.yaml`の`summary`と食い違っていた
+（例: `顧客 - モモ`≠`顧客`、`会計 — モモ`≠`会計`）。原因は患者名・種別名を
+`<h1>`/`<title>`に混ぜていたこと（患者ごとに見出しが変わってしまう）。
+
+`page()`が`title`引数から`<h1>`/`<title>`を自動生成する作りだったため、
+**呼び出し側の`title`を契約の`summary`（括弧書きを除いた形）に統一するだけ**で直った。
+患者名・種別名は本文側（`header(patient)`や「カルテNo: ... ｜ 動物名: ...」の行）に
+出す形はほとんどの画面で既にできていたため、無かった2画面
+（`/animals/{karte_no}`＝顧客、`/animals/{karte_no}/history`＝来院履歴）にだけ
+新たに追加した。
+
+- `src/lib/karte-render.ts`: `カルテ — 患者名` → `カルテ`（`/karte` `/karte/new` `/karte/cancel`
+  共通）。`カルテ印刷（1診察） — 患者名` → `カルテ印刷`（`/karte/print` `/karte/{visit_id}/print`
+  共通、どちらも契約のsummaryは同じ「カルテ印刷」）
+- `src/lib/exam-render.ts`: `検査 — 患者名` → `検査`
+- `src/lib/billing-render.ts`: `会計 — 患者名` → `会計`、`会計履歴 — 患者名` → `会計履歴`
+- `src/app/animals/[karte_no]/route.ts`（顧客）: `顧客 - 患者名` → `顧客`。本文冒頭に
+  「カルテNo: ... ｜ 動物名: ... ｜ 飼主: ...」の行を新規追加
+- `src/app/animals/[karte_no]/history/route.ts`: `来院履歴 - 患者名` → `来院履歴`。
+  同様に本文冒頭へ識別行を追加
+- `src/app/animals/[karte_no]/papers/route.ts`: `書類 — 患者名` → `書類`
+- `src/app/animals/[karte_no]/dosing/[kind_id]/route.ts`: `投薬 — 種別名` → `投薬`
+- `src/app/animals/[karte_no]/prevention/[kind_id]/route.ts`: `予防 — 種別名` → `予防`
+- `src/app/animals/[karte_no]/delete/route.ts`: `削除確認` → `削除`（契約のsummaryに合わせた）
+
+**1件だけ`title`を渡し分けた**: `/animals/{karte_no}/karte/copy_prev`は契約の`summary`が
+「前回コピー」で、`/karte`（「カルテ」）と別の名前を要求している。同じ`renderKarteScreen()`を
+使う画面なので、`title`を省略可能な第5引数にして既定値`'カルテ'`にし、`copy_prev/route.ts`
+だけ`'前回コピー'`を明示的に渡す形にした。`/karte/cancel`（POST専用、契約上も
+「取消」というsummaryがあるが実体は同じカルテ画面にバナーが乗るだけ）は
+GETが無くクローラーの対象外のため、既定の「カルテ」のままにした。
+
+**再検証**:
+```
+$ npm run typecheck → エラー0
+$ BASE_URL=http://127.0.0.1:8405 npm test → 44/44
+$ python tests/run.py http://127.0.0.1:8405 → 全29件通過
+  （新規の「見た目 ナビに無い画面の名前も契約と同じ」も含め14画面で契約と一致）
+$ python tests/shots.py（全画面）
+  → /animals/{karte_no}/karte・exam・accountingのh1がRails/FastAPIと一致（カルテ/検査/会計、
+    患者名を含まない）
+```
+
+## 2026-09-06 続報4: `/today` の既定表示が全25件出ていた（データ再投入で顕在化）
+
+指揮役がデータを作り直し（消費税の丸め方の見張りを効かせるため／`/today`が5実装とも
+0件だったため基準日を今日に変更）、その結果このレーンの食い違いが表に出た。
+
+**原因**: `reception`テーブルの`kind`列（`schema.sql`の注記どおり、area1がタブを実装する
+ために独自追加した列。`spec/model.md`にも`data/seed.json`にも当時は対応するフィールドが
+無かったため、`NOT NULL DEFAULT 'first_visit'`にしていた）を、`scripts/seed.ts`の
+`insert(db, 'reception', fixtures.receptions)`が**一度も上書きしていなかった**。
+`fixtures.receptions`（`data/seed.json`）のJSONオブジェクトに`kind`キーが無いため、
+INSERT文の列リストに`kind`が入らず、**25件全部が列のDEFAULT値`'first_visit'`のまま**
+だった。既定タブ（1つ目＝初診）で絞ると「初診」の`kind`を持つ行が25件（＝全部）ヒットする。
+
+新しいデータでは`Reception.medical_purpose`が区分の**表示名**（「初診」「健康診断」等）を
+実際に持つようになっていた（Go/Laravelはここを`reception_kinds`の`name`と突き合わせて
+1行に絞っている）。旧データでは`medical_purpose`が空／無関係な値だったため、この対応関係に
+気づく機会が無かった。
+
+**対処**: `scripts/seed.ts`のreception挿入に`extra`コールバックを追加し、
+`medical_purpose`を`data/masters.json`の`reception_kinds[].name`と逆引きして`code`を求め、
+それを`kind`として書き込むようにした（一致しなければ従来どおり1つ目のcodeにフォールバック）。
+`next dev`（8405）を一度止めてから`npm run seed`→再起動（WALロック対策、前回の教訓どおり）。
+
+**再検証**:
+```
+$ npm run typecheck → エラー0
+$ npm run seed → reception 25件（DBには手を入れず再構築のみ）
+$ BASE_URL=http://127.0.0.1:8405 npm test → 44/44
+$ python tests/run.py http://127.0.0.1:8405 → 全29件通過
+  （新規/強化された「契約 本日の患者に受付区分のタブがある」も含む:
+    6区分すべてにタブがあり、既定は「初診」1行——data/から独立に数えた値と一致）
+  売上総合計 5,189,585円（指揮役の新データと一致）
+```

@@ -21,6 +21,8 @@ class KarteController < ApplicationController
   # 直前の診察が無いときは新規診察フォームをそのまま開く（灰色にする判断は
   # 画面側＝リンクの見た目に任せる。ここでは404にしない）。
   def copy_prev
+    # 契約のsummaryは「前回コピー」（カルテ本体とは別画面扱い）。h1・titleをそれに合わせる。
+    @screen_name = "前回コピー"
     load_visits
     prev = @patient.visits.kept.order(visit_date: :desc, visit_no: :desc).first
     @form_visit = @patient.visits.build(

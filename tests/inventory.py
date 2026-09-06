@@ -948,13 +948,36 @@ def register(check, Client, Report):
         # 検算2（消費税の丸め）で「150枚すべてで差が出ず、規則を確かめられていない」
         # という事故を既に起こしている。**同じ形なので、同じように事実として表に出す。**
         # 隠して緑にすると、確かめていないことを確かめたことにしてしまう。
-        if n1 == 0:
+        # **期待する行数を data/ から独立に計算して突き合わせる。**
+        #
+        # 「タブが在る」だけを見ていたころは、既定表示の行数が
+        # **0行・1行・25行と3通りに割れていても緑**だった（2026-09-06、
+        # データを作り直して受付が出るようになった途端に見えた）。
+        #
+        #     絞り込みが効いているかは、**正解の行数を別に数えないと分からない。**
+        #
+        # 契約: 「省略時はマスタの1つ目。マスタに無い区分が来たら1つ目へ戻す」
+        try:
+            with open(os.path.join(_DATA, "seed.json"), encoding="utf-8") as f:
+                seed = json.load(f)
+        except Exception:
+            return False, "data/seed.json が読めない（検査が働いていない）"
+        first_name = next((k.get("name") for k in kinds if k.get("code") == codes[0]), None)
+        recs = seed.get("receptions") or []
+        want_first = sum(1 for r in recs
+                         if r.get("medical_purpose") == first_name
+                         and not r.get("deleted_at"))
+
+        if not recs:
             return True, (f"{len(codes)} 区分すべてにタブがある — "
-                          f"★ ただし本日の受付が0件のため、**絞り込みが効いているかは"
-                          f"確かめられていない**（データが anchor_date に固定されているため）")
-        if n2 > n1:
-            return False, f"絞り込むと行が増えている（全体{n1}行 → 先頭区分{n2}行）"
-        return True, f"{len(codes)} 区分すべてにタブがある（全体{n1}行 / 先頭区分{n2}行）"
+                          f"★ ただし受付データが0件のため、絞り込みは確かめられていない")
+        if n1 != want_first:
+            return False, (f"既定表示が {n1} 行。契約は「省略時はマスタの1つ目」なので "
+                           f"{want_first} 行（{first_name}）が正しい")
+        if n2 != want_first:
+            return False, f"先頭区分を指定すると {n2} 行（既定と同じ {want_first} 行のはず）"
+        return True, (f"{len(codes)} 区分すべてにタブがあり、既定は"
+                      f"「{first_name}」{want_first} 行（data/ から独立に数えた値と一致）")
 
     @check("inventory", "見た目 画面名がナビの表示と同じ（同じ画面を別の名前で呼ばない）")
     def _screen_names(c, rep):

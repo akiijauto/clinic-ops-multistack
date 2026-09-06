@@ -614,3 +614,61 @@ $ python tests/shots.py /ward /settings /dm
 ```
 
 **レーンBの担当分はこれで完了。次の指示待ち。**
+
+---
+
+## 2026-09-06 — ナビに無い13画面のh1を契約のsummaryに揃える（担当分完了）
+
+指揮役の指摘（患者名を見出しに混ぜると画面名が患者ごとに変わる）に対応。
+`spec/openapi.yaml` の `summary`（括弧書きを除いたもの）を正とした。
+
+対象10ビュー、患者名・カルテNo・種別名は`<h1>`から下の`<p>`へ移した:
+`animals/show`→顧客、`animals/history`→来院履歴、`animals/delete_confirm`→削除
+（「削除の確認」から変更）、`exams/show`→検査、`dosings/show`→投薬、
+`preventions/show`→予防、`papers/index`→書類、`wards/animal`→入院、
+`accounting/show`→会計、`accounting/history`→会計履歴。
+
+カルテ（`karte/show.html.erb`）は show/new_visit/copy_prev の3アクションが同じ
+テンプレートを共有しているが、契約上 copy_prev だけ別summary（「前回コピー」）。
+`karte_controller.rb#copy_prev` で `@screen_name = "前回コピー"` をセットし、
+ビューは `@screen_name || "カルテ"` を `<h1>`・`<title>` に出す形にした。
+
+### 自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+全 29 件 通過（新規「見た目 ナビに無い画面の名前も契約と同じ」含む — 13画面一致）
+```
+
+`python tests/shots.py`（デフォルト全画面）で確認。`/animals/10003/karte` `/exam`
+`/accounting` はRailsのh1が契約どおりになり、FastAPI・Next.jsと一致。
+
+**レーンBの担当分はこれで完了。次の指示待ち。**
+
+---
+
+## 2026-09-06 — /today の区分絞り込みが効いていなかったバグを修正（担当分完了）
+
+指揮役の指摘（データ入れ替え後、`/today` 既定表示がRailsだけ0行。正解は1行）に対応。
+
+**原因**: `receptions` テーブルには `kind` 列と `medical_purpose` 列の両方があるが、
+`kind` 列は `data/seed.json` に値が無く常にnil。区分の実データは `medical_purpose`
+（表示名「初診」等がそのまま入っている。Laravelと同じ実装方針）にある。
+`Reception.of_kind` スコープが存在しない`kind`列で絞っていたため、有効な区分コードを
+渡すと常に0件になっていた。以前の既定「すべて」（絞らない）ではこの不具合が
+隠れていて表面化しなかった。
+
+**修正**: `app/models/reception.rb` の `of_kind` スコープで、受け取った区分コードを
+`FixedData::Masters.reception_kind_label(code)` で表示名に変換してから
+`medical_purpose` を突き合わせる形に変更。
+
+### 自己点検
+
+```
+$ python tests/run.py http://127.0.0.1:8414
+全 29 件 通過
+（契約 本日の患者に受付区分のタブがある — 既定は「初診」1行、data/から独立に
+  数えた値と一致）
+```
+
+**レーンBの担当分はこれで完了。次の指示待ち。**

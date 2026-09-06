@@ -1,7 +1,8 @@
-{{define "title"}}書類 {{.KarteNo}}{{end}}
+{{define "title"}}書類{{end}}
 {{define "content"}}
 <div data-testid="screen-papers">
-  <h1>書類（紙カルテPDF）</h1>
+  <h1>書類</h1>
+  <p>紙カルテPDF</p>
   {{if .SuccessMessage}}<p data-testid="success-banner">{{.SuccessMessage}}</p>{{end}}
   {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
 

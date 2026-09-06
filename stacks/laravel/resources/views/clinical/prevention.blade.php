@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', '予防 — '.$patient->name_kanji)
+@section('title', '予防')
 
 @section('content')
     <div class="card" data-testid="screen-prevention">
-        <h1>予防（{{ $kindName }}） — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>予防</h1>
+        <p>{{ $kindName }} — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
 
         @if (!empty($error))
             <div data-testid="error-banner" class="error-banner">{{ $error }}</div>

@@ -104,6 +104,8 @@ export function renderExamScreen(
     <h2>過去の検査</h2>
     ${pastTestsNav(patient.karte_no, tests, current?.id)}
     ${newTestForm(patient.karte_no, allItems, patient.species)}`;
-  const html = page({ title: `検査 — ${patient.name_kanji}`, screenKey: 'screen-exam', body });
+  // Bare contract summary (spec/openapi.yaml「検査」) -- `header(patient)`
+  // already shows the patient at the top of the body.
+  const html = page({ title: '検査', screenKey: 'screen-exam', body });
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }

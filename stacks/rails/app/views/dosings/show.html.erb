@@ -1,6 +1,7 @@
 <% content_for :title, "投薬" %>
 <div data-testid="screen-dosing">
-  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の投薬（<%= @kind[:name] %>）</h1>
+  <h1>投薬</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）／<%= @kind[:name] %></p>
 
   <% if @success %>
     <p data-testid="success-banner">保存しました。</p>

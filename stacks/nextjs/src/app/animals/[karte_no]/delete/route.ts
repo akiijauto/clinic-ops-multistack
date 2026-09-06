@@ -22,7 +22,8 @@ ${
       </form>
       <p><a href="/animals/${escapeHtml(karteNo)}">キャンセルして戻る</a></p>`
 }`;
-  return page({ title: '削除確認', screenKey: 'screen-delete-confirm', body });
+  // Bare contract summary (spec/openapi.yaml「削除」).
+  return page({ title: '削除', screenKey: 'screen-delete-confirm', body });
 }
 
 export async function GET(_req: Request, { params }: Params): Promise<Response> {

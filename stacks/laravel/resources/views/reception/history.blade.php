@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', '来院履歴 — '.$patient->name_kanji)
+@section('title', '来院履歴')
 
 @section('content')
     <div class="card" data-testid="screen-history">
-        <h1>来院履歴 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>来院履歴</h1>
+        <p>{{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
 
         @if (!empty($restored))
             <div data-testid="success-banner" class="success-banner">元に戻しました。</div>

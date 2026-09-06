@@ -1,6 +1,7 @@
 <% content_for :title, "入院" %>
 <div data-testid="screen-ward">
-  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の入院記録</h1>
+  <h1>入院</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
 
   <% if @success %>
     <p data-testid="success-banner">保存しました。</p>

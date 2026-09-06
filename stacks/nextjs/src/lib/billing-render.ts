@@ -134,7 +134,9 @@ export function renderAccountingScreen(opts: {
     <p><a href="/animals/${e(patient.karte_no)}/accounting/history" data-testid="link-accounting-history">会計履歴へ</a></p>
   `;
 
-  return htmlResponse(page({ title: `会計 — ${patient.name_kanji}`, screenKey: 'screen-accounting', body }));
+  // Bare contract summary (spec/openapi.yaml「会計」) -- the カルテNo/動物名/
+  // 飼主 line above already says whose billing this is.
+  return htmlResponse(page({ title: '会計', screenKey: 'screen-accounting', body }));
 }
 
 export function billingRowHtml(karteNo: string, b: BillingWire, opts: { currentPatientId?: number } = {}): string {
@@ -179,7 +181,7 @@ export function renderAccountingHistoryScreen(opts: {
     <p><a href="/animals/${e(patient.karte_no)}/accounting">会計画面へ</a></p>
   `;
 
-  return htmlResponse(page({ title: `会計履歴 — ${patient.name_kanji}`, screenKey: 'screen-accounting-history', body }));
+  return htmlResponse(page({ title: '会計履歴', screenKey: 'screen-accounting-history', body }));
 }
 
 export { errorBanner, successBanner };

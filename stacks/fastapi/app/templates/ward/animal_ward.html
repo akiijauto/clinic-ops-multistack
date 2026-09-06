@@ -8,7 +8,8 @@
 
 {% block content %}
 <section {{ screen("ward") }}>
-  <h1>入院（{{ patient.name_kanji }} / カルテNo {{ patient.karte_no }}）</h1>
+  <h1>入院</h1>
+  <p>カルテNo: {{ patient.karte_no }} / {{ patient.name_kanji }}</p>
 
   {% if banner %}
     {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}

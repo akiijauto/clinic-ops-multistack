@@ -62,7 +62,7 @@ function render(karteNo: string, patient: Patient & { owner: Owner }, papers: Pa
     </table>
     ${importForm}
     <p><a href="/animals/${e(karteNo)}/history">来院履歴へ</a></p>`;
-  return page({ title: `書類 — ${patient.name_kanji}`, screenKey: 'screen-papers', body });
+  return page({ title: '書類', screenKey: 'screen-papers', body });
 }
 
 // GET /animals/{karte_no}/papers -- spec/openapi.yaml `screen_papers`.

@@ -57,6 +57,7 @@ export async function GET(_req: Request, { params }: Params): Promise<Response> 
   const isEmpty = entries.length === 0 && deletedVisits.length === 0;
 
   const body = `
+<p>カルテNo: ${escapeHtml(record.karte_no)} ｜ 動物名: ${escapeHtml(record.name_kanji)} ｜ 飼主: ${escapeHtml(record.owner.name_kanji)}</p>
 <h2>変更履歴</h2>
 <table>
   <thead><tr><th>日時</th><th>対象</th><th>操作</th><th>担当</th><th>変わった内容</th></tr></thead>
@@ -69,5 +70,5 @@ export async function GET(_req: Request, { params }: Params): Promise<Response> 
 </table>
 ${isEmpty ? '<p data-testid="empty-history">この動物にはまだ履歴がありません。</p>' : ''}`;
 
-  return htmlResponse(page({ title: `来院履歴 - ${record.name_kanji}`, screenKey: 'screen-history', body }));
+  return htmlResponse(page({ title: '来院履歴', screenKey: 'screen-history', body }));
 }

@@ -57,7 +57,9 @@ function render(opts: {
       <label>年度 <input type="number" name="fiscal_year" required></label>
       <button type="submit">開く</button>
     </form>`;
-  return htmlResponse(page({ title: `投薬 — ${kindName}`, screenKey: 'screen-dosing', body }));
+  // Bare contract summary (spec/openapi.yaml「投薬」) -- the カルテNo/種別
+  // line above already says which kind this is.
+  return htmlResponse(page({ title: '投薬', screenKey: 'screen-dosing', body }));
 }
 
 // GET /animals/{karte_no}/dosing/{kind_id} -- spec/openapi.yaml `screen_dosing`.

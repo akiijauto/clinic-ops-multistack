@@ -810,3 +810,74 @@ $ python tests/run.py http://127.0.0.1:8415
 `tests/shots.py /` は「揃っている」で差分なし。
 
 サーバーは今回も --reload なしのため、旧プロセスを止めて入れ替え起動（孤児無しを確認）。
+
+## 完了の自己点検（9回目、ナビに無い画面の見出し7件対応）
+
+指揮役から「`<h1>` が `spec/openapi.yaml` の `summary` と違う（患者名・カルテ番号を
+見出しに混ぜている）」との報告（7画面）を受けて対応。契約の summary（括弧書きは落とす）
+を正として、識別情報（カルテNo・患者名・区分名）は見出しの下の `<p>` へ移した。
+
+- `app/templates/reception/animal_delete_confirm.html`: h1「削除の確認」→「削除」
+- `app/templates/billing/accounting.html`: h1「会計 — {{karte_no}}」→「会計」＋
+  `<p>カルテNo: ...</p>`。titleからもカルテ番号を外した（「会計 {{karte_no}}」→「会計」）
+- `app/templates/billing/accounting_history.html`: 同様に「会計履歴」＋カルテNo行、
+  titleからもカルテ番号を除去
+- `app/templates/ward/animal_ward.html`: h1「入院（患者名／カルテNo）」→「入院」＋
+  `<p>カルテNo: ... / 患者名</p>`
+- `app/templates/clinical/dosing.html` / `prevention.html`: h1「投薬（区分名）」
+  「予防（区分名）」→「投薬」「予防」。区分名は既存のカルテNo行に合流
+- `app/templates/clinical/karte.html` + `app/routers/karte.py`: `/karte/copy_prev`
+  だけ契約の summary が「前回コピー」（「カルテ」ではない）と気づいた。
+  `_render()` に `screen_title`（既定「カルテ」）を足し、`karte_copy_prev()` だけ
+  `screen_title="前回コピー"` を渡すようにした。`/karte`・`/karte/new` は既定のまま
+  「カルテ」で変更なし
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 29 件 通過
+```
+
+該当検査も通過:
+- OK 見た目 ナビに無い画面の名前も契約と同じ（患者名を見出しに混ぜない）— 13 画面の名前が契約と一致
+
+`tests/shots.py`（全画面）で確認: `/animals/10003/karte`・`/exam`・`/accounting` の h1 は
+Rails・Next.jsと完全一致（「カルテ」「検査」「会計」のみ）。会計のtitleもRails・Next.js・Goと
+一致（「会計 — 動物病院 窓口業務システム」）。
+
+残っている差分（今回の指摘範囲外・未対応）:
+- FastAPIのカルテ・検査画面のtitleに患者名が入ったまま（「カルテ — モモ — …」）。
+  Rails・Next.jsはtitleに患者名を入れていない。h1の指摘のみだったため今回は変更せず
+- `/folded` でFastAPI・Goがtitle/h1/nav全て空（Rails・Laravelは表示できている）。
+  今回のNGリストに無かったため未調査
+
+サーバーは今回も --reload なしのため、旧プロセスを止めて入れ替え起動（孤児無しを確認）。
+
+## 完了の自己点検（10回目、データ作り直し後の受付区分タブ絞り込み対応）
+
+指揮役から「データを作り直したら `/today` の既定表示が0行（正解は1行）」との報告。
+
+**実測して分かったこと**: 絞り込みロジック自体は正しく動いていた（`medical_purpose`
+への一致で「初診」1件を正しく絞れていた——DB直接クエリ・実際のHTML両方で確認済み）。
+落ちていた原因は別で、**行の目印が `data-check="row-reception"` だけで
+`data-testid="row-reception"` を出していなかった**こと。新しい検査は
+`data-testid="row-reception"` の出現数で行数を数えるため、実際は1行あっても常に0と
+数えられていた。
+
+これは `_macros.html` の D-4（「`data-testid` は書かず `data-check` だけ」という
+仮決め）が原因。`screen()` マクロは既に2026-09-06の別件で「両方の名前を出す」に
+直っていたが、`row()`・`empty()` マクロは仮決めのままだった。同じ仮決めが同じ形で
+2回検査を素通りさせたため、`row()`・`empty()` も `screen()` と同じく
+`data-testid="..."` `data-check="..."` の両方を出すよう `_macros.html` を直した
+（全26画面のrow/empty表示に影響するが、属性を足すだけで既存の`data-check`ベースの
+検査・機能への影響は無い）。
+
+```
+$ python tests/run.py http://127.0.0.1:8415
+全 29 件 通過
+```
+
+該当検査: OK 契約 本日の患者に受付区分のタブがある — 6区分すべてにタブがあり、
+既定は「初診」1行（data/ から独立に数えた値と一致）
+
+サーバーは指揮役がデータ入れ替え後に起動していたものを一旦止め、`data/clinic.db` は
+そのままに（削除せず）入れ替え起動した。孤児無しを確認済み。

@@ -5,8 +5,9 @@ karte_body は「カルテ」画面と「カルテ印刷」画面の両方から
 */}}
 {{define "karte_body"}}
 <section data-testid="patient-header">
-  <h1>{{.Patient.NameKanji}}（{{.Patient.NameKana}}）</h1>
+  <h1>{{if .Heading}}{{.Heading}}{{else}}カルテ{{end}}</h1>
   <dl>
+    <dt>動物名</dt><dd>{{.Patient.NameKanji}}（{{.Patient.NameKana}}）</dd>
     <dt>カルテNo</dt><dd>{{.Patient.KarteNo}}</dd>
     <dt>種別・品種</dt><dd>{{.Patient.Species}} / {{.Patient.Breed}}</dd>
     <dt>性別</dt><dd>{{.Patient.Sex}}</dd>

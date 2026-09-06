@@ -1,6 +1,7 @@
 <% content_for :title, "予防" %>
 <div data-testid="screen-prevention">
-  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）の予防（<%= @kind[:name] %>）</h1>
+  <h1>予防</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）／<%= @kind[:name] %></p>
 
   <% if @success %>
     <p data-testid="success-banner">保存しました。</p>

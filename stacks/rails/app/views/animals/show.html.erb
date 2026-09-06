@@ -1,6 +1,9 @@
 <% content_for :title, "顧客" %>
 <div data-testid="screen-animal-detail">
-  <h1><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</h1>
+  <%# <h1>は契約のsummaryと同じにする（spec/screens.md末尾、2026-09-06追記）。
+      患者名は患者ごとに変わるので見出しの下に置く。 %>
+  <h1>顧客</h1>
+  <p><%= @patient.name_kanji %>（<%= @patient.karte_no %>）</p>
 
   <% if flash[:error] %>
     <p data-testid="error-banner"><%= flash[:error] %></p>

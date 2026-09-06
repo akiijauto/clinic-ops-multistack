@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', '削除確認 — '.$patient->name_kanji)
+@section('title', '削除')
 
 @section('content')
     <div class="card" data-testid="screen-delete-confirm">
-        <h1>削除確認 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>削除</h1>
+        <p>{{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
 
         @if (!empty($deleted))
             <div data-testid="success-banner" class="success-banner">

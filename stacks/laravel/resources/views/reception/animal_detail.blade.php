@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', '顧客 — '.$patient->name_kanji)
+@section('title', '顧客')
 
 @section('content')
     <div class="card" data-testid="screen-animal-detail">
-        <h1>顧客 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>顧客</h1>
+        <p>{{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
 
         @if (!empty($saved))
             <div data-testid="success-banner" class="success-banner">保存しました。</div>

@@ -80,7 +80,22 @@ export function seed(): Record<string, number> {
     counts.staff = insert(db, 'staff', fixtures.staff as Json[]);
     counts.owner = insert(db, 'owner', fixtures.owners as Json[]);
     counts.patient = insert(db, 'patient', fixtures.patients as Json[]);
-    counts.reception = insert(db, 'reception', fixtures.receptions as Json[]);
+    // The `reception` table's own `kind` column (schema.sql's comment on it)
+    // is area1's addition to back the screen 1 区分タブ -- `data/seed.json`
+    // rows carry no `kind` field, only `medical_purpose` (a *display name*,
+    // e.g. "初診"). Without this, `kind` fell through to the column's
+    // `NOT NULL DEFAULT 'first_visit'` for every seeded row (nothing in the
+    // INSERT's column list overrode it), so the default タブ showed all 25
+    // receptions instead of just the 1 whose 診療目的 is "初診" -- 5実装比較で
+    // Go/Laravelは`medical_purpose`をreception_kindsの表示名と突き合わせて
+    // いた（指揮役の実測、2026-09-06）。Reverse-map the display name back to
+    // its code here, same as those two lanes do at query time.
+    const receptionKindsMaster = (readJson('masters.json').reception_kinds as { code: string; name: string }[]) ?? [];
+    const nameToKindCode = new Map(receptionKindsMaster.map((k) => [k.name, k.code]));
+    const defaultKindCode = receptionKindsMaster[0]?.code ?? 'first_visit';
+    counts.reception = insert(db, 'reception', fixtures.receptions as Json[], (r) => ({
+      kind: nameToKindCode.get(String(r.medical_purpose)) ?? defaultKindCode,
+    }));
     counts.visit = insert(db, 'visit', fixtures.visits as Json[]);
     counts.progress_note = insert(db, 'progress_note', fixtures.progress_notes as Json[]);
     counts.prevention = insert(db, 'prevention', fixtures.preventions as Json[]);

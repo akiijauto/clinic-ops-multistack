@@ -1,10 +1,17 @@
 @extends('layouts.app')
 
-@section('title', '新規診察 — '.$patient->name_kanji)
+{{--
+    <h1>はspec/openapi.yamlのsummaryに合わせる（括弧書きは落とす）。
+    /karte/new = 「カルテ」、/karte/copy_prev = 「前回コピー」（別の名前。
+    同じテンプレートを使うが見出しは分ける）。
+--}}
+@php($heading = $mode === 'copy_prev' ? '前回コピー' : 'カルテ')
+@section('title', $heading)
 
 @section('content')
     <div class="card" data-testid="screen-karte">
-        <h1>新規診察 — {{ $patient->name_kanji }}（{{ $patient->karte_no }}）</h1>
+        <h1>{{ $heading }}</h1>
+        <p>{{ $patient->name_kanji }}（{{ $patient->karte_no }}）</p>
 
         @if (!empty($notice))
             <p><small>{{ $notice }}</small></p>

@@ -16,7 +16,9 @@ export async function GET(_req: Request, { params }: Params): Promise<Response> 
     const patient = findPatientForKarte(karte_no);
     const visits = listVisitsForKarte(patient.id);
     const draft = draftFromPreviousVisit(patient.id) ?? blankVisitDraft();
-    return renderKarteScreen(patient, visits, { visitId: null, draft });
+    // spec/openapi.yaml's summary for this path is「前回コピー」, distinct
+    // from the shared カルテ screen's default title.
+    return renderKarteScreen(patient, visits, { visitId: null, draft }, undefined, '前回コピー');
   } catch (e) {
     if (e instanceof ApiError && e.code === 'not_found') return notFoundHtml();
     throw e;

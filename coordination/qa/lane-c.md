@@ -414,3 +414,32 @@ POSTは201のまま。テスト用に作成したケア記録（id=109）は削�
 `python tests/shots.py /dm /settings`で実描画を確認: `/dm`は「揃っている」、
 `/settings`は自分（Laravel）を含む4実装が一致（Goだけ`<h1>`に「（病院設定）」を
 残しており、そちらの問題）。
+
+## T. 2026-09-06 — 画面名をopenapi.yamlのsummaryと一致させる（13画面。患者名を見出しから外す）
+
+`spec/screens.md`追記「`<h1>`はopenapi.yamlのsummaryと同じにする。括弧書きは落とす」への対応。
+患者名（`$patient->name_kanji`・`karte_no`）を`<h1>`と`<title>`から外し、`<h1>`直下の`<p>`へ
+移した13画面:
+
+| ルート | 旧h1 | 新h1（=openapi summaryから括弧書きを除いたもの） |
+| --- | --- | --- |
+| `/animals/{karte_no}` | 顧客 — モモ（10003） | 顧客 |
+| `/animals/{karte_no}/delete` | 削除確認 — モモ（10003） | 削除 |
+| `/animals/{karte_no}/history` | 来院履歴 — モモ（10003） | 来院履歴 |
+| `/animals/{karte_no}/karte` | カルテ — モモ（10003） | カルテ |
+| `/animals/{karte_no}/karte/new` | 新規診察 — モモ（10003） | カルテ |
+| `/animals/{karte_no}/karte/copy_prev` | 新規診察 — モモ（10003） | 前回コピー |
+| `/animals/{karte_no}/karte/print`（+1診察分） | カルテ印刷 — モモ（10003） | カルテ印刷 |
+| `/animals/{karte_no}/exam` | 検査 — モモ（10003） | 検査 |
+| `/animals/{karte_no}/dosing/{kind_id}` | 投薬（種別） — モモ（10003） | 投薬 |
+| `/animals/{karte_no}/prevention/{kind_id}` | 予防（種別） — モモ（10003） | 予防 |
+| `/animals/{karte_no}/papers` | 書類 — モモ（10003） | 書類 |
+| `/animals/{karte_no}/accounting` | 会計 — モモ（10003） | 会計 |
+| `/animals/{karte_no}/accounting/history` | 会計履歴 — モモ（10003） | 会計履歴 |
+| `/animals/{karte_no}/ward` | 入院 — モモ（10003） | 入院 |
+
+`<title>`（`@section('title', ...)`）からも患者名を外した（例:「カルテ - モモ」→「カルテ」。
+レイアウト側で自動付与される「— 動物病院 窓口業務システム」はそのまま）。
+`karte_form.blade.php`は`/karte/new`と`/karte/copy_prev`の両方を1テンプレートで
+出しているため、`$mode`で見出しを分岐させた（前者「カルテ」、後者「前回コピー」。
+openapi.yamlのsummaryがこの2つで別の文言だったため）。

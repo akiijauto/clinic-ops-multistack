@@ -130,6 +130,12 @@ export function renderKarteScreen(
   visits: VisitWithNotes[],
   editing: { visitId: number | null; draft: VisitInput; current?: VisitWithNotes },
   banner?: { kind: 'success' | 'error'; message: string },
+  // `/karte`・`/karte/new`・`/karte/cancel` share `spec/openapi.yaml`'s
+  // 「カルテ」summary and this shared renderer's default title. `/karte/copy_prev`
+  // is the one caller with its own summary（「前回コピー」）-- same screen,
+  // different contract name -- so it passes it explicitly rather than this
+  // function guessing from the URL.
+  title = 'カルテ',
 ): Response {
   const bannerHtml = banner
     ? `<p data-testid="${banner.kind}-banner" class="${banner.kind}-banner">${e(banner.message)}</p>`
@@ -156,14 +162,18 @@ export function renderKarteScreen(
     ${visitForm(patient.karte_no, editing.visitId, editing.draft)}
     <h2>診察の切替</h2>
     ${historyNav(patient.karte_no, visits, editing.visitId)}`;
-  const html = page({ title: `カルテ — ${patient.name_kanji}`, screenKey: 'screen-karte', body });
+  // Title/h1 is the bare contract summary -- no patient name.
+  // `header(patient)` above already puts "誰の画面か" at the top of the
+  // body (spec/screens.md 末尾「画面名はナビの表示と同じにする」の患者版:
+  // 見出しは画面の種類だけを表し、対象は本文に出す).
+  const html = page({ title, screenKey: 'screen-karte', body });
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
 /** `/karte/print` when the patient has no Visit at all yet -- same wording `visitBlock`'s callers use elsewhere. */
 export function noVisitPrint(patient: Patient & { owner: Owner }): Response {
   const body = `${header(patient)}<p>この動物の診察記録はまだありません。</p>`;
-  const html = page({ title: `カルテ印刷 — ${patient.name_kanji}`, screenKey: 'screen-karte-print', body });
+  const html = page({ title: 'カルテ印刷', screenKey: 'screen-karte-print', body });
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
@@ -171,6 +181,6 @@ export function noVisitPrint(patient: Patient & { owner: Owner }): Response {
 export function renderVisitPrint(patient: Patient & { owner: Owner }, visit: VisitWithNotes): Response {
   const body = `${header(patient)}
     ${visitBlock(visit)}`;
-  const html = page({ title: `カルテ印刷（1診察） — ${patient.name_kanji}`, screenKey: 'screen-karte-print', body });
+  const html = page({ title: 'カルテ印刷', screenKey: 'screen-karte-print', body });
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }

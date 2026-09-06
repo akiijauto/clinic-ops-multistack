@@ -1,7 +1,8 @@
-{{define "title"}}予防 {{.KarteNo}}{{end}}
+{{define "title"}}予防{{end}}
 {{define "content"}}
 <div data-testid="screen-prevention">
-  <h1>予防（{{.KindName}}）</h1>
+  <h1>予防</h1>
+  <p>{{.KindName}}</p>
   {{if .ErrorMessage}}<p data-testid="error-banner">{{.ErrorMessage}}</p>{{end}}
 
   {{if not .Rows}}

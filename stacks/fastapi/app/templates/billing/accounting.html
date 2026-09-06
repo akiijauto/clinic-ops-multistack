@@ -2,11 +2,12 @@
 {% extends "base.html" %}
 {% from "_macros.html" import screen, row, value_check, success_banner, error_banner %}
 
-{% block title %}会計 {{ karte_no }}{% endblock %}
+{% block title %}会計{% endblock %}
 
 {% block content %}
 <section {{ screen("accounting") }}>
-  <h1>会計 — {{ karte_no }}</h1>
+  <h1>会計</h1>
+  <p>カルテNo: {{ karte_no }}</p>
 
   {% if banner %}
     {% if banner[0] == "success" %}{{ success_banner(banner[1]) }}{% else %}{{ error_banner(banner[1]) }}{% endif %}

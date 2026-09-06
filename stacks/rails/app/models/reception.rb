@@ -16,7 +16,17 @@ class Reception < ApplicationRecord
     range = date.in_time_zone("Tokyo").beginning_of_day..date.in_time_zone("Tokyo").end_of_day
     where(received_at: range)
   }
-  scope :of_kind, ->(kind) { kind.present? ? where(kind: kind) : all }
+  # `receptions.kind` 列は常にnil（data/seed.jsonに無い）。区分の実データは
+  # `medical_purpose` に区分の**表示名**（「初診」等）がそのまま入っている
+  # （Laravel実測・qa/lane-b.md、2026-09-06データ入れ替え後に発覚）。
+  # ここで受け取る `kind` は `data/masters.json` の code（例: "first_visit"）なので、
+  # 表示名に変換してから絞り込む。
+  scope :of_kind, ->(kind) {
+    next all if kind.blank?
+
+    name = FixedData::Masters.reception_kind_label(kind)
+    name.present? ? where(medical_purpose: name) : none
+  }
   scope :hide_done, ->(hide) { hide ? where.not(status: "done") : all }
 
   # 上へ／下へ：選択行と隣接する行の display_no を入れ替える（他の行は変わらない）。
